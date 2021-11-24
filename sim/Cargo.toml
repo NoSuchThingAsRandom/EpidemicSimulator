@@ -1,0 +1,12 @@
+[package]
+name = "sim"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+load_census_data = { path = "../load_census_data" }
+census_geography = { path = "../census_geography" }
+anyhow = "1.0"
+log = "0.4.14"
