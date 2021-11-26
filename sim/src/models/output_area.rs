@@ -1,11 +1,13 @@
+use std::collections::HashMap;
+
 use enum_map::EnumMap;
+use uuid::Uuid;
 
 use load_census_data::population_and_density_per_output_area::PopulationRecord as PopRecord;
 use load_census_data::table_144_enum_values::{AreaClassification, PersonType};
 
-use crate::BuildingCode;
-use crate::citizen::{Citizen, WorkType};
-use crate::household::Household;
+use crate::models::building::{Building, BuildingCode, BuildingType};
+use crate::models::citizen::{Citizen, WorkType};
 
 /// This is a container for a Census Output Area
 ///
@@ -16,13 +18,13 @@ pub struct OutputArea {
     /// The Census Data Output Area Code
     pub code: String,
     /// The list of citizens who have a "home" in this area
-    pub citizens: Vec<Citizen>,
+    pub citizens: HashMap<Uuid, Citizen>,
     /// How big the area is in Hectares
     pub area_size: f32,
     /// How many people per hectare? TODO Check this
     pub density: f32,
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
-    pub households: EnumMap<AreaClassification, Vec<Household>>,
+    pub buildings: EnumMap<AreaClassification, Vec<Building>>,
     /// A polygon for drawing this output area
     pub polygon: geo_types::Polygon<f64>,
 }
@@ -32,7 +34,7 @@ impl OutputArea {
     pub fn new(code: String, polygon: geo_types::Polygon<f64>, census_data: &PopRecord) -> OutputArea {
         // TODO Fix this
         let mut household_classification = EnumMap::default();
-        let mut citizens = Vec::with_capacity(census_data.population_size as usize);
+        let mut citizens = HashMap::with_capacity(census_data.population_size as usize);
         for (area, pop_count) in census_data.population_counts.iter() {
             // TODO Currently assigning 4 people per household
             // Should use census data instead
@@ -42,12 +44,12 @@ impl OutputArea {
             let mut households = Vec::with_capacity(household_number as usize);
             for _ in 0..household_number {
                 let area_code = BuildingCode::new(code.clone(), area);
-                let mut household = Household::new(area_code.clone());
+                let mut household = Building::new(BuildingType::Household, area_code.clone());
                 for _ in 0..household_size {
                     // TODO Add workplaces to citizens
                     let citizen = Citizen::new(area_code.clone(), area_code.clone(), WorkType::NA);
                     household.add_citizen(citizen.id());
-                    citizens.push(citizen);
+                    citizens.insert(citizen.id(), citizen);
                     generated_population += 1;
                 }
                 households.push(household);
@@ -62,7 +64,7 @@ impl OutputArea {
             citizens,
             area_size: census_data.area_size,
             density: census_data.density,
-            households: household_classification,
+            buildings: household_classification,
             polygon,
         }
     }

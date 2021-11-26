@@ -5,16 +5,14 @@ use std::time::Instant;
 
 use geo_types::{Coordinate, LineString};
 use log::{debug, info};
-use shapefile::Shape;
 use shapefile::dbase::FieldValue;
-use uuid::Uuid;
+use shapefile::Shape;
 
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
-use load_census_data::table_144_enum_values::AreaClassification;
 
 pub mod output_area;
-pub mod household;
+pub mod building;
 pub mod citizen;
 
 const DEBUG_ITERATION: usize = 5000;
@@ -61,55 +59,4 @@ pub fn build_polygons_for_output_areas(filename: &str) -> Result<HashMap<String,
     }
     info!("Finished loading map data in {:?}", start_time.elapsed());
     Ok(data)
-}
-
-/// This is used to represent a building location
-///
-/// It utilises:
-/// * An `OutputArea` - for broad location in the country,
-/// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
-/// * A  `Uuid` for a unique building identifier
-#[derive(Clone)]
-pub struct BuildingCode {
-    output_area_code: String,
-    area_type: AreaClassification,
-    building_id: uuid::Uuid,
-}
-
-impl BuildingCode {
-    /// Generates a new `BuildingCode` in the given position, with a new random building ID (`Uuid`)
-    ///
-    /// # Example
-    /// ```
-    /// use census_geography::BuildingCode;
-    /// use load_census_data::table_144_enum_values::AreaClassification;
-    ///
-    /// let output_area = String::from("1234");
-    /// let area_type = AreaClassification::UrbanCity;
-    ///
-    /// let building_code = BuildingCode::new(output_area, area_type);
-    ///
-    /// assert_eq!(building_code.output_area_code(), output_area);
-    /// assert_eq!(building_code.area_type(), area_type);
-    ///
-    /// ```
-    pub fn new(output_code: String, area_type: AreaClassification) -> BuildingCode {
-        BuildingCode {
-            output_area_code: output_code,
-            area_type,
-            building_id: Uuid::new_v4(),
-        }
-    }
-    /// Returns the `OutputArea` code
-    pub fn output_area_code(&self) -> String {
-        String::from(&self.output_area_code)
-    }
-    /// Returns the type of area this building is located in
-    pub fn area_type(&self) -> AreaClassification {
-        self.area_type
-    }
-    /// Returns the unique ID of this `BuildingCode`
-    pub fn building_id(&self) -> Uuid {
-        self.building_id
-    }
 }

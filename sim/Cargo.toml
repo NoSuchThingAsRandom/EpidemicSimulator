@@ -7,6 +7,14 @@ edition = "2021"
 
 [dependencies]
 load_census_data = { path = "../load_census_data" }
-census_geography = { path = "../census_geography" }
+
 anyhow = "1.0"
-log = "0.4.14"
+csv = "1.1.6"
+enum-map = "1.1.1"
+geo-types = "0.7.2"
+log = "0.4"
+rand = "0.8.4"
+serde = "1.0"
+serde_plain = "1.0"
+shapefile = { version = "0.3.0", features = ["geo-types"] }
+uuid = { version = "0.8", features = ["v4"] }
