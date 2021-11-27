@@ -65,8 +65,8 @@ impl std::error::Error for CensusError {
                     SerdeErrors::Plain { ref source } => { Some(source) }
                 }
             }
-            CensusError::ValueParsingError { ref source } => { Some(source) },
-            CensusError::IOError { ref source } => { source.source() },
+            CensusError::ValueParsingError { ref source } => { Some(source) }
+            CensusError::IOError { ref source } => { source.source() }
         }
     }
 }
@@ -79,6 +79,12 @@ impl From<reqwest::Error> for CensusError {
 
 impl From<csv::Error> for CensusError {
     fn from(e: Error) -> Self {
+        CensusError::IOError { source: Box::new(e) }
+    }
+}
+
+impl From<std::io::Error> for CensusError {
+    fn from(e: std::io::Error) -> Self {
         CensusError::IOError { source: Box::new(e) }
     }
 }

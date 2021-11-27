@@ -1,0 +1,1 @@
+pub const STARTING_INFECTED_COUNT: u32 = 10;

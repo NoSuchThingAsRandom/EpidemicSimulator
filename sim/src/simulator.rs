@@ -3,17 +3,19 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use log::{debug, error, info};
-use rand::thread_rng;
+use rand::prelude::IteratorRandom;
 use rand::rngs::ThreadRng;
+use rand::thread_rng;
 
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 
-use crate::disease::{DiseaseModel, Exposure, Statistics};
+use crate::config::STARTING_INFECTED_COUNT;
+use crate::disease::{DiseaseModel, DiseaseStatus, Exposure, Statistics};
 use crate::disease::DiseaseStatus::Infected;
 use crate::models::build_polygons_for_output_areas;
 use crate::models::output_area::OutputArea;
 
-const DEBUG_PRINT: u16 = 20;
+const DEBUG_PRINT: u16 = 100;
 
 pub struct Simulator {
     /// The total size of the population
@@ -27,20 +29,37 @@ pub struct Simulator {
 
 
 impl Simulator {
-    pub fn new() -> Result<Simulator> {
+    pub fn new(census_table: String, output_map_file: String) -> Result<Simulator> {
         let start = Instant::now();
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
+        info!("Loading data from disk...");
 
-        let census_data = load_census_data::load_table_from_disk("../../data/tables/PopulationAndDensityPerEnglandOutputArea(144)-35645376-Records.csv".to_string()).context("Loading census table 144")?;
-        let output_areas_polygons = build_polygons_for_output_areas("data/census_map_areas/England_oa_2011/england_oa_2011.shp").context("Loading polygons for output areas")?;
+        let census_data = load_census_data::load_table_from_disk(census_table).context("Loading census table 144")?;
+        info!("Loaded census data in {:?}",start.elapsed());
+        let mut output_areas_polygons = build_polygons_for_output_areas(&output_map_file).context("Loading polygons for output areas")?;
+        info!("Loaded map data in {:?}",start.elapsed());
         let mut starting_population = 0;
-        for (code, polygon) in output_areas_polygons.into_iter() {
+        let mut index = 1;
+        for (code, census) in census_data.into_iter() {
             // TODO Add failure case
-            let census_for_current_area = census_data.get(&code).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Building output areas map".to_string(), key: code.to_string() } })?;
-            starting_population += census_for_current_area.population_size as u32;
-            output_areas.insert(code.to_string(), OutputArea::new(code.to_string(), polygon, census_for_current_area));
+            let polygon = output_areas_polygons.remove(&code).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Building output areas map".to_string(), key: code.to_string() } })?;
+            starting_population += census.population_size as u32;
+            output_areas.insert(code.to_string(), OutputArea::new(code.to_string(), polygon, census));
+            if index % DEBUG_PRINT == 0 {
+                debug!("At index {} with time {:?}",index,start.elapsed());
+            }
+            index += 1;
         }
-
+        info!("Built population in {:?}",start.elapsed());
+        // Infect random citizens
+        let mut rng = thread_rng();
+        let starting_area_code = output_areas.keys().choose(&mut rng).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::IsEmpty { message: "No output areas exist for seeding the disease".to_string() } }).context("Initialisation of disease!")?.to_string();
+        let starting_area = output_areas.get_mut(&starting_area_code).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Randomly chosen output area doesn't exist!".to_string(), key: starting_area_code.to_string() } }).context("Initialisation of disease!")?;
+        for _ in 0..STARTING_INFECTED_COUNT {
+            let chosen_citizen = *starting_area.citizens.keys().choose(&mut rng).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::IsEmpty { message: format!("No citizens exist in the output areas {} for seeding the disease", starting_area_code) } }).context("Initialisation of disease!")?;
+            let citizen = starting_area.citizens.get_mut(&chosen_citizen).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Randomly chosen citizen exist!".to_string(), key: chosen_citizen.to_string() } }).context("Initialisation of disease!")?;
+            citizen.disease_status = DiseaseStatus::Infected(0);
+        }
         info!("Initialization completed in {} seconds", start.elapsed().as_secs_f32());
         Ok(Simulator { current_population: starting_population, output_areas, current_statistics: Statistics::default(), disease_model: DiseaseModel::covid(), rng: thread_rng() })
     }
@@ -61,7 +80,7 @@ impl Simulator {
         Ok(())
     }
     pub fn execute_time_step(&mut self) -> anyhow::Result<()> {
-        debug!("Executing time step at hour: {}",self.current_statistics.time_step());
+        //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposure_list: HashSet<Exposure> = HashSet::new();
         let mut statistics = Statistics::default();
         for (_, area) in &mut self.output_areas {

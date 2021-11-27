@@ -112,7 +112,7 @@ impl Statistics {
     }
     /// Returns true if at least one Citizen has the Disease
     pub fn disease_exists(&self) -> bool {
-        self.exposed == 0 && self.infected == 0
+        self.exposed != 0 && self.infected != 0
     }
 }
 

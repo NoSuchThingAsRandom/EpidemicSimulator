@@ -31,7 +31,7 @@ pub struct OutputArea {
 
 impl OutputArea {
     /// Builds a new output area, for the given code, polygon for drawing and a census record of the population
-    pub fn new(code: String, polygon: geo_types::Polygon<f64>, census_data: &PopRecord) -> OutputArea {
+    pub fn new(code: String, polygon: geo_types::Polygon<f64>, census_data: PopRecord) -> OutputArea {
         // TODO Fix this
         let mut household_classification = EnumMap::default();
         let mut citizens = HashMap::with_capacity(census_data.population_size as usize);
