@@ -58,7 +58,11 @@ impl BuildingCode {
 
 impl Display for BuildingCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Output Area: {}, Area Type: {:?}, Building ID: {}", self.output_area_code, self.area_type, self.building_id)
+        write!(
+            f,
+            "Output Area: {}, Area Type: {:?}, Building ID: {}",
+            self.output_area_code, self.area_type, self.building_id
+        )
     }
 }
 
@@ -85,7 +89,6 @@ pub enum BuildingType {
     Workplace,
 }
 
-
 /// This represents a home for Citizens
 ///
 /// Has an AreaCode for referencing it, and a list of Citizen ID's that live here
@@ -101,7 +104,11 @@ pub struct Building {
 impl Building {
     /// Creates a new building at the given location, with the specified type
     pub fn new(building_type: BuildingType, building_code: BuildingCode) -> Building {
-        Building { building_type, building_code, occupants: Vec::new() }
+        Building {
+            building_type,
+            building_code,
+            occupants: Vec::new(),
+        }
     }
     /// Adds the new citizen to this building
     pub fn add_citizen(&mut self, citizen_id: Uuid) {
@@ -119,6 +126,12 @@ impl Building {
 
 impl Display for Building {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} Building at {}, with {} residents", self.building_code, self.building_code, self.occupants.len())
+        write!(
+            f,
+            "{} Building at {}, with {} residents",
+            self.building_code,
+            self.building_code,
+            self.occupants.len()
+        )
     }
 }

@@ -3,31 +3,39 @@
 extern crate enum_map;
 
 use std::collections::HashMap;
-use std::fs::File;
 
 use log::info;
 
-use tables::population_and_density_per_output_area::PopulationRecord;
-
-use crate::parse_table::read_table;
 use crate::parsing_error::CensusError;
-use crate::tables::population_and_density_per_output_area::PreProcessingPopulationDensityRecord;
+use crate::tables::{PreProcessingTable, TableEntry};
 
 mod nomis_download;
-pub mod parsing_error;
 pub mod parse_table;
+pub mod parsing_error;
 pub mod tables;
 
 /// This loads a census data table from disk
-pub fn load_table_from_disk(table_name: String) -> Result<HashMap<String, PopulationRecord>, CensusError> {
-    info!("Loading census table: '{}'",table_name);
-    let reader = csv::Reader::from_path(table_name)?;
-    read_table::<File, PopulationRecord, PreProcessingPopulationDensityRecord>(reader)
+pub fn load_table_from_disk<T: TableEntry, U: 'static + PreProcessingTable>(
+    table_name: &str,
+) -> Result<HashMap<String, T>, CensusError> {
+    info!("Loading census table: '{}'", table_name);
+    let mut reader = csv::Reader::from_path(table_name)?;
+
+    let data: Result<Vec<U>, csv::Error> = reader.deserialize().collect();
+    let data = T::generate(data?)?;
+    Ok(data)
 }
 
 pub async fn download_york_population() -> Result<(), CensusError> {
     let path = nomis_download::table_144_york_output_areas(20000);
     let fetcher = nomis_download::DataFetcher::default();
-    fetcher.download_and_save_table(String::from("data/tables/york_population_144.csv"), path, 1000000, 20000).await?;
+    fetcher
+        .download_and_save_table(
+            String::from("data/tables/york_population_144.csv"),
+            path,
+            1000000,
+            20000,
+        )
+        .await?;
     Ok(())
 }

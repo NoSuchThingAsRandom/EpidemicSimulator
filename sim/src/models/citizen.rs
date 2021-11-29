@@ -24,10 +24,13 @@ pub struct Citizen {
     pub disease_status: DiseaseStatus,
 }
 
-
 impl Citizen {
     /// Generates a new Citizen with a random ID
-    pub fn new(household_code: BuildingCode, workplace_code: BuildingCode, work_type: WorkType) -> Citizen {
+    pub fn new(
+        household_code: BuildingCode,
+        workplace_code: BuildingCode,
+        work_type: WorkType,
+    ) -> Citizen {
         Citizen {
             id: Uuid::new_v4(),
             household_code: household_code.clone(),
@@ -59,7 +62,9 @@ impl Citizen {
     }
     /// Registers a new exposure to this citizen
     pub fn expose(&mut self, disease_model: &DiseaseModel, rng: &mut dyn RngCore) -> bool {
-        if self.disease_status == DiseaseStatus::Susceptible && rng.gen::<f64>() < disease_model.exposure_chance {
+        if self.disease_status == DiseaseStatus::Susceptible
+            && rng.gen::<f64>() < disease_model.exposure_chance
+        {
             self.disease_status = DiseaseStatus::Exposed(0);
             return true;
         }

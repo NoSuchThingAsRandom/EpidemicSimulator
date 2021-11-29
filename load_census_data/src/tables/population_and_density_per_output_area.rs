@@ -1,8 +1,8 @@
 //! Intermediary and Post Processing Structs for the NOMIS Census Table 144
-use std::any::{Any, type_name};
+use std::any::Any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 use enum_map::EnumMap;
 use serde::Deserialize;
@@ -53,7 +53,9 @@ pub enum PersonType {
     LivesInHousehold,
     #[serde(alias = "Lives in a communal establishment")]
     LivesInCommunalEstablishment,
-    #[serde(alias = "Schoolchild or full-time student aged 4 and over at their non term-time address")]
+    #[serde(
+    alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
+    )]
     Schoolchild,
 }
 
@@ -94,7 +96,9 @@ impl TableEntry for PopulationRecord {
     /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
     ///
     /// TODO: THIS IS SO FUCKING CURSED - NEEDS A REWRITE
-    fn generate(data: Vec<impl PreProcessingTable + 'static>) -> Result<HashMap<String, Self>, CensusError> {
+    fn generate(
+        data: Vec<impl PreProcessingTable + 'static>,
+    ) -> Result<HashMap<String, Self>, CensusError> {
         let mut buffer = HashMap::new();
         // Group the pre processing records, by output area
         for entry in data {
@@ -105,7 +109,13 @@ impl TableEntry for PopulationRecord {
                 }
                 buffer.get_mut(&entry.geography_name.to_string()).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Pre processing record, does not have a matching output area code, even though it should've been added???".to_string(), key: (entry.geography_name).to_string() } })?.push(entry);
             } else {
-                return Err(CensusError::ValueParsingError { source: ParseErrorType::InvalidDataType { value: None, expected_type: "Invalid pre processing type, for population density table!".to_string() } });
+                return Err(CensusError::ValueParsingError {
+                    source: ParseErrorType::InvalidDataType {
+                        value: None,
+                        expected_type: "Invalid pre processing type, for population density table!"
+                            .to_string(),
+                    },
+                });
             }
         }
         // Convert into Population Records
@@ -120,9 +130,17 @@ impl TableEntry for PopulationRecord {
 impl TryFrom<Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
     type Error = CensusError;
 
-    fn try_from(records: Vec<Box<PreProcessingPopulationDensityRecord>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        records: Vec<Box<PreProcessingPopulationDensityRecord>>,
+    ) -> Result<Self, Self::Error> {
         if records.is_empty() {
-            return Err(CensusError::ValueParsingError { source: ParseErrorType::IsEmpty { message: String::from("PreProcessingRecord list is empty, can't build a PopulationRecord!") } });
+            return Err(CensusError::ValueParsingError {
+                source: ParseErrorType::IsEmpty {
+                    message: String::from(
+                        "PreProcessingRecord list is empty, can't build a PopulationRecord!",
+                    ),
+                },
+            });
         }
         let geography_code = String::from(&records[0].geography_name);
         let geography_type = String::from(&records[0].geography_type);
@@ -132,10 +150,26 @@ impl TryFrom<Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecor
         let mut data: EnumMap<AreaClassification, EnumMap<PersonType, u16>> = EnumMap::default();
         for record in records {
             if record.geography_name != geography_code {
-                return Err(CensusError::ValueParsingError { source: ParseErrorType::Mismatching { message: String::from("Mis matching geography codes for pre processing records"), value_1: geography_code, value_2: record.geography_name.clone() } });
+                return Err(CensusError::ValueParsingError {
+                    source: ParseErrorType::Mismatching {
+                        message: String::from(
+                            "Mis matching geography codes for pre processing records",
+                        ),
+                        value_1: geography_code,
+                        value_2: record.geography_name.clone(),
+                    },
+                });
             }
             if record.geography_type != geography_type {
-                return Err(CensusError::ValueParsingError { source: ParseErrorType::Mismatching { message: String::from("Mis matching geography type for pre processing records"), value_1: geography_type, value_2: record.geography_type.clone() } });
+                return Err(CensusError::ValueParsingError {
+                    source: ParseErrorType::Mismatching {
+                        message: String::from(
+                            "Mis matching geography type for pre processing records",
+                        ),
+                        value_1: geography_type,
+                        value_2: record.geography_type.clone(),
+                    },
+                });
             }
             if record.measures_name == "Value" {
                 if &record.cell_name == "Area (Hectares)" {
@@ -143,8 +177,10 @@ impl TryFrom<Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecor
                 } else if &record.cell_name == "Density (number of persons per hectare)" {
                     density = record.obs_value.parse().unwrap_or(0.0);
                 } else {
-                    let area_classification: AreaClassification = serde_plain::from_str(&record.rural_urban_name)?;
-                    let person_classification: PersonType = serde_plain::from_str(&record.cell_name)?;
+                    let area_classification: AreaClassification =
+                        serde_plain::from_str(&record.rural_urban_name)?;
+                    let person_classification: PersonType =
+                        serde_plain::from_str(&record.cell_name)?;
                     let population_size = record.obs_value.parse()?;
                     total_population += population_size;
                     data[area_classification][person_classification] = population_size;

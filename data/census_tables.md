@@ -6,8 +6,8 @@ API CODE: https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv/summary
 
 |GEOGRAPHY_NAME|GEOGRAPHY_TYPE|RURAL_URBAN_NAME|RURAL_URBAN_TYPECODE|CELL_NAME|MEASURES_NAME|OBS_VALUE|OBS_STATUS|RECORD_OFFSET|RECORD_COUNT|
 |---|---|---|---|---|---|---|---|---|---|
-|E00062207|2011 output areas|Total|2000|All usual residents|Value|242|A|0|35645376|
-|E00062207|2011 output areas|Total|2000|All usual residents|Percent|100.0|A|1|35645376|
+|E00062207|2011 output areas|Total|2000|all usual residents|Value|242|A|0|35645376|
+|E00062207|2011 output areas|Total|2000|all usual residents|Percent|100.0|A|1|35645376|
 |E00062207|2011 output areas|Total|2000|Males|Value|116|A|2|35645376|
 |E00062207|2011 output areas|Total|2000|Males|Percent|47.9|A|3|35645376|
 |E00062207|2011 output areas|Total|2000|Females|Value|126|A|4|35645376|

@@ -5,6 +5,8 @@ use serde::de::DeserializeOwned;
 
 use crate::parsing_error::CensusError;
 
+pub mod employment_densities;
+pub mod occupation_count;
 pub mod population_and_density_per_output_area;
 
 /// This is used to load in a CSV file, and each row corresponds to one struct
@@ -16,5 +18,13 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {}
 /// Should contain a hashmap of OutputArea Codes to TableEntries
 pub trait TableEntry: Debug + Sized {
     /// Returns the entire processed CSV per output area
-    fn generate(data: Vec<impl PreProcessingTable + 'static>) -> Result<HashMap<String, Self>, CensusError>;
+    fn generate(
+        data: Vec<impl PreProcessingTable + 'static>,
+    ) -> Result<HashMap<String, Self>, CensusError>;
+}
+
+pub enum CensusTableNames {
+    OccupationCount,
+    PopulationDensity,
+    OutputAreaMap,
 }

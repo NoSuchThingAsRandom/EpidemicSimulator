@@ -1,8 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
-use csv::Error;
-
 #[derive(Debug)]
 pub enum SerdeErrors {
     Json { source: serde_json::Error },
@@ -16,26 +14,59 @@ pub enum ParseErrorType {
     /// Cannot parse the value into a float
     Float { source: ParseFloatError },
     /// The value is not the expected data type
-    InvalidDataType { value: Option<String>, expected_type: String },
+    InvalidDataType {
+        value: Option<String>,
+        expected_type: String,
+    },
     /// The collection is expected to contain one or more values
     IsEmpty { message: String },
     /// Two values should be equal, but are not
-    Mismatching { message: String, value_1: String, value_2: String },
+    Mismatching {
+        message: String,
+        value_1: String,
+        value_2: String,
+    },
     /// This occurs when the value corresponding to a key in a map is not there
     MissingKey { context: String, key: String },
 }
 
 impl Display for ParseErrorType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        /*        match self {
-                    ParseErrorType::Int { ref source } => {Some(source)}
-                    ParseErrorType::Float { ref source } => {Some(source)}
-                    ParseErrorType::InvalidDataType { ..} => {None}
-                    ParseErrorType::IsEmpty { .. } => {None}
-                    ParseErrorType::Mismatching { .. } => {None}
-                    ParseErrorType::MissingKey { .. } => {None}
-                };*/
-        write!(f, "FUCK")
+        match self {
+            ParseErrorType::Int { ref source } => {
+                write!(f, "{}", source)
+            }
+            ParseErrorType::Float { ref source } => {
+                write!(f, "{}", source)
+            }
+            ParseErrorType::InvalidDataType {
+                value,
+                expected_type,
+            } => {
+                write!(
+                    f,
+                    "Invalid Data Type: Expected {} got {:?}",
+                    expected_type, value
+                )
+            }
+            ParseErrorType::IsEmpty { message } => {
+                write!(f, "Object is empty: {}", message)
+            }
+            ParseErrorType::Mismatching {
+                message,
+                value_1,
+                value_2,
+            } => {
+                write!(
+                    f,
+                    "Values ({}) and  ({}) should be matching. {}",
+                    value_1, value_2, message
+                )
+            }
+            ParseErrorType::MissingKey { context, key } => {
+                write!(f, "Missing Key! Context: {}. Key: {}", context, key)
+            }
+        }
     }
 }
 
@@ -50,23 +81,21 @@ pub enum CensusError {
     /// An error occurs trying to parse or convert a Value
     ValueParsingError { source: ParseErrorType },
     /// An error occurs reading from disk
-    IOError { source: Box<dyn std::error::Error + Send + Sync> },
+    IOError {
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 }
 
 impl std::error::Error for CensusError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
-            CensusError::NetworkError { ref source } => {
-                Some(source)
-            }
-            CensusError::SerdeParseError { ref source } => {
-                match source {
-                    SerdeErrors::Json { ref source } => { Some(source) }
-                    SerdeErrors::Plain { ref source } => { Some(source) }
-                }
-            }
-            CensusError::ValueParsingError { ref source } => { Some(source) }
-            CensusError::IOError { ref source } => { source.source() }
+            CensusError::NetworkError { ref source } => Some(source),
+            CensusError::SerdeParseError { ref source } => match source {
+                SerdeErrors::Json { ref source } => Some(source),
+                SerdeErrors::Plain { ref source } => Some(source),
+            },
+            CensusError::ValueParsingError { ref source } => Some(source),
+            CensusError::IOError { ref source } => source.source(),
         }
     }
 }
@@ -78,38 +107,50 @@ impl From<reqwest::Error> for CensusError {
 }
 
 impl From<csv::Error> for CensusError {
-    fn from(e: Error) -> Self {
-        CensusError::IOError { source: Box::new(e) }
+    fn from(err: csv::Error) -> Self {
+        CensusError::IOError {
+            source: Box::new(err),
+        }
     }
 }
 
 impl From<std::io::Error> for CensusError {
     fn from(e: std::io::Error) -> Self {
-        CensusError::IOError { source: Box::new(e) }
+        CensusError::IOError {
+            source: Box::new(e),
+        }
     }
 }
 
 impl From<serde_json::Error> for CensusError {
     fn from(err: serde_json::Error) -> Self {
-        CensusError::SerdeParseError { source: SerdeErrors::Json { source: err } }
+        CensusError::SerdeParseError {
+            source: SerdeErrors::Json { source: err },
+        }
     }
 }
 
 impl From<serde_plain::Error> for CensusError {
     fn from(err: serde_plain::Error) -> Self {
-        CensusError::SerdeParseError { source: SerdeErrors::Plain { source: err } }
+        CensusError::SerdeParseError {
+            source: SerdeErrors::Plain { source: err },
+        }
     }
 }
 
 impl From<ParseIntError> for CensusError {
     fn from(err: ParseIntError) -> Self {
-        CensusError::ValueParsingError { source: ParseErrorType::Int { source: err } }
+        CensusError::ValueParsingError {
+            source: ParseErrorType::Int { source: err },
+        }
     }
 }
 
 impl From<ParseFloatError> for CensusError {
     fn from(err: ParseFloatError) -> Self {
-        CensusError::ValueParsingError { source: ParseErrorType::Float { source: err } }
+        CensusError::ValueParsingError {
+            source: ParseErrorType::Float { source: err },
+        }
     }
 }
 
@@ -142,9 +183,12 @@ impl Display for CensusError {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: ParsingError\n        Source: {} ", source)
             }
             CensusError::IOError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {} ", source)
+                write!(
+                    f,
+                    "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {} ",
+                    source
+                )
             }
         }
     }
 }
-

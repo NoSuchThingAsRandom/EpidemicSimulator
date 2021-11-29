@@ -19,11 +19,12 @@ pub enum DiseaseStatus {
 }
 
 impl DiseaseStatus {
-    pub fn execute_time_step(status: &DiseaseStatus, disease_model: &DiseaseModel) -> DiseaseStatus {
+    pub fn execute_time_step(
+        status: &DiseaseStatus,
+        disease_model: &DiseaseModel,
+    ) -> DiseaseStatus {
         match status {
-            DiseaseStatus::Susceptible => {
-                DiseaseStatus::Susceptible
-            }
+            DiseaseStatus::Susceptible => DiseaseStatus::Susceptible,
             DiseaseStatus::Exposed(time) => {
                 if disease_model.exposed_time <= *time {
                     DiseaseStatus::Infected(0)
@@ -38,7 +39,7 @@ impl DiseaseStatus {
                     DiseaseStatus::Infected(time + 1)
                 }
             }
-            DiseaseStatus::Recovered => { DiseaseStatus::Recovered }
+            DiseaseStatus::Recovered => DiseaseStatus::Recovered,
         }
     }
 }
@@ -107,7 +108,9 @@ impl Statistics {
             Ok(())
         } else {
             error!("Cannot log citizen being exposed, as no susceptible citizens left");
-            return Err(crate::error::MyError::new(String::from("Cannot expose citizen as no citizens are susceptible!")));
+            return Err(crate::error::MyError::new(String::from(
+                "Cannot expose citizen as no citizens are susceptible!",
+            )));
         }
     }
     /// Returns true if at least one Citizen has the Disease
@@ -115,7 +118,6 @@ impl Statistics {
         self.exposed != 0 && self.infected != 0
     }
 }
-
 
 impl Default for Statistics {
     fn default() -> Self {
@@ -131,7 +133,11 @@ impl Default for Statistics {
 
 impl Display for Statistics {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Hour: {}, Susceptible: {}, Exposed: {}, Infected: {}, Recovered: {}", self.time_step, self.susceptible, self.exposed, self.infected, self.recovered)
+        write!(
+            f,
+            "Hour: {}, Susceptible: {}, Exposed: {}, Infected: {}, Recovered: {}",
+            self.time_step, self.susceptible, self.exposed, self.infected, self.recovered
+        )
     }
 }
 
@@ -142,7 +148,6 @@ pub struct DiseaseModel {
     pub exposed_time: u16,
     pub infected_time: u16,
     pub max_time_step: u16,
-
 }
 
 impl DiseaseModel {
@@ -153,7 +158,14 @@ impl DiseaseModel {
     /// Exposure Time - 4 days
     /// Infected Time - 14 days
     pub fn covid() -> DiseaseModel {
-        DiseaseModel { reproduction_rate: 2.5, exposure_chance: 0.6, death_rate: 0.05, exposed_time: 4 * 24, infected_time: 14 * 24, max_time_step: 1000 }
+        DiseaseModel {
+            reproduction_rate: 2.5,
+            exposure_chance: 0.6,
+            death_rate: 0.05,
+            exposed_time: 4 * 24,
+            infected_time: 14 * 24,
+            max_time_step: 1000,
+        }
     }
 }
 
@@ -169,7 +181,10 @@ pub struct Exposure {
 impl Exposure {
     /// Create a new exposure event from the given citizen at the given building
     pub fn new(citizen_id: Uuid, building: BuildingCode) -> Exposure {
-        Exposure { infector_id: citizen_id, building_code: building }
+        Exposure {
+            infector_id: citizen_id,
+            building_code: building,
+        }
     }
     pub fn output_area_code(&self) -> String {
         self.building_code.output_area_code()
@@ -184,6 +199,10 @@ impl Exposure {
 
 impl Display for Exposure {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Exposure by {}, at {} ", self.infector_id, self.building_code)
+        write!(
+            f,
+            "Exposure by {}, at {} ",
+            self.infector_id, self.building_code
+        )
     }
 }

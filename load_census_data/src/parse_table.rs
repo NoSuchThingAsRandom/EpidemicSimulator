@@ -5,12 +5,9 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs::File;
 use std::io::Write;
 
-use log::error;
 use serde_json::Value;
 
 use crate::parsing_error::{CensusError, ParseErrorType};
-use crate::tables::{PreProcessingTable, TableEntry};
-use crate::tables::population_and_density_per_output_area::{PopulationRecord, PreProcessingPopulationDensityRecord};
 
 pub struct TableInfo {
     id: String,
@@ -21,17 +18,68 @@ pub struct TableInfo {
     geo_level: Vec<String>,
 }
 
-
 impl TryFrom<HashMap<String, String>> for TableInfo {
     type Error = CensusError;
 
     fn try_from(value: HashMap<String, String>) -> Result<Self, Self::Error> {
-        let id = value.get("id").ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: String::from("Table info"), key: "id".to_string() } })?.to_string();
-        let source = value.get("contenttype/sources").ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: String::from("Table info"), key: "contenttype/sources".to_string() } })?.to_string();
-        let coded_name = value.get("Mnemonic").ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: String::from("Table info"), key: "Mnemonic".to_string() } })?.to_string();
-        let metadata = value.get("MetadataText0").ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: String::from("Table info"), key: "MetadataText0".to_string() } })?.to_string();
-        let keywords = value.get("Keywords").ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: String::from("Table info"), key: "Keywords".to_string() } })?.split(',').map(|s| s.to_string()).collect();
-        let geo_level = value.get("contenttype/geoglevel").ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: String::from("Table info"), key: "contenttype/geoglevel".to_string() } })?.split(',').map(|s| s.to_string()).collect();
+        let id = value
+            .get("id")
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: String::from("Table info"),
+                    key: "id".to_string(),
+                },
+            })?
+            .to_string();
+        let source = value
+            .get("contenttype/sources")
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: String::from("Table info"),
+                    key: "contenttype/sources".to_string(),
+                },
+            })?
+            .to_string();
+        let coded_name = value
+            .get("Mnemonic")
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: String::from("Table info"),
+                    key: "Mnemonic".to_string(),
+                },
+            })?
+            .to_string();
+        let metadata = value
+            .get("MetadataText0")
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: String::from("Table info"),
+                    key: "MetadataText0".to_string(),
+                },
+            })?
+            .to_string();
+        let keywords = value
+            .get("Keywords")
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: String::from("Table info"),
+                    key: "Keywords".to_string(),
+                },
+            })?
+            .split(',')
+            .map(|s| s.to_string())
+            .collect();
+        let geo_level = value
+            .get("contenttype/geoglevel")
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: String::from("Table info"),
+                    key: "contenttype/geoglevel".to_string(),
+                },
+            })?
+            .split(',')
+            .map(|s| s.to_string())
+            .collect();
 
         Ok(TableInfo {
             id,
@@ -46,7 +94,11 @@ impl TryFrom<HashMap<String, String>> for TableInfo {
 
 impl Display for TableInfo {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ID: {}, Coded Name: {}, Source: {}, Keywords: ({:?}), Geo Levels: {:?}", self.id, self.coded_name, self.source, self.keywords, self.geo_level)
+        write!(
+            f,
+            "ID: {}, Coded Name: {}, Source: {}, Keywords: ({:?}), Geo Levels: {:?}",
+            self.id, self.coded_name, self.source, self.keywords, self.geo_level
+        )
     }
 }
 
@@ -56,16 +108,8 @@ impl Debug for TableInfo {
     }
 }
 
-
-pub fn read_table<R: std::io::Read, T: TableEntry, U: 'static + PreProcessingTable>(mut data: csv::Reader<R>) -> Result<HashMap<String, T>, CensusError> {
-    let data: Vec<U> = data.deserialize().map(|entry| entry.unwrap()).collect();
-    let data = T::generate(data)?;
-    Ok(data)
-}
-
 pub fn parse_jsontable_list(json: Value) -> Result<Vec<TableInfo>, CensusError> {
     let mut tables = Vec::new();
-
 
     let structure = extract_value_from_json(&json, "structure")?;
     let key_families_object = extract_value_from_json(structure, "keyfamilies")?;
@@ -103,33 +147,89 @@ pub async fn read_json(filename: String) -> Result<Value, String> {
 
 pub fn write_file(filename: String, data: String) -> Result<(), String> {
     let mut file = File::create(filename).map_err(|e| format!("{:?}", e))?;
-    file.write_all(data.as_bytes()).map_err(|e| format!("{:?}", e))?;
+    file.write_all(data.as_bytes())
+        .map_err(|e| format!("{:?}", e))?;
     file.flush().unwrap();
     Ok(())
 }
 
 fn extract_value_from_json<'a>(object: &'a Value, name: &str) -> Result<&'a Value, CensusError> {
-    let object = object.get(name).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Extracting value from JSON".to_string(), key: name.to_string() } })?;
+    let object = object
+        .get(name)
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::MissingKey {
+                context: "Extracting value from JSON".to_string(),
+                key: name.to_string(),
+            },
+        })?;
     Ok(object)
 }
 
 fn extract_string_from_json(object: &Value, name: &str) -> Result<String, CensusError> {
-    let object = object.get(name).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Extracting string from JSON".to_string(), key: name.to_string() } })?;
+    let object = object
+        .get(name)
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::MissingKey {
+                context: "Extracting string from JSON".to_string(),
+                key: name.to_string(),
+            },
+        })?;
     if let Value::Number(n) = object {
         return Ok(n.to_string());
     }
-    let object = object.as_str().ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::InvalidDataType { value: Some(object.to_string()), expected_type: "String".to_string() } })?;
+    let object = object
+        .as_str()
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::InvalidDataType {
+                value: Some(object.to_string()),
+                expected_type: "String".to_string(),
+            },
+        })?;
     Ok(object.to_string())
 }
 
-fn extract_array_from_json<'a>(object: &'a Value, name: &str) -> Result<&'a Vec<Value>, CensusError> {
-    let object = object.get(name).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Extracting array from JSON".to_string(), key: name.to_string() } })?;
-    let object = object.as_array().ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::InvalidDataType { value: Some(object.to_string()), expected_type: "Array".to_string() } })?;
+fn extract_array_from_json<'a>(
+    object: &'a Value,
+    name: &str,
+) -> Result<&'a Vec<Value>, CensusError> {
+    let object = object
+        .get(name)
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::MissingKey {
+                context: "Extracting array from JSON".to_string(),
+                key: name.to_string(),
+            },
+        })?;
+    let object = object
+        .as_array()
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::InvalidDataType {
+                value: Some(object.to_string()),
+                expected_type: "Array".to_string(),
+            },
+        })?;
     Ok(object)
 }
 
-fn extract_map_from_json<'a>(object: &'a Value, name: &str) -> Result<&'a serde_json::Map<String, Value>, CensusError> {
-    let object = object.get(name).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Extracting map from JSON".to_string(), key: name.to_string() } })?;
-    let object = object.as_object().ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::InvalidDataType { value: Some(object.to_string()), expected_type: "Map".to_string() } })?;
+fn extract_map_from_json<'a>(
+    object: &'a Value,
+    name: &str,
+) -> Result<&'a serde_json::Map<String, Value>, CensusError> {
+    let object = object
+        .get(name)
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::MissingKey {
+                context: "Extracting map from JSON".to_string(),
+                key: name.to_string(),
+            },
+        })?;
+    let object = object
+        .as_object()
+        .ok_or_else(|| CensusError::ValueParsingError {
+            source: ParseErrorType::InvalidDataType {
+                value: Some(object.to_string()),
+                expected_type: "Map".to_string(),
+            },
+        })?;
     Ok(object)
 }

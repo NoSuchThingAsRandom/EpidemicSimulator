@@ -1,5 +1,4 @@
 //! Module used for download Census Tables from the NOMIS API
-use std::fs::File;
 use std::io::Write;
 use std::time::Instant;
 
@@ -15,7 +14,6 @@ const ENGLAND_OUTPUT_AREAS_CODE: &str = "2092957699TYPE299";
 const POPULATION_TABLE_CODE: &str = "NM_144_1";
 const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
 
-
 /// This is a struct to download census tables from the NOMIS api
 pub struct DataFetcher {
     client: reqwest::Client,
@@ -23,15 +21,19 @@ pub struct DataFetcher {
 
 impl Default for DataFetcher {
     fn default() -> Self {
-        DataFetcher { client: reqwest::Client::default() }
+        DataFetcher {
+            client: reqwest::Client::default(),
+        }
     }
 }
-
 
 impl DataFetcher {
     /// Retrieves a list of all the census 20211 tables
     pub async fn get_list_of_census_2011_dataset_names(&self) -> Result<Value, CensusError> {
-        let api: String = format!("{}dataset/def.sdmx.json?search=c2011*&uid=0xca845fec90a78b8554b075b32294605f543d9c48", NOMIS_API);
+        let api: String = format!(
+            "{}dataset/def.sdmx.json?search=c2011*&uid=0xca845fec90a78b8554b075b32294605f543d9c48",
+            NOMIS_API
+        );
         println!("Making request to: {}", api);
         let request = self.client.get(api).send().await?;
         println!("Got response: {:?}", request);
@@ -53,7 +55,12 @@ impl DataFetcher {
         Ok(())
     }
     /// Downloads a census table from the NOMIS api
-    pub async fn get_table(&self, id: String, number_of_records: usize, page_size: usize) -> Result<String, CensusError> {
+    pub async fn get_table(
+        &self,
+        id: String,
+        number_of_records: usize,
+        page_size: usize,
+    ) -> Result<String, CensusError> {
         let mut path = String::from(NOMIS_API);
         path.push_str(&id);
         path.push_str(".data.csv");
@@ -78,11 +85,17 @@ impl DataFetcher {
             debug!("Got response: {:?}", request);
             let new_data = request.text().await?;
             data.push_str(new_data.as_str());
-            info!("Completed request {} in {:?}",index,start_time.elapsed());
+            info!("Completed request {} in {:?}", index, start_time.elapsed());
         }
         Ok(data)
     }
-    pub async fn download_and_save_table(&self, filename: String, request: String, number_of_records: usize, page_size: usize) -> Result<(), CensusError> {
+    pub async fn download_and_save_table(
+        &self,
+        filename: String,
+        request: String,
+        number_of_records: usize,
+        page_size: usize,
+    ) -> Result<(), CensusError> {
         let start_time = Instant::now();
         let mut file = std::fs::File::create(filename)?;
         for index in 0..(number_of_records as f64 / page_size as f64).ceil() as usize {
@@ -103,7 +116,7 @@ impl DataFetcher {
                 break;
             }
             file.write_all(new_data.as_bytes())?;
-            info!("Completed request {} in {:?}",index,start_time.elapsed());
+            info!("Completed request {} in {:?}", index, start_time.elapsed());
         }
         file.flush()?;
         Ok(())
