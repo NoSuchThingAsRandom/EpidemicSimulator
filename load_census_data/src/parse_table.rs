@@ -9,7 +9,8 @@ use log::error;
 use serde_json::Value;
 
 use crate::parsing_error::{CensusError, ParseErrorType};
-use crate::population_and_density_per_output_area::{PopulationRecord, PreProcessingRecord};
+use crate::tables::{PreProcessingTable, TableEntry};
+use crate::tables::population_and_density_per_output_area::{PopulationRecord, PreProcessingPopulationDensityRecord};
 
 pub struct TableInfo {
     id: String,
@@ -55,35 +56,11 @@ impl Debug for TableInfo {
     }
 }
 
-/// Processes the incoming data from the reader (line by line, expected to be a CSV) and attempts to build a population record from it
-pub fn parse_table<R: std::io::Read>(mut data: csv::Reader<R>) -> Result<HashMap<String, PopulationRecord>, CensusError> {
-    //let mut csv_reader = csv::Reader::from_reader(data.as_bytes());
-    let mut output = HashMap::new();
 
-    let mut current_area = String::from("");
-    let mut buffer = Vec::new();
-
-    for line in data.deserialize() {
-        let record: Result<PreProcessingRecord, csv::Error> = line;
-        match record {
-            Ok(record) => {
-                if record.geography_name != current_area {
-                    if !current_area.is_empty() {
-                        let pop_record = PopulationRecord::try_from(buffer);
-                        match pop_record {
-                            Ok(pop_record) => { output.insert(current_area, pop_record); }
-                            Err(e) => { error!("{}",e); }
-                        }
-                        buffer = Vec::new();
-                    }
-                    current_area = String::from(&record.geography_name);
-                }
-                buffer.push(record);
-            }
-            Err(e) => error!("{}",e)
-        }
-    }
-    Ok(output)
+pub fn read_table<R: std::io::Read, T: TableEntry, U: 'static + PreProcessingTable>(mut data: csv::Reader<R>) -> Result<HashMap<String, T>, CensusError> {
+    let data: Vec<U> = data.deserialize().map(|entry| entry.unwrap()).collect();
+    let data = T::generate(data)?;
+    Ok(data)
 }
 
 pub fn parse_jsontable_list(json: Value) -> Result<Vec<TableInfo>, CensusError> {

@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use uuid::Uuid;
 
-use load_census_data::table_144_enum_values::AreaClassification;
+use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 /// This is used to represent a building location
 ///

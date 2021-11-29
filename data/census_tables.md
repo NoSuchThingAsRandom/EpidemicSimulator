@@ -22,3 +22,27 @@ API CODE: https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv/summary
 |E00062207|2011 output areas|Total|2000|Area (Hectares)|Percent||Q|13|35645376|
 |E00062207|2011 output areas|Total|2000|Density (number of persons per hectare)|Value|0.3|A|14|35645376|
 |E00062207|2011 output areas|Total|2000|Density (number of persons per hectare)|Percent||Q|15|35645376|
+
+# Employment Densities
+
+Page 9 of Employment Densities Guide: 2nd
+Edition: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/378203/employ-den.pdf
+https://www.gov.uk/government/publications/employment-densities-guide
+
+# Population Per Occupation
+
+# Distance travelled to work:
+
+https://www.nomisweb.co.uk/census/2011/wd702ew
+
+Need to figure out size of output areas But can be used to spread out workers to different areas
+
+# Home Residence to Work Place Position - wf01bew
+
+Counts the number of workers in output areas, against the output area they reside in Used for modelling migration of
+workers
+https://www.nomisweb.co.uk/census/2011/wf01bew
+
+# Occupation Type Counts - ks608uk
+
+https://www.nomisweb.co.uk/census/2011/ks608uk

@@ -7,7 +7,7 @@ use log::{debug, info};
 use serde_json::Value;
 
 use crate::parsing_error::CensusError;
-use crate::population_and_density_per_output_area::SELECTED_COLUMNS;
+use crate::tables::population_and_density_per_output_area::SELECTED_COLUMNS;
 
 const YORK_OUTPUT_AREA_CODE: &str = "1254162148...1254162748,1254262205...1254262240";
 //https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv?date=latest&geography=1254162148...1254162748,1254262205...1254262240&rural_urban=0&cell=0&measures=20100";

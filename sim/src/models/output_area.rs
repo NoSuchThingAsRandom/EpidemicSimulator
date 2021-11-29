@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use enum_map::EnumMap;
 use uuid::Uuid;
 
-use load_census_data::population_and_density_per_output_area::PopulationRecord as PopRecord;
-use load_census_data::table_144_enum_values::{AreaClassification, PersonType};
+use load_census_data::tables::population_and_density_per_output_area::{AreaClassification, PersonType, PopulationRecord as PopRecord};
 
 use crate::models::building::{Building, BuildingCode, BuildingType};
 use crate::models::citizen::{Citizen, WorkType};

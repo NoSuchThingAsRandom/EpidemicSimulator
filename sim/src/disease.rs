@@ -4,7 +4,7 @@ use std::hash::Hash;
 use log::error;
 use uuid::Uuid;
 
-use load_census_data::table_144_enum_values::AreaClassification;
+use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::models::building::BuildingCode;
 
