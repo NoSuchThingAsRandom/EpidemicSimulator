@@ -18,8 +18,6 @@
  *
  */
 
-
-
 pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per workplace building
 pub const WORKPLACE_BUILDING_SIZE: u16 = 200;

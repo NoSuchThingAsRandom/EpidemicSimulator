@@ -69,7 +69,7 @@ impl Simulator {
 
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
-            info!("{}",entry.output_area_code);
+            info!("{}", entry.output_area_code);
             let polygon = output_areas_polygons
                 .remove(&entry.output_area_code)
                 .ok_or_else(|| CensusError::ValueParsingError {
@@ -79,13 +79,12 @@ impl Simulator {
                     },
                 })?;
             starting_population += entry.total_population_size() as u32;
-            let new = OutputArea::new(entry.output_area_code.to_string(), polygon, entry, &mut rng)?;
-
+            let new =
+                OutputArea::new(entry.output_area_code.to_string(), polygon, entry, &mut rng)?;
 
             output_areas.insert(new.code.to_string(), new);
         }
         info!("Built residential population in {:?}", start.elapsed());
-
 
         let mut simulator = Simulator {
             current_population: starting_population,
@@ -98,7 +97,7 @@ impl Simulator {
         // Build the workplaces
         simulator.build_workplaces(census_data)?;
         println!("{:?}", simulator.output_areas);
-        info!("Generated workplaces in {:?}",start.elapsed());
+        info!("Generated workplaces in {:?}", start.elapsed());
         // Infect random citizens
         simulator.apply_initial_infections()?;
 
@@ -120,15 +119,34 @@ impl Simulator {
         // Add Workplace Output Areas to Every Citizen
         let mut citizens_to_allocate: HashMap<String, Vec<(String, Uuid)>> = HashMap::new();
         for household_output_area_code in areas {
-            let household_output_area = self.output_areas.get_mut(&household_output_area_code).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Retrieving output area for building workplaces ".to_string(), key: household_output_area_code.to_string() } })?;
-            let household_census_data = census_data.get_output_area(&household_output_area_code).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve Census Data for output area ".to_string(), key: household_output_area_code.to_string() } })?;
+            let household_output_area = self
+                .output_areas
+                .get_mut(&household_output_area_code)
+                .ok_or_else(|| CensusError::ValueParsingError {
+                    source: ParseErrorType::MissingKey {
+                        context: "Retrieving output area for building workplaces ".to_string(),
+                        key: household_output_area_code.to_string(),
+                    },
+                })?;
+            let household_census_data = census_data
+                .get_output_area(&household_output_area_code)
+                .ok_or_else(|| CensusError::ValueParsingError {
+                    source: ParseErrorType::MissingKey {
+                        context: "Cannot retrieve Census Data for output area ".to_string(),
+                        key: household_output_area_code.to_string(),
+                    },
+                })?;
 
             for citizen_id in household_output_area.citizens.keys() {
-                let workplace_output_area_code = household_census_data.get_random_workplace_area(&mut self.rng)?;
+                let workplace_output_area_code =
+                    household_census_data.get_random_workplace_area(&mut self.rng)?;
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
                     citizens_to_allocate.insert(workplace_output_area_code.to_string(), Vec::new());
                 }
-                citizens_to_allocate.get_mut(&workplace_output_area_code).unwrap().push((household_output_area_code.to_string(), *citizen_id));
+                citizens_to_allocate
+                    .get_mut(&workplace_output_area_code)
+                    .unwrap()
+                    .push((household_output_area_code.to_string(), *citizen_id));
             }
         }
 
@@ -139,15 +157,29 @@ impl Simulator {
             to_allocate.shuffle(&mut self.rng);
 
             // This is the workplace list to allocate citizens to
-            let mut current_workplaces_to_allocate: HashMap<OccupationType, Workplace> = HashMap::new();
+            let mut current_workplaces_to_allocate: HashMap<OccupationType, Workplace> =
+                HashMap::new();
 
             // This is the list of full workplaces that need to be added to the parent Output Area
             let mut workplace_buildings: HashMap<Uuid, Box<dyn Building>> = HashMap::new();
             for (home_output_area_code, citizen_id) in to_allocate {
-                let citizen = self.output_areas.get_mut(&home_output_area_code)
-                    .ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Retrieving output area for building workplaces ".to_string(), key: home_output_area_code.to_string() } })?
-                    .citizens.get_mut(&citizen_id)
-                    .ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve Citizen to assign workplace ".to_string(), key: citizen_id.to_string() } })?;
+                let citizen = self
+                    .output_areas
+                    .get_mut(&home_output_area_code)
+                    .ok_or_else(|| CensusError::ValueParsingError {
+                        source: ParseErrorType::MissingKey {
+                            context: "Retrieving output area for building workplaces ".to_string(),
+                            key: home_output_area_code.to_string(),
+                        },
+                    })?
+                    .citizens
+                    .get_mut(&citizen_id)
+                    .ok_or_else(|| CensusError::ValueParsingError {
+                        source: ParseErrorType::MissingKey {
+                            context: "Cannot retrieve Citizen to assign workplace ".to_string(),
+                            key: citizen_id.to_string(),
+                        },
+                    })?;
 
                 // 3 Cases
                 // Work place exists and Citizen can be added:
@@ -166,17 +198,36 @@ impl Simulator {
                         match workplace.add_citizen(citizen_id) {
                             Ok(_) => workplace,
                             Err(_) => {
-                                workplace_buildings.insert(workplace.building_code().building_id(), Box::new(workplace));
+                                workplace_buildings.insert(
+                                    workplace.building_code().building_id(),
+                                    Box::new(workplace),
+                                );
                                 // TODO Have better distribution of AreaClassification?
-                                let mut workplace = Workplace::new(BuildingCode::new(workplace_area_code.clone(), AreaClassification::UrbanCity), WORKPLACE_BUILDING_SIZE, citizen.occupation());
-                                workplace.add_citizen(citizen_id).context("Cannot add Citizen to freshly generated Workplace!")?;
+                                let mut workplace = Workplace::new(
+                                    BuildingCode::new(
+                                        workplace_area_code.clone(),
+                                        AreaClassification::UrbanCity,
+                                    ),
+                                    WORKPLACE_BUILDING_SIZE,
+                                    citizen.occupation(),
+                                );
+                                workplace.add_citizen(citizen_id).context(
+                                    "Cannot add Citizen to freshly generated Workplace!",
+                                )?;
                                 workplace
                             }
                         }
                     }
                     None => {
                         // TODO Have better distrubution of AreaClassification?
-                        let mut workplace = Workplace::new(BuildingCode::new(workplace_area_code.clone(), AreaClassification::UrbanCity), WORKPLACE_BUILDING_SIZE, citizen.occupation());
+                        let mut workplace = Workplace::new(
+                            BuildingCode::new(
+                                workplace_area_code.clone(),
+                                AreaClassification::UrbanCity,
+                            ),
+                            WORKPLACE_BUILDING_SIZE,
+                            citizen.occupation(),
+                        );
                         workplace.add_citizen(citizen_id)?;
                         workplace
                     }
@@ -185,15 +236,24 @@ impl Simulator {
                 // Add the unfilled workplace back to the allocator
                 current_workplaces_to_allocate.insert(citizen.occupation(), workplace);
             }
-            let workplace_output_area = self.output_areas.get_mut(&workplace_area_code)
-                .ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Retrieving output area for building workplaces ".to_string(), key: workplace_area_code.to_string() } })?;
-            workplace_output_area.buildings[AreaClassification::UrbanCity].extend(workplace_buildings);
+            let workplace_output_area = self
+                .output_areas
+                .get_mut(&workplace_area_code)
+                .ok_or_else(|| CensusError::ValueParsingError {
+                    source: ParseErrorType::MissingKey {
+                        context: "Retrieving output area for building workplaces ".to_string(),
+                        key: workplace_area_code.to_string(),
+                    },
+                })?;
+            workplace_output_area.buildings[AreaClassification::UrbanCity]
+                .extend(workplace_buildings);
         }
         Ok(())
     }
 
     pub fn apply_initial_infections(&mut self) -> anyhow::Result<()> {
-        let starting_area_code = self.output_areas
+        let starting_area_code = self
+            .output_areas
             .keys()
             .choose(&mut self.rng)
             .ok_or_else(|| CensusError::ValueParsingError {
@@ -203,7 +263,8 @@ impl Simulator {
             })
             .context("Initialisation of disease!")?
             .to_string();
-        let starting_area = self.output_areas
+        let starting_area = self
+            .output_areas
             .get_mut(&starting_area_code)
             .ok_or_else(|| CensusError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
@@ -242,7 +303,6 @@ impl Simulator {
     }
 }
 
-
 /// Runtime Simulation Methods
 impl Simulator {
     pub fn simulate(&mut self) -> anyhow::Result<()> {
@@ -262,7 +322,7 @@ impl Simulator {
                     "Disease finished at {} as no one has the disease",
                     time_step
                 );
-                debug!("{}",self.current_statistics);
+                debug!("{}", self.current_statistics);
                 break;
             }
         }
@@ -284,12 +344,14 @@ impl Simulator {
                 }
             }
         }
-        debug!("There are {} exposures",exposure_list.len());
+        debug!("There are {} exposures", exposure_list.len());
         for exposure in exposure_list {
             let area = self.output_areas.get_mut(&exposure.output_area_code());
             match area {
                 Some(area) => {
-                    let building = &area.buildings[exposure.area_classification()].get_mut(&exposure.building_code()).context(format!("Failed to retrieve exposure building {}", exposure));
+                    let building = &area.buildings[exposure.area_classification()]
+                        .get_mut(&exposure.building_code())
+                        .context(format!("Failed to retrieve exposure building {}", exposure));
                     if let Err(e) = building {
                         println!("Fuck: {}", e);
                     }
@@ -306,9 +368,9 @@ impl Simulator {
                             }
                             None => {
                                 error!(
-                                        "Citizen {}, does not exist in the expected area {}",
-                                        citizen_id, area.code
-                                    );
+                                    "Citizen {}, does not exist in the expected area {}",
+                                    citizen_id, area.code
+                                );
                             }
                         }
                     }

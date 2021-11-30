@@ -47,7 +47,7 @@ pub enum OccupationType {
     #[serde(alias = "Occupation: 5. Skilled trades occupations; measures: Value")]
     SkilledTrades,
     #[serde(
-    alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
+        alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
     )]
     Caring,
     #[serde(alias = "Occupation: 7. sales and customer service occupations; measures: Value")]

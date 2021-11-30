@@ -114,7 +114,6 @@ impl PartialEq<Self> for BuildingCode {
 
 impl Eq for BuildingCode {}
 
-
 /// The types of buildings that can exist
 pub enum BuildingType {
     /// A place where Citizens reside at night
@@ -138,7 +137,6 @@ pub trait Building: Display + Debug {
     fn occupants(&self) -> &Vec<Uuid>;
 }
 
-
 #[derive(Debug)]
 pub struct Household {
     /// This is unique to the specific output area - ~250 households
@@ -148,8 +146,7 @@ pub struct Household {
 }
 
 impl Household {
-    pub(crate) fn new(building_code: BuildingCode) -> Self
-    {
+    pub(crate) fn new(building_code: BuildingCode) -> Self {
         Household {
             building_code,
             occupants: Vec::new(),
@@ -171,7 +168,6 @@ impl Building for Household {
         &self.occupants
     }
 }
-
 
 impl Display for Household {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -196,8 +192,11 @@ pub struct Workplace {
 }
 
 impl Workplace {
-    pub fn new(building_code: BuildingCode, floor_space: u16, occupation_type: OccupationType) -> Self
-    {
+    pub fn new(
+        building_code: BuildingCode,
+        floor_space: u16,
+        occupation_type: OccupationType,
+    ) -> Self {
         Workplace {
             building_code,
             occupants: Vec::new(),
@@ -206,14 +205,19 @@ impl Workplace {
         }
     }
     pub fn is_at_capacity(&self) -> bool {
-        (self.floor_space as usize) <= (self.occupants.len() * EmploymentDensities::get_size_for_occupation(self.workplace_occupation_type) as usize)
+        (self.floor_space as usize)
+            <= (self.occupants.len()
+            * EmploymentDensities::get_size_for_occupation(self.workplace_occupation_type)
+            as usize)
     }
 }
 
 impl Building for Workplace {
     fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError> {
         if self.is_at_capacity() {
-            return Err(MyError::new("Workplace has full occupancy, so cannot add new occupant".to_string()));
+            return Err(MyError::new(
+                "Workplace has full occupancy, so cannot add new occupant".to_string(),
+            ));
         }
         self.occupants.push(citizen_id);
         Ok(())
@@ -227,7 +231,6 @@ impl Building for Workplace {
         &self.occupants
     }
 }
-
 
 impl Display for Workplace {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

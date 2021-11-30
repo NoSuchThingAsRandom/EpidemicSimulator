@@ -138,7 +138,9 @@ impl CensusData {
         let keys = self.population_counts.keys();
         keys.filter_map(|key| {
             let data = self.get_output_area(key);
-            if data.is_none() { warn!("Output Area: {} is incomplete",key); }
+            if data.is_none() {
+                warn!("Output Area: {} is incomplete", key);
+            }
             data
         })
     }

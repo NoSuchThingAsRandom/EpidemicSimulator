@@ -74,20 +74,31 @@ impl OutputArea {
             let household_size = 4;
             let household_number = pop_count[PersonType::All] / household_size;
             let mut generated_population = 0;
-            let mut households_for_area: HashMap<Uuid, Box<dyn Building>> = HashMap::with_capacity(household_number as usize);
+            let mut households_for_area: HashMap<Uuid, Box<dyn Building>> =
+                HashMap::with_capacity(household_number as usize);
 
             // Build households
             for _ in 0..household_number {
                 let household_building_code = BuildingCode::new(output_area_code.clone(), area);
                 let mut household = Household::new(household_building_code.clone());
                 for _ in 0..household_size {
-                    let occupation = census_data.occupation_count.get_random_occupation(rng).context("Cannot generate a random occupation for new Citizen!")?;
-                    let citizen = Citizen::new(household_building_code.clone(), household_building_code.clone(), occupation);
-                    household.add_citizen(citizen.id()).context("Failed to add Citizen to Household")?;
+                    let occupation = census_data
+                        .occupation_count
+                        .get_random_occupation(rng)
+                        .context("Cannot generate a random occupation for new Citizen!")?;
+                    let citizen = Citizen::new(
+                        household_building_code.clone(),
+                        household_building_code.clone(),
+                        occupation,
+                    );
+                    household
+                        .add_citizen(citizen.id())
+                        .context("Failed to add Citizen to Household")?;
                     citizens.insert(citizen.id(), citizen);
                     generated_population += 1;
                 }
-                households_for_area.insert(household_building_code.building_id(), Box::new(household));
+                households_for_area
+                    .insert(household_building_code.building_id(), Box::new(household));
                 if generated_population >= pop_count[PersonType::All] {
                     break;
                 }

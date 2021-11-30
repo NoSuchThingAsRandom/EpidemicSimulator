@@ -115,8 +115,8 @@ pub fn build_polygons_for_output_areas(
             });
         }
         /*        if index % DEBUG_ITERATION_PRINT == 0 {
-                    debug!("  At index {} with time {:?}", index, start_time.elapsed());
-                }*/
+            debug!("  At index {} with time {:?}", index, start_time.elapsed());
+        }*/
     }
     info!("Finished loading map data in {:?}", start_time.elapsed());
     Ok(data)
