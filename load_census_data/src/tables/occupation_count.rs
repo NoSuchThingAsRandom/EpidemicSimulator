@@ -33,7 +33,7 @@ use crate::tables::{PreProcessingTable, TableEntry};
 #[derive(Deserialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy)]
 pub enum OccupationType {
     /*    #[serde(alias = "Occupation: all categories: Occupation; measures: Value")]
-        All,*/
+    All,*/
     #[serde(alias = "Occupation: 1. managers, directors and senior officials; measures: Value")]
     Managers,
     #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
@@ -100,8 +100,11 @@ pub struct OccupationCount {
 }
 
 impl OccupationCount {
-    pub fn get_random_occupation(&self, rng: &mut dyn RngCore) -> Result<OccupationType, CensusError> {
-        let mut chosen = rng.gen_range(0..self.total_range);
+    pub fn get_random_occupation(
+        &self,
+        rng: &mut dyn RngCore,
+    ) -> Result<OccupationType, CensusError> {
+        let chosen = rng.gen_range(0..self.total_range);
         let mut index = 0;
         for (occupation_type, value) in self.occupation_count.iter() {
             if index <= chosen && chosen <= index + *value {
@@ -109,7 +112,12 @@ impl OccupationCount {
             }
             index += *value;
         }
-        Err(CensusError::Misc { source: format!("Allocating a occupation failed, as chosen value ({}) is out of range (0..{})", chosen, self.total_range) })
+        Err(CensusError::Misc {
+            source: format!(
+                "Allocating a occupation failed, as chosen value ({}) is out of range (0..{})",
+                chosen, self.total_range
+            ),
+        })
     }
 }
 
@@ -139,7 +147,7 @@ impl TableEntry for OccupationCount {
 
 impl From<Box<PreProcessingOccupationCountRecord>> for OccupationCount {
     fn from(pre_processing: Box<PreProcessingOccupationCountRecord>) -> Self {
-        let mut output = enum_map! {
+        let output = enum_map! {
                 // TODO I hate this
                 //OccupationType::All=> pre_processing.all,
                 OccupationType::Managers=> pre_processing.managers,
@@ -156,7 +164,7 @@ impl From<Box<PreProcessingOccupationCountRecord>> for OccupationCount {
         };
         Self {
             occupation_count: output,
-            total_range: pre_processing.all
+            total_range: pre_processing.all,
         }
     }
 }

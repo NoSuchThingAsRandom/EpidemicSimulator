@@ -94,18 +94,24 @@ impl std::error::Error for ParseErrorType {}
 
 pub enum CensusError {
     /// An error occurs fetching via reqwest
-    NetworkError { source: reqwest::Error },
+    NetworkError {
+        source: reqwest::Error,
+    },
     //,details:String
     /// An error occurs parsing data with Serde
-    SerdeParseError { source: SerdeErrors },
+    SerdeParseError {
+        source: SerdeErrors,
+    },
     /// An error occurs trying to parse or convert a Value
-    ValueParsingError { source: ParseErrorType },
+    ValueParsingError {
+        source: ParseErrorType,
+    },
     /// An error occurs reading from disk
     IOError {
         source: Box<dyn std::error::Error + Send + Sync>,
     },
     Misc {
-        source: String
+        source: String,
     },
 }
 
@@ -119,7 +125,7 @@ impl std::error::Error for CensusError {
             },
             CensusError::ValueParsingError { ref source } => Some(source),
             CensusError::IOError { ref source } => source.source(),
-            CensusError::Misc { .. } => None
+            CensusError::Misc { .. } => None,
         }
     }
 }

@@ -27,6 +27,7 @@ use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::models::building::BuildingCode;
 
 /// This is used to represent a single Citizen in the simulation
+#[derive(Debug)]
 pub struct Citizen {
     /// A unique identifier for this Citizen
     id: Uuid,
@@ -36,9 +37,9 @@ pub struct Citizen {
     workplace_code: BuildingCode,
     occupation: OccupationType,
     /// The hour which they go to work
-    start_working_hour: u8,
+    start_working_hour: u32,
     /// The hour which they leave to work
-    end_working_hour: u8,
+    end_working_hour: u32,
     /// The building the Citizen is currently at
     pub current_position: BuildingCode,
     /// Disease Status
@@ -68,7 +69,7 @@ impl Citizen {
         self.id
     }
 
-    pub fn execute_time_step(&mut self, current_hour: u8, disease: &DiseaseModel) {
+    pub fn execute_time_step(&mut self, current_hour: u32, disease: &DiseaseModel) {
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
 
         match current_hour {

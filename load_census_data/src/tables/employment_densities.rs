@@ -43,16 +43,15 @@ impl EmploymentDensities {
     pub const RETAIL_RESTAURANTS_CAFES: u32 = 18;
     pub fn get_size_for_occupation(occupation: OccupationType) -> u32 {
         match occupation {
-            OccupationType::Managers => { Self::OFFICE_GENERAL_OFFICE }
-            OccupationType::Professional => { Self::OFFICE_GENERAL_OFFICE }
-            OccupationType::Technical => { Self::OFFICE_SERVICED_OFFICE }
-            OccupationType::Administrative => { Self::OFFICE_GENERAL_OFFICE }
-            OccupationType::SkilledTrades => { Self::INDUSTRIAL_GENERAL }
-            OccupationType::Caring => { Self::INDUSTRIAL_LIGHT_INDUSTRY_BUSINESS_PARK }
-            OccupationType::Sales => { Self::RETAIL_HIGH_STREET }
-            OccupationType::MachineOperatives => { Self::INDUSTRIAL_GENERAL }
-            OccupationType::Teaching => { Self::RETAIL_HIGH_STREET }
+            OccupationType::Managers => Self::OFFICE_GENERAL_OFFICE,
+            OccupationType::Professional => Self::OFFICE_GENERAL_OFFICE,
+            OccupationType::Technical => Self::OFFICE_SERVICED_OFFICE,
+            OccupationType::Administrative => Self::OFFICE_GENERAL_OFFICE,
+            OccupationType::SkilledTrades => Self::INDUSTRIAL_GENERAL,
+            OccupationType::Caring => Self::INDUSTRIAL_LIGHT_INDUSTRY_BUSINESS_PARK,
+            OccupationType::Sales => Self::RETAIL_HIGH_STREET,
+            OccupationType::MachineOperatives => Self::INDUSTRIAL_GENERAL,
+            OccupationType::Teaching => Self::RETAIL_HIGH_STREET,
         }
     }
 }
-

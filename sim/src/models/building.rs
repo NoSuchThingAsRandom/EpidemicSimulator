@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 
 use uuid::Uuid;
@@ -35,7 +35,7 @@ use crate::error::MyError;
 /// * An `OutputArea` - for broad location in the country,
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BuildingCode {
     output_area_code: String,
     area_type: AreaClassification,
@@ -126,7 +126,7 @@ pub enum BuildingType {
 /// This represents a home for Citizens
 ///
 /// Has an AreaCode for referencing it, and a list of Citizen ID's that live here
-pub trait Building: Display {
+pub trait Building: Display + Debug {
     /// Creates a new building at the given location, with the specified type
     //fn new(building_code: BuildingCode) -> Self;
 
@@ -139,6 +139,7 @@ pub trait Building: Display {
 }
 
 
+#[derive(Debug)]
 pub struct Household {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,
@@ -184,7 +185,7 @@ impl Display for Household {
     }
 }
 
-
+#[derive(Debug)]
 pub struct Workplace {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,

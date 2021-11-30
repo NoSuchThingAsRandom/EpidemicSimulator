@@ -24,7 +24,8 @@ extern crate enum_map;
 
 use std::collections::HashMap;
 
-use log::info;
+use log::{debug, info, warn};
+use rand::{Rng, RngCore};
 
 use crate::parsing_error::CensusError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
@@ -44,12 +45,32 @@ pub struct CensusDataEntry<'a> {
     pub output_area_code: String,
     pub population_count: &'a PopulationRecord,
     pub occupation_count: &'a OccupationCount,
+
+    pub workplace_area_distribution: &'a HashMap<String, u32>,
+    /// The sum of all the values in workplace_area_distrubution - Used for generating random areas
+    workplace_area_distribution_total: u32,
     pub workplace_density: EmploymentDensities,
 }
 
 impl<'a> CensusDataEntry<'a> {
     pub fn total_population_size(&self) -> u16 {
         self.population_count.population_size
+    }
+    pub fn get_random_workplace_area(&self, rng: &mut dyn RngCore) -> Result<String, CensusError> {
+        let chosen = rng.gen_range(0..self.workplace_area_distribution_total);
+        let mut index = 0;
+        for (area_code, value) in self.workplace_area_distribution.iter() {
+            if index <= chosen && chosen <= index + *value {
+                return Ok(area_code.to_string());
+            }
+            index += *value;
+        }
+        Err(CensusError::Misc {
+            source: format!(
+                "Allocating a output area failed, as chosen value ({}) is out of range (0..{})",
+                chosen, self.workplace_area_distribution_total
+            ),
+        })
     }
 }
 
@@ -58,11 +79,31 @@ pub struct CensusData {
     pub population_counts: HashMap<String, PopulationRecord>,
     pub occupation_counts: HashMap<String, OccupationCount>,
     pub workplace_density: EmploymentDensities,
+    /// Residentatial Area -> Workplace Area -> Count
+    pub residents_workplace: HashMap<String, HashMap<String, u32>>,
 }
 
 impl CensusData {
     /// Attempts to load all the Census Tables stored on disk into memory
     pub fn load() -> Result<CensusData, CensusError> {
+        let mut workplace_reader = csv::ReaderBuilder::new()
+            .has_headers(true)
+            .from_path(CensusTableNames::WorkLocations.get_filename())?; //.context("Cannot create CSV Reader for workplace areas")?;
+        let headers = workplace_reader.headers()?.clone();
+        let mut workplace_areas: HashMap<String, HashMap<String, u32>> =
+            HashMap::with_capacity(headers.len());
+        for record in workplace_reader.records() {
+            let record = record?;
+            let mut current_workplace: HashMap<String, u32> = HashMap::with_capacity(headers.len());
+            let area = record.get(0).unwrap().to_string();
+            for index in 1..headers.len() {
+                let count = record.get(index).unwrap().parse()?;
+                current_workplace.insert(headers.get(index).unwrap().to_string(), count);
+            }
+            workplace_areas.insert(area, current_workplace);
+        }
+        info!("Loaded workplace areas");
+        debug! {"{:?}",workplace_areas}
         Ok(CensusData {
             population_counts: CensusData::load_table_from_disk::<
                 PopulationRecord,
@@ -73,24 +114,33 @@ impl CensusData {
                 PreProcessingOccupationCountRecord,
             >(CensusTableNames::OccupationCount.get_filename())?,
             workplace_density: EmploymentDensities {},
+            residents_workplace: workplace_areas,
         })
     }
 
     /// Attempts to retrieve all records relating to the given output area code
     ///
     /// Will return None, if at least one table is missing the entry
-    pub fn get_output_area<'a>(&self, code: &'a String) -> Option<CensusDataEntry> {
+    pub fn get_output_area(&self, code: &String) -> Option<CensusDataEntry> {
+        let workplace_area_distribution = self.residents_workplace.get(code)?;
+        let total = workplace_area_distribution.values().copied().sum();
         Some(CensusDataEntry {
             output_area_code: code.clone(),
             population_count: self.population_counts.get(code)?,
             occupation_count: self.occupation_counts.get(code)?,
             workplace_density: EmploymentDensities {},
+            workplace_area_distribution,
+            workplace_area_distribution_total: total,
         })
     }
     /// Returns an iterator over Output Areas
     pub fn values(&self) -> impl Iterator<Item=CensusDataEntry> {
         let keys = self.population_counts.keys();
-        keys.filter_map(|key| self.get_output_area(key))
+        keys.filter_map(|key| {
+            let data = self.get_output_area(key);
+            if data.is_none() { warn!("Output Area: {} is incomplete",key); }
+            data
+        })
     }
 
     /// This loads a census data table from disk

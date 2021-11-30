@@ -47,6 +47,7 @@ pub enum CensusTableNames {
     OccupationCount,
     PopulationDensity,
     OutputAreaMap,
+    WorkLocations,
 }
 
 impl CensusTableNames {
@@ -58,6 +59,7 @@ impl CensusTableNames {
             CensusTableNames::OutputAreaMap => {
                 "data/census_map_areas/England_oa_2011/england_oa_2011.shp"
             }
+            CensusTableNames::WorkLocations => "data/tables/york_locations_of_work_wf01bew.csv",
         }
     }
 }

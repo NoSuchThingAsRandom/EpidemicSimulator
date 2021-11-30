@@ -28,7 +28,7 @@ use load_census_data::tables::population_and_density_per_output_area::AreaClassi
 
 use crate::models::building::BuildingCode;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum DiseaseStatus {
     Susceptible,
     /// The amount of steps(hours) the citizen has been exposed for
@@ -66,7 +66,7 @@ impl DiseaseStatus {
 
 /// A snapshot of the disease per time step
 pub struct Statistics {
-    time_step: u8,
+    time_step: u32,
     susceptible: u32,
     exposed: u32,
     infected: u32,
@@ -74,7 +74,7 @@ pub struct Statistics {
 }
 
 impl Statistics {
-    pub fn new(hour: u8) -> Statistics {
+    pub fn new(hour: u32) -> Statistics {
         Statistics {
             time_step: hour,
             susceptible: 0,
@@ -83,7 +83,7 @@ impl Statistics {
             recovered: 0,
         }
     }
-    pub fn time_step(&self) -> u8 {
+    pub fn time_step(&self) -> u32 {
         self.time_step
     }
     pub fn susceptible(&self) -> u32 {

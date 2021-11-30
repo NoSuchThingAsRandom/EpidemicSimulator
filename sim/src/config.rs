@@ -18,7 +18,7 @@
  *
  */
 
-use load_census_data::tables::CensusTableNames;
+
 
 pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per workplace building

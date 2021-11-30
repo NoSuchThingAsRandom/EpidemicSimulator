@@ -24,14 +24,12 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use geo_types::{Coordinate, LineString};
-use log::{debug, info};
+use log::info;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
-
-use crate::config::DEBUG_ITERATION_PRINT;
 
 pub mod building;
 pub mod citizen;
@@ -47,7 +45,7 @@ pub fn build_polygons_for_output_areas(
     let start_time = Instant::now();
     let mut data = HashMap::new();
     info!("Loading map data from file...");
-    for (index, shape_record) in reader.iter_shapes_and_records().enumerate() {
+    for (_, shape_record) in reader.iter_shapes_and_records().enumerate() {
         let (shape, record) = shape_record.map_err(|e| CensusError::IOError {
             source: Box::new(e),
         })?;

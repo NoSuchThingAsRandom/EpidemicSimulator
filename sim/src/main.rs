@@ -34,7 +34,6 @@ mod simulator;
 async fn main() {
     dotenv::dotenv().ok();
     pretty_env_logger::init();
-    warn!("Test");
     //SimpleLogger::new().init().unwrap();
     info!("Epidemic simulator");
     info!("Download york population data...");
