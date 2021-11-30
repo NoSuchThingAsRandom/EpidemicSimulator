@@ -37,7 +37,7 @@ pub enum OccupationType {
     #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
     Professional,
     #[serde(
-    alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
+        alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
     )]
     Technical,
     #[serde(alias = "Occupation: 4. administrative and secretarial occupations; measures: Value")]
@@ -63,7 +63,6 @@ pub struct PreProcessingOccupationCountRecord {
     #[serde(alias = "geography code")]
     pub geography_code: String,
     #[serde(alias = "Occupation: all categories: Occupation; measures: Value")]
-
     all: u32,
     #[serde(alias = "Occupation: 1. managers, directors and senior officials; measures: Value")]
     managers: u32,

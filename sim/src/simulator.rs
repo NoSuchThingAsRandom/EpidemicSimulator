@@ -60,7 +60,14 @@ impl Simulator {
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
         info!("Loading data from disk...");
 
-        let population_count: HashMap<String, PopulationRecord> = load_census_data::load_table_from_disk::<PopulationRecord, PreProcessingPopulationDensityRecord>(get_census_table_filename(CensusTableNames::PopulationDensity)).context("Loading census table 144")?;
+        let population_count: HashMap<String, PopulationRecord> =
+            load_census_data::load_table_from_disk::<
+                PopulationRecord,
+                PreProcessingPopulationDensityRecord,
+            >(get_census_table_filename(
+                CensusTableNames::PopulationDensity,
+            ))
+                .context("Loading census table 144")?;
         let occupation_count: HashMap<String, OccupationCount> =
             load_census_data::load_table_from_disk::<
                 OccupationCount,
