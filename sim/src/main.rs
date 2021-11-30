@@ -43,6 +43,6 @@ async fn main() {
     let sim = simulator::Simulator::new();
     let mut sim = sim.unwrap();
     info!("Starting simulator...");
-    //sim.simulate().unwrap();
+    sim.simulate().unwrap();
     info!("Finished");
 }

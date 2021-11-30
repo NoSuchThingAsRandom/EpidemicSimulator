@@ -31,11 +31,11 @@ use shapefile::Shape;
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
 
+use crate::config::DEBUG_ITERATION_PRINT;
+
 pub mod building;
 pub mod citizen;
 pub mod output_area;
-
-const DEBUG_ITERATION: usize = 5000;
 
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
@@ -116,9 +116,9 @@ pub fn build_polygons_for_output_areas(
                 },
             });
         }
-        if index % DEBUG_ITERATION == 0 {
-            debug!("  At index {} with time {:?}", index, start_time.elapsed());
-        }
+        /*        if index % DEBUG_ITERATION_PRINT == 0 {
+                    debug!("  At index {} with time {:?}", index, start_time.elapsed());
+                }*/
     }
     info!("Finished loading map data in {:?}", start_time.elapsed());
     Ok(data)

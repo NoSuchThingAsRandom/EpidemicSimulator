@@ -104,6 +104,9 @@ pub enum CensusError {
     IOError {
         source: Box<dyn std::error::Error + Send + Sync>,
     },
+    Misc {
+        source: String
+    },
 }
 
 impl std::error::Error for CensusError {
@@ -116,6 +119,7 @@ impl std::error::Error for CensusError {
             },
             CensusError::ValueParsingError { ref source } => Some(source),
             CensusError::IOError { ref source } => source.source(),
+            CensusError::Misc { .. } => None
         }
     }
 }
@@ -208,6 +212,9 @@ impl Display for CensusError {
                     "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {} ",
                     source
                 )
+            }
+            CensusError::Misc { source } => {
+                write!(f, "{}", source)
             }
         }
     }

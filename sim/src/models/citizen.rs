@@ -21,6 +21,8 @@
 use rand::{Rng, RngCore};
 use uuid::Uuid;
 
+use load_census_data::tables::occupation_count::OccupationType;
+
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::models::building::BuildingCode;
 
@@ -32,8 +34,7 @@ pub struct Citizen {
     household_code: BuildingCode,
     /// The place they work at
     workplace_code: BuildingCode,
-    /// Their type of employment
-    work_type: WorkType,
+    occupation: OccupationType,
     /// The hour which they go to work
     start_working_hour: u8,
     /// The hour which they leave to work
@@ -49,13 +50,13 @@ impl Citizen {
     pub fn new(
         household_code: BuildingCode,
         workplace_code: BuildingCode,
-        work_type: WorkType,
+        occupation_type: OccupationType,
     ) -> Citizen {
         Citizen {
             id: Uuid::new_v4(),
             household_code: household_code.clone(),
             workplace_code,
-            work_type,
+            occupation: occupation_type,
             start_working_hour: 9,
             end_working_hour: 17,
             current_position: household_code,
@@ -89,6 +90,12 @@ impl Citizen {
             return true;
         }
         false
+    }
+    pub fn set_workplace_code(&mut self, workplace_code: BuildingCode) {
+        self.workplace_code = workplace_code;
+    }
+    pub fn occupation(&self) -> OccupationType {
+        self.occupation
     }
 }
 

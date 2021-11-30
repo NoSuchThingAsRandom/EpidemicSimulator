@@ -48,3 +48,16 @@ pub enum CensusTableNames {
     PopulationDensity,
     OutputAreaMap,
 }
+
+impl CensusTableNames {
+    ///
+    pub fn get_filename<'a>(&self) -> &'a str {
+        match &self {
+            CensusTableNames::PopulationDensity => "data/tables/york_population_144.csv",
+            CensusTableNames::OccupationCount => "data/tables/york_occupation_count_ks608uk.csv",
+            CensusTableNames::OutputAreaMap => {
+                "data/census_map_areas/England_oa_2011/england_oa_2011.shp"
+            }
+        }
+    }
+}

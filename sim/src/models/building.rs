@@ -23,7 +23,11 @@ use std::hash::{Hash, Hasher};
 
 use uuid::Uuid;
 
+use load_census_data::tables::employment_densities::EmploymentDensities;
+use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
+
+use crate::error::MyError;
 
 /// This is used to represent a building location
 ///
@@ -60,6 +64,15 @@ impl BuildingCode {
             output_area_code: output_code,
             area_type,
             building_id: Uuid::new_v4(),
+        }
+    }
+
+    /// Creates a new Building Code, but in the same Output Area and Area Type as the given BuildingCode
+    pub(crate) fn new_from(other: BuildingCode) -> Self {
+        BuildingCode {
+            output_area_code: other.output_area_code.to_string(),
+            area_type: other.area_type,
+            building_id: Default::default(),
         }
     }
     /// Returns the `OutputArea` code
@@ -101,6 +114,7 @@ impl PartialEq<Self> for BuildingCode {
 
 impl Eq for BuildingCode {}
 
+
 /// The types of buildings that can exist
 pub enum BuildingType {
     /// A place where Citizens reside at night
@@ -112,39 +126,109 @@ pub enum BuildingType {
 /// This represents a home for Citizens
 ///
 /// Has an AreaCode for referencing it, and a list of Citizen ID's that live here
-pub struct Building {
-    /// What the function of this building is
-    building_type: BuildingType,
+pub trait Building: Display {
+    /// Creates a new building at the given location, with the specified type
+    //fn new(building_code: BuildingCode) -> Self;
+
+    /// Adds the new citizen to this building
+    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError>;
+    /// Returns the AreaCode where this building is located
+    fn building_code(&self) -> &BuildingCode;
+    /// Returns a list of ids of occupants that are here
+    fn occupants(&self) -> &Vec<Uuid>;
+}
+
+
+pub struct Household {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,
     /// A list of all the ID's of citizens who are at this building
     occupants: Vec<Uuid>,
 }
 
-impl Building {
-    /// Creates a new building at the given location, with the specified type
-    pub fn new(building_type: BuildingType, building_code: BuildingCode) -> Building {
-        Building {
-            building_type,
+impl Household {
+    pub(crate) fn new(building_code: BuildingCode) -> Self
+    {
+        Household {
             building_code,
             occupants: Vec::new(),
         }
     }
-    /// Adds the new citizen to this building
-    pub fn add_citizen(&mut self, citizen_id: Uuid) {
+}
+
+impl Building for Household {
+    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError> {
         self.occupants.push(citizen_id);
+        Ok(())
     }
-    /// Returns the AreaCode where this building is located
-    pub fn household_code(&self) -> &BuildingCode {
+
+    fn building_code(&self) -> &BuildingCode {
         &self.building_code
     }
-    /// Returns a list of ids of occupants that are here
-    pub fn occupants(&self) -> &Vec<Uuid> {
+
+    fn occupants(&self) -> &Vec<Uuid> {
         &self.occupants
     }
 }
 
-impl Display for Building {
+
+impl Display for Household {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} Building at {}, with {} residents",
+            self.building_code,
+            self.building_code,
+            self.occupants.len()
+        )
+    }
+}
+
+
+pub struct Workplace {
+    /// This is unique to the specific output area - ~250 households
+    building_code: BuildingCode,
+    /// A list of all the ID's of citizens who are at this building
+    occupants: Vec<Uuid>,
+    floor_space: u16,
+    workplace_occupation_type: OccupationType,
+}
+
+impl Workplace {
+    pub fn new(building_code: BuildingCode, floor_space: u16, occupation_type: OccupationType) -> Self
+    {
+        Workplace {
+            building_code,
+            occupants: Vec::new(),
+            floor_space,
+            workplace_occupation_type: occupation_type,
+        }
+    }
+    pub fn is_at_capacity(&self) -> bool {
+        (self.floor_space as usize) <= (self.occupants.len() * EmploymentDensities::get_size_for_occupation(self.workplace_occupation_type) as usize)
+    }
+}
+
+impl Building for Workplace {
+    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError> {
+        if self.is_at_capacity() {
+            return Err(MyError::new("Workplace has full occupancy, so cannot add new occupant".to_string()));
+        }
+        self.occupants.push(citizen_id);
+        Ok(())
+    }
+
+    fn building_code(&self) -> &BuildingCode {
+        &self.building_code
+    }
+
+    fn occupants(&self) -> &Vec<Uuid> {
+        &self.occupants
+    }
+}
+
+
+impl Display for Workplace {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

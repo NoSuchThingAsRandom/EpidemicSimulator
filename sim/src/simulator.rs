@@ -27,22 +27,15 @@ use rand::prelude::IteratorRandom;
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
 
+use load_census_data::CensusData;
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::tables::CensusTableNames;
-use load_census_data::tables::occupation_count::{
-    OccupationCount, PreProcessingOccupationCountRecord,
-};
-use load_census_data::tables::population_and_density_per_output_area::{
-    PopulationRecord, PreProcessingPopulationDensityRecord,
-};
 
-use crate::config::{get_census_table_filename, STARTING_INFECTED_COUNT};
+use crate::config::{DEBUG_ITERATION_PRINT, STARTING_INFECTED_COUNT};
 use crate::disease::{DiseaseModel, DiseaseStatus, Exposure, Statistics};
 use crate::disease::DiseaseStatus::Infected;
 use crate::models::build_polygons_for_output_areas;
 use crate::models::output_area::OutputArea;
-
-const DEBUG_PRINT: u16 = 100;
 
 pub struct Simulator {
     /// The total size of the population
@@ -57,54 +50,46 @@ pub struct Simulator {
 impl Simulator {
     pub fn new() -> Result<Simulator> {
         let start = Instant::now();
+        let mut rng = thread_rng();
+
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
         info!("Loading data from disk...");
-
-        let population_count: HashMap<String, PopulationRecord> =
-            load_census_data::load_table_from_disk::<
-                PopulationRecord,
-                PreProcessingPopulationDensityRecord,
-            >(get_census_table_filename(
-                CensusTableNames::PopulationDensity,
-            ))
-                .context("Loading census table 144")?;
-        let occupation_count: HashMap<String, OccupationCount> =
-            load_census_data::load_table_from_disk::<
-                OccupationCount,
-                PreProcessingOccupationCountRecord,
-            >(get_census_table_filename(CensusTableNames::OccupationCount))
-                .context("Loading occupation count table")?;
+        let census_data = CensusData::load().context("Failed to load census data")?;
         info!("Loaded census data in {:?}", start.elapsed());
-        let mut output_areas_polygons = build_polygons_for_output_areas(get_census_table_filename(
-            CensusTableNames::OutputAreaMap,
-        ))
-            .context("Loading polygons for output areas")?;
+        let mut output_areas_polygons =
+            build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
+                .context("Loading polygons for output areas")?;
+        println!(
+            "Size of polygons {:?}, amount of polygons {}",
+            std::mem::size_of_val(&output_areas_polygons),
+            output_areas_polygons.len()
+        );
         info!("Loaded map data in {:?}", start.elapsed());
         let mut starting_population = 0;
         let mut index = 1;
-        for (code, census) in population_count.into_iter() {
+        for entry in census_data.values() {
             // TODO Add failure case
-            let polygon = output_areas_polygons.remove(&code).ok_or_else(|| {
-                CensusError::ValueParsingError {
+            let polygon = output_areas_polygons
+                .remove(&entry.output_area_code)
+                .ok_or_else(|| CensusError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Building output areas map".to_string(),
-                        key: code.to_string(),
+                        key: entry.output_area_code.to_string(),
                     },
-                }
-            })?;
-            starting_population += census.population_size as u32;
-            output_areas.insert(
-                code.to_string(),
-                OutputArea::new(code.to_string(), polygon, census),
-            );
-            if index % DEBUG_PRINT == 0 {
+                })?;
+            starting_population += entry.total_population_size() as u32;
+            let new = OutputArea::new(entry.output_area_code.to_string(), polygon, entry, &mut rng)?;
+
+
+            output_areas.insert(new.code.to_string(), new);
+            if index % DEBUG_ITERATION_PRINT == 0 {
                 debug!("At index {} with time {:?}", index, start.elapsed());
             }
             index += 1;
         }
         info!("Built population in {:?}", start.elapsed());
         // Infect random citizens
-        let mut rng = thread_rng();
+
         let starting_area_code = output_areas
             .keys()
             .choose(&mut rng)
@@ -168,7 +153,7 @@ impl Simulator {
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
             self.execute_time_step()?;
-            if time_step % DEBUG_PRINT == 0 {
+            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
                 info!(
                     "{:?}       - {}",
                     start_time.elapsed(),
@@ -180,6 +165,7 @@ impl Simulator {
                     "Disease finished at {} as no one has the disease",
                     time_step
                 );
+                debug!("{}",self.current_statistics);
                 break;
             }
         }
@@ -188,7 +174,7 @@ impl Simulator {
     pub fn execute_time_step(&mut self) -> anyhow::Result<()> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposure_list: HashSet<Exposure> = HashSet::new();
-        let mut statistics = Statistics::default();
+        let mut statistics = Statistics::new(self.current_statistics.time_step() + 1);
         for (_, area) in &mut self.output_areas {
             for citizen in &mut area.citizens.values_mut() {
                 citizen.execute_time_step(self.current_statistics.time_step(), &self.disease_model);
@@ -201,32 +187,32 @@ impl Simulator {
                 }
             }
         }
+        debug!("There are {} exposures",exposure_list.len());
         for exposure in exposure_list {
             let area = self.output_areas.get_mut(&exposure.output_area_code());
             match area {
                 Some(area) => {
-                    let buildings = &area.buildings[*(&exposure.area_classification())];
-                    for building in buildings {
-                        for citizen_id in building.occupants() {
-                            let citizen = area.citizens.get_mut(&citizen_id);
-                            match citizen {
-                                Some(citizen) => {
-                                    if citizen.expose(&self.disease_model, &mut self.rng) {
-                                        statistics
-                                            .citizen_exposed()
-                                            .context(format!("Exposing citizen {}", citizen_id))?;
-                                    }
+                    let building = &area.buildings[exposure.area_classification()].get_mut(&exposure.building_code()).context("Failed to retrieve exposure building ").unwrap();
+                    for citizen_id in building.occupants() {
+                        let citizen = area.citizens.get_mut(&citizen_id);
+                        match citizen {
+                            Some(citizen) => {
+                                if citizen.expose(&self.disease_model, &mut self.rng) {
+                                    statistics
+                                        .citizen_exposed()
+                                        .context(format!("Exposing citizen {}", citizen_id))?;
                                 }
-                                None => {
-                                    error!(
+                            }
+                            None => {
+                                error!(
                                         "Citizen {}, does not exist in the expected area {}",
                                         citizen_id, area.code
                                     );
-                                }
                             }
                         }
                     }
                 }
+
                 None => {
                     error!(
                         "Cannot find area {}, that had an exposure ({}) occurred in!",

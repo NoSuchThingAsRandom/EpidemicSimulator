@@ -135,7 +135,7 @@ impl Statistics {
     }
     /// Returns true if at least one Citizen has the Disease
     pub fn disease_exists(&self) -> bool {
-        self.exposed != 0 && self.infected != 0
+        self.exposed != 0 || self.infected != 0
     }
 }
 
@@ -180,8 +180,8 @@ impl DiseaseModel {
     pub fn covid() -> DiseaseModel {
         DiseaseModel {
             reproduction_rate: 2.5,
-            exposure_chance: 0.6,
-            death_rate: 0.05,
+            exposure_chance: 0.8,
+            death_rate: 0.2,
             exposed_time: 4 * 24,
             infected_time: 14 * 24,
             max_time_step: 1000,

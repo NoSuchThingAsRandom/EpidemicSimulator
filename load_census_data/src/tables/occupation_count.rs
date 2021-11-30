@@ -22,16 +22,18 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use enum_map::EnumMap;
+use rand::{Rng, RngCore};
 use serde::Deserialize;
 use strum_macros::EnumCount as EnumCountMacro;
 
 use crate::parsing_error::{CensusError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
-#[derive(Deserialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro)]
+#[derive(Deserialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy)]
 pub enum OccupationType {
-    #[serde(alias = "Occupation: all categories: Occupation; measures: Value")]
-    All,
+    /*    #[serde(alias = "Occupation: all categories: Occupation; measures: Value")]
+        All,*/
     #[serde(alias = "Occupation: 1. managers, directors and senior officials; measures: Value")]
     Managers,
     #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
@@ -93,7 +95,22 @@ impl PreProcessingTable for PreProcessingOccupationCountRecord {}
 
 #[derive(Debug)]
 pub struct OccupationCount {
-    pub occupation_count: HashMap<OccupationType, u32>,
+    pub occupation_count: EnumMap<OccupationType, u32>,
+    total_range: u32,
+}
+
+impl OccupationCount {
+    pub fn get_random_occupation(&self, rng: &mut dyn RngCore) -> Result<OccupationType, CensusError> {
+        let mut chosen = rng.gen_range(0..self.total_range);
+        let mut index = 0;
+        for (occupation_type, value) in self.occupation_count.iter() {
+            if index <= chosen && chosen <= index + *value {
+                return Ok(occupation_type);
+            }
+            index += *value;
+        }
+        Err(CensusError::Misc { source: format!("Allocating a occupation failed, as chosen value ({}) is out of range (0..{})", chosen, self.total_range) })
+    }
 }
 
 impl TableEntry for OccupationCount {
@@ -122,27 +139,24 @@ impl TableEntry for OccupationCount {
 
 impl From<Box<PreProcessingOccupationCountRecord>> for OccupationCount {
     fn from(pre_processing: Box<PreProcessingOccupationCountRecord>) -> Self {
-        let mut output = HashMap::new();
-        // TODO I hate this
-        output.insert(OccupationType::All, pre_processing.all);
-        output.insert(OccupationType::Managers, pre_processing.managers);
-        output.insert(OccupationType::Professional, pre_processing.professional);
-        output.insert(OccupationType::Technical, pre_processing.technical);
-        output.insert(
-            OccupationType::Administrative,
-            pre_processing.administrative,
-        );
-        output.insert(OccupationType::SkilledTrades, pre_processing.skilled_trades);
-        output.insert(OccupationType::Caring, pre_processing.caring);
-        output.insert(OccupationType::Sales, pre_processing.sales);
-        output.insert(
-            OccupationType::MachineOperatives,
-            pre_processing.machine_operatives,
-        );
-        output.insert(OccupationType::Teaching, pre_processing.teaching);
+        let mut output = enum_map! {
+                // TODO I hate this
+                //OccupationType::All=> pre_processing.all,
+                OccupationType::Managers=> pre_processing.managers,
+                OccupationType::Professional=> pre_processing.professional,
+                OccupationType::Technical=> pre_processing.technical,
 
+                OccupationType::Administrative=>pre_processing.administrative,
+                OccupationType::SkilledTrades=> pre_processing.skilled_trades,
+                OccupationType::Caring=> pre_processing.caring,
+                OccupationType::Sales=> pre_processing.sales,
+
+                OccupationType::MachineOperatives=>pre_processing.machine_operatives,
+                OccupationType::Teaching=> pre_processing.teaching
+        };
         Self {
             occupation_count: output,
+            total_range: pre_processing.all
         }
     }
 }
