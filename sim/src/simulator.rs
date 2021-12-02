@@ -66,9 +66,8 @@ impl Simulator {
                 .context("Loading polygons for output areas")?;
         info!("Loaded map data in {:?}", start.elapsed());
         let mut starting_population = 0;
-        println!("{}", census_data.population_counts.len());
-        println!("{}", census_data.occupation_counts.len());
-        println!("{}", census_data.residents_workplace.len());
+
+
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
             info!("{}", entry.output_area_code);
@@ -221,7 +220,7 @@ impl Simulator {
                         }
                     }
                     None => {
-                        // TODO Have better distrubution of AreaClassification?
+                        // TODO Have better distribution of AreaClassification?
                         let mut workplace = Workplace::new(
                             BuildingCode::new(
                                 workplace_area_code.clone(),
@@ -351,12 +350,10 @@ impl Simulator {
             let area = self.output_areas.get_mut(&exposure.output_area_code());
             match area {
                 Some(area) => {
+                    // TODO Sometime there's a weird bug here?
                     let building = &area.buildings[exposure.area_classification()]
                         .get_mut(&exposure.building_code())
                         .context(format!("Failed to retrieve exposure building {}", exposure));
-                    if let Err(e) = building {
-                        println!("Fuck: {}", e);
-                    }
                     let building = building.as_ref().unwrap();
                     for citizen_id in building.occupants() {
                         let citizen = area.citizens.get_mut(citizen_id);
