@@ -79,7 +79,7 @@ pub struct CensusData {
     pub population_counts: HashMap<String, PopulationRecord>,
     pub occupation_counts: HashMap<String, OccupationCount>,
     pub workplace_density: EmploymentDensities,
-    /// Residentatial Area -> Workplace Area -> Count
+    /// Residential Area -> Workplace Area -> Count
     pub residents_workplace: HashMap<String, HashMap<String, u32>>,
 }
 

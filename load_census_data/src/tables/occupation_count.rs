@@ -71,7 +71,7 @@ pub struct PreProcessingOccupationCountRecord {
     #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
     professional: u32,
     #[serde(
-    alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
+        alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
     )]
     technical: u32,
     #[serde(alias = "Occupation: 4. administrative and secretarial occupations; measures: Value")]

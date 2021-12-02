@@ -20,26 +20,53 @@
 
 use std::fmt::{Debug, Display, Formatter};
 
-pub struct MyError {
-    message: String,
+pub enum Error {
+    Default {
+        message: String,
+    },
+    Simulation {
+        message: String,
+    },
+    DrawingError {
+        source: Box<dyn std::error::Error + Send + Sync>,
+        context: String,
+    },
 }
 
-impl MyError {
-    pub fn new(message: String) -> MyError {
-        MyError { message }
+impl Error {
+    pub fn new_simulation_error(message: String) -> Error {
+        Error::Simulation { message }
     }
 }
 
-impl Debug for MyError {
+impl Default for Error {
+    fn default() -> Self {
+        Error::Default {
+            message: String::from("An error occurred!"),
+        }
+    }
+}
+
+impl Debug for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error: {}", self.message)
+        match self {
+            Error::Default { message } => {
+                write!(f, "Error: {}", message)
+            }
+            Error::DrawingError { source, context } => {
+                write!(f, "Error: {}\n{}", context, source)
+            }
+            Error::Simulation { message } => {
+                write!(f, "Simulation Error Occured: {}", message)
+            }
+        }
     }
 }
 
-impl Display for MyError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error: {}", self.message)
+        write!(f, "Error: {}", self)
     }
 }
 
-impl std::error::Error for MyError {}
+impl std::error::Error for Error {}

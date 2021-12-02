@@ -27,7 +27,7 @@ use load_census_data::tables::employment_densities::EmploymentDensities;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
-use crate::error::MyError;
+use crate::error::Error;
 
 /// This is used to represent a building location
 ///
@@ -130,7 +130,7 @@ pub trait Building: Display + Debug {
     //fn new(building_code: BuildingCode) -> Self;
 
     /// Adds the new citizen to this building
-    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError>;
+    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), Error>;
     /// Returns the AreaCode where this building is located
     fn building_code(&self) -> &BuildingCode;
     /// Returns a list of ids of occupants that are here
@@ -155,7 +155,7 @@ impl Household {
 }
 
 impl Building for Household {
-    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError> {
+    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), Error> {
         self.occupants.push(citizen_id);
         Ok(())
     }
@@ -213,11 +213,11 @@ impl Workplace {
 }
 
 impl Building for Workplace {
-    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), MyError> {
+    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), Error> {
         if self.is_at_capacity() {
-            return Err(MyError::new(
-                "Workplace has full occupancy, so cannot add new occupant".to_string(),
-            ));
+            return Err(Error::Default {
+                message: "Workplace has full occupancy, so cannot add new occupant".to_string(),
+            });
         }
         self.occupants.push(citizen_id);
         Ok(())

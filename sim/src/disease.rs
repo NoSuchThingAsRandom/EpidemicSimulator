@@ -120,7 +120,7 @@ impl Statistics {
     }
     /// When a citizen has been exposed, the susceptible count drops by one, and exposure count increases by 1
     /// Will error, if called when no Citizens are susceptible
-    pub fn citizen_exposed(&mut self) -> Result<(), crate::error::MyError> {
+    pub fn citizen_exposed(&mut self) -> Result<(), crate::error::Error> {
         let x = self.susceptible.checked_sub(1);
         if let Some(x) = x {
             self.susceptible = x;
@@ -128,7 +128,7 @@ impl Statistics {
             Ok(())
         } else {
             error!("Cannot log citizen being exposed, as no susceptible citizens left");
-            return Err(crate::error::MyError::new(String::from(
+            return Err(crate::error::Error::new_simulation_error(String::from(
                 "Cannot expose citizen as no citizens are susceptible!",
             )));
         }

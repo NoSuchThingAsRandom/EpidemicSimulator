@@ -66,7 +66,9 @@ impl Simulator {
                 .context("Loading polygons for output areas")?;
         info!("Loaded map data in {:?}", start.elapsed());
         let mut starting_population = 0;
-
+        println!("{}", census_data.population_counts.len());
+        println!("{}", census_data.occupation_counts.len());
+        println!("{}", census_data.residents_workplace.len());
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
             info!("{}", entry.output_area_code);
