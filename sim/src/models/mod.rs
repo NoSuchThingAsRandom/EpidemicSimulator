@@ -28,7 +28,6 @@ use log::info;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
-use draw::DrawingRecord;
 use load_census_data::CensusData;
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
@@ -124,50 +123,3 @@ pub fn build_polygons_for_output_areas(
     Ok(data)
 }
 
-pub fn draw_census_data(
-    census_data: &CensusData,
-    output_areas_polygons: HashMap<String, Polygon<f64>>,
-) -> anyhow::Result<()> {
-    let data: Vec<DrawingRecord> = census_data
-        .population_counts
-        .iter()
-        .filter_map(|(code, _)| {
-            Some(DrawingRecord {
-                code: code.to_string(),
-                polygon: output_areas_polygons.get(code)?.clone(),
-                percentage_highlighting: Some(0.25),
-                label: None,
-            })
-        })
-        .collect();
-    draw::draw(String::from("PopulationMap.png"), data)?;
-
-    let data: Vec<DrawingRecord> = census_data
-        .residents_workplace
-        .iter()
-        .filter_map(|(code, _)| {
-            Some(DrawingRecord {
-                code: code.to_string(),
-                polygon: output_areas_polygons.get(code)?.clone(),
-                percentage_highlighting: Some(0.6),
-                label: None,
-            })
-        })
-        .collect();
-    draw::draw(String::from("ResidentsWorkplace.png"), data)?;
-
-    let data: Vec<DrawingRecord> = census_data
-        .occupation_counts
-        .iter()
-        .filter_map(|(code, _)| {
-            Some(DrawingRecord {
-                code: code.to_string(),
-                polygon: output_areas_polygons.get(code)?.clone(),
-                percentage_highlighting: Some(1.0),
-                label: None,
-            })
-        })
-        .collect();
-    draw::draw(String::from("OccupationCounts.png"), data)?;
-    Ok(())
-}

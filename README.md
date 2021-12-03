@@ -20,3 +20,13 @@ Workpalce position Table (https://www.nomisweb.co.uk/census/2011/wf01bew)
 * Add dynamic disease risks, dependent on occupation
 * Add support for disease intervention techniques (mask wearing, lockdowns, vaccinations, etc)
 * Better visualisation support for summaries
+
+## Current Problem
+
+Trying to allow spread of disease (increase the networks of agents), as seems to get stuck in a cluster
+
+Measures taken:
+
+1. Randomly allocating households
+2. Assigning workplaces inside the same output area
+3. Assigning workplaces outside the output area

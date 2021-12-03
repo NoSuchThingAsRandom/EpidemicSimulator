@@ -1,0 +1,18 @@
+[package]
+name = "run"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+load_census_data = { path = "../load_census_data" }
+sim = { path = "../sim" }
+draw = { path = "../draw" }
+
+anyhow = "1.0"
+dotenv = "0.15"
+geo-types = "0.7"
+log = "0.4"
+pretty_env_logger = "0.4"
+tokio = { version = "0.3.7", features = ["full"] }

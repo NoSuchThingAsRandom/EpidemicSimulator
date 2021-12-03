@@ -6,7 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0"
+sim = { path = "../sim" }
 log = "0.4"
 geo-types = "0.7.2"
 plotters = "0.3"
 polylabel = "2.4.0"
+pixels = "0.8.0"
+winit = "0.26.0"

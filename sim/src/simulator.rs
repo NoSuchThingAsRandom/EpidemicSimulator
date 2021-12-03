@@ -48,7 +48,7 @@ pub struct Simulator {
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
-    output_areas: HashMap<String, OutputArea>,
+    pub output_areas: HashMap<String, OutputArea>,
     /// The list of citizens who have a "home" in this area
     citizens: HashMap<Uuid, Citizen>,
     pub statistics: Statistics,
@@ -281,23 +281,33 @@ impl Simulator {
         let start_time = Instant::now();
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
-            let exposures = self.execute_time_step()?;
-            self.apply_exposures(exposures)?;
-            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                info!("{:?}       - {}", start_time.elapsed(), self.statistics);
-            }
-            if !self.statistics.disease_exists() {
-                info!(
-                    "Disease finished at {} as no one has the disease",
-                    time_step
-                );
+            if !self.step()? {
                 debug!("{}", self.statistics);
                 break;
+            }
+            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
+                info!("{:?}       - {}", start_time.elapsed(), self.statistics);
             }
         }
         Ok(())
     }
-    pub fn execute_time_step(&mut self) -> anyhow::Result<HashSet<Exposure>> {
+    /// Applies a single time step to the simulation
+    ///
+    /// Returns False if it has finished
+    pub fn step(&mut self) -> anyhow::Result<bool> {
+        let exposures = self.generate_exposures()?;
+        self.apply_exposures(exposures)?;
+        if !self.statistics.disease_exists() {
+            info!(
+                    "Disease finished as no one has the disease"
+                );
+            Ok(false)
+        } else {
+            Ok(true)
+        }
+    }
+
+    pub fn generate_exposures(&mut self) -> anyhow::Result<HashSet<Exposure>> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposure_list: HashSet<Exposure> = HashSet::new();
         self.statistics.next();
