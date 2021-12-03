@@ -42,6 +42,11 @@ async fn main() {
     let sim = simulator::Simulator::new();
     let mut sim = sim.unwrap();
     info!("Starting simulator...");
-    sim.simulate().unwrap();
-    info!("Finished");
+    if let Err(e) = sim.simulate() {
+        error!("{}", e);
+        sim.error_dump_json().expect("Failed to create core dump!");
+    } else {
+        //sim.statistics.summarise();
+        info!("Finished");
+    }
 }

@@ -24,13 +24,13 @@ use std::fmt::Debug;
 
 use enum_map::EnumMap;
 use rand::{Rng, RngCore};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumCount as EnumCountMacro;
 
 use crate::parsing_error::{CensusError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
-#[derive(Deserialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy)]
 pub enum OccupationType {
     /*    #[serde(alias = "Occupation: all categories: Occupation; measures: Value")]
     All,*/

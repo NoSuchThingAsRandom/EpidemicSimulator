@@ -103,7 +103,6 @@ impl CensusData {
             workplace_areas.insert(area, current_workplace);
         }
         info!("Loaded workplace areas");
-        debug! {"{:?}",workplace_areas}
         Ok(CensusData {
             population_counts: CensusData::load_table_from_disk::<
                 PopulationRecord,

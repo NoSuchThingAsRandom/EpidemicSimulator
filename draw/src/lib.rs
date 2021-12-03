@@ -122,8 +122,7 @@ pub fn draw(filename: String, data: Vec<DrawingRecord>) -> DrawingResult<()> {
     let draw_backend = BitMapBackend::new(&filename, (GRID_SIZE, GRID_SIZE)).into_drawing_area();
     draw_backend.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&draw_backend)
-        .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))
-        .unwrap();
+        .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))?;
 
     let style = TextStyle::from(("sans-serif", 20).into_font()).color(&RED);
     for (index, area) in data.iter().enumerate() {

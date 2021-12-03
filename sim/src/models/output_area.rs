@@ -18,6 +18,7 @@
  *
  */
 
+use std::any::Any;
 use std::collections::HashMap;
 
 use anyhow::Context;
@@ -30,7 +31,8 @@ use load_census_data::tables::population_and_density_per_output_area::{
     AreaClassification, PersonType,
 };
 
-use crate::models::building::{Building, BuildingCode, Household};
+use crate::config::HOUSEHOLD_SIZE;
+use crate::models::building::{Building, BuildingCode, Household, Workplace};
 use crate::models::citizen::Citizen;
 
 /// This is a container for a Census Output Area
@@ -41,13 +43,8 @@ use crate::models::citizen::Citizen;
 #[derive(Debug)]
 pub struct OutputArea {
     /// The Census Data Output Area Code
-    pub code: String,
-    /// The list of citizens who have a "home" in this area
-    pub citizens: HashMap<Uuid, Citizen>,
-    /// How big the area is in Hectares
-    pub area_size: f32,
-    /// How many people per hectare? TODO Check this
-    pub density: f32,
+    pub output_area_code: String,
+
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
     pub buildings: EnumMap<AreaClassification, HashMap<Uuid, Box<dyn Building>>>,
     /// A polygon for drawing this output area
@@ -61,27 +58,30 @@ impl OutputArea {
     pub fn new(
         output_area_code: String,
         polygon: geo_types::Polygon<f64>,
-        census_data: CensusDataEntry,
-        rng: &mut dyn RngCore,
     ) -> anyhow::Result<OutputArea> {
+        Ok(OutputArea {
+            output_area_code,
+            buildings: EnumMap::default(),
+            polygon,
+        })
+    }
+    pub fn generate_citizens(&mut self, census_data: CensusDataEntry, rng: &mut dyn RngCore) -> anyhow::Result<HashMap<Uuid, Citizen>> {
         // TODO Fix this
-        let mut buildings = EnumMap::default();
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
 
         for (area, pop_count) in census_data.population_count.population_counts.iter() {
             // TODO Currently assigning 4 people per household
             // Should use census data instead
-            let household_size = 4;
-            let household_number = pop_count[PersonType::All] / household_size;
+            let household_number = pop_count[PersonType::All] / HOUSEHOLD_SIZE;
             let mut generated_population = 0;
             let mut households_for_area: HashMap<Uuid, Box<dyn Building>> =
                 HashMap::with_capacity(household_number as usize);
 
             // Build households
             for _ in 0..household_number {
-                let household_building_code = BuildingCode::new(output_area_code.clone(), area);
+                let household_building_code = BuildingCode::new(self.output_area_code.clone(), area);
                 let mut household = Household::new(household_building_code.clone());
-                for _ in 0..household_size {
+                for _ in 0..HOUSEHOLD_SIZE {
                     let occupation = census_data
                         .occupation_count
                         .get_random_occupation(rng)
@@ -103,16 +103,26 @@ impl OutputArea {
                     break;
                 }
             }
-            buildings[area] = households_for_area;
+            self.buildings[area] = households_for_area;
         }
-
-        Ok(OutputArea {
-            code: output_area_code,
-            citizens,
-            area_size: census_data.population_count.area_size,
-            density: census_data.population_count.density,
-            buildings,
-            polygon,
-        })
+        Ok(citizens)
+    }
+    fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<Uuid> {
+        let mut citizens = Vec::new();
+        for (_, data) in self.buildings.iter() {
+            for building in data.values() {
+                let building = building.as_any();
+                if let Some(household) = building.downcast_ref::<T>() {
+                    citizens.extend(household.occupants());
+                }
+            }
+        }
+        citizens
+    }
+    pub fn get_residents(&self) -> Vec<Uuid> {
+        self.extract_occupants_for_building_type::<Household>()
+    }
+    pub fn get_workers(&self) -> Vec<Uuid> {
+        self.extract_occupants_for_building_type::<Workplace>()
     }
 }

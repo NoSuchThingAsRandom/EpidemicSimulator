@@ -18,7 +18,11 @@
  *
  */
 
+use std::fmt::{Debug, Display, Formatter, write};
+
 use rand::{Rng, RngCore};
+use serde::Serialize;
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 use load_census_data::tables::occupation_count::OccupationType;
@@ -27,14 +31,14 @@ use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::models::building::BuildingCode;
 
 /// This is used to represent a single Citizen in the simulation
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Citizen {
     /// A unique identifier for this Citizen
     id: Uuid,
     /// The building they reside at (home)
-    household_code: BuildingCode,
+    pub household_code: BuildingCode,
     /// The place they work at
-    workplace_code: BuildingCode,
+    pub workplace_code: BuildingCode,
     occupation: OccupationType,
     /// The hour which they go to work
     start_working_hour: u32,
@@ -87,16 +91,23 @@ impl Citizen {
         if self.disease_status == DiseaseStatus::Susceptible
             && rng.gen::<f64>() < disease_model.exposure_chance
         {
+            //debug!("                Exposing Citizen {} lives at {} works at {}",self.id(),self.household_code,self.workplace_code);
             self.disease_status = DiseaseStatus::Exposed(0);
             return true;
         }
         false
     }
     pub fn set_workplace_code(&mut self, workplace_code: BuildingCode) {
-        self.workplace_code = workplace_code;
+        self.workplace_code = workplace_code.clone();
     }
     pub fn occupation(&self) -> OccupationType {
         self.occupation
+    }
+}
+
+impl Display for Citizen {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Citizen {} Has Diease Status {}, Is Currently Located At {}, Resides at {}, Works at {}", self.id, self.disease_status, self.current_position, self.household_code, self.workplace_code)
     }
 }
 

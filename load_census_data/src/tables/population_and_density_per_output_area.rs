@@ -22,16 +22,17 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
+use std::path::Display;
 
 use enum_map::EnumMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::parsing_error::{CensusError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
 /// This is a representation of Nomis Area Classifications for table 144
-#[derive(Deserialize, Debug, Enum, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Enum, Clone, Copy)]
 pub enum AreaClassification {
     #[serde(alias = "Total")]
     Total,
@@ -61,6 +62,11 @@ pub enum AreaClassification {
     RuralSparseHamlet,
 }
 
+impl std::fmt::Display for AreaClassification {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 #[derive(Deserialize, Debug, Enum)]
 pub enum PersonType {
     #[serde(alias = "All usual residents")]

@@ -18,9 +18,12 @@
  *
  */
 
+use std::any::Any;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 
+use serde::{Serialize, Serializer};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 use load_census_data::tables::employment_densities::EmploymentDensities;
@@ -35,7 +38,7 @@ use crate::error::Error;
 /// * An `OutputArea` - for broad location in the country,
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct BuildingCode {
     output_area_code: String,
     area_type: AreaClassification,
@@ -108,19 +111,11 @@ impl Hash for BuildingCode {
 
 impl PartialEq<Self> for BuildingCode {
     fn eq(&self, other: &Self) -> bool {
-        self.output_area_code == other.output_area_code && self.building_id == other.building_id
+        self.output_area_code == other.output_area_code && self.building_id.eq(&other.building_id)
     }
 }
 
 impl Eq for BuildingCode {}
-
-/// The types of buildings that can exist
-pub enum BuildingType {
-    /// A place where Citizens reside at night
-    Household,
-    /// A place where people work
-    Workplace,
-}
 
 /// This represents a home for Citizens
 ///
@@ -135,9 +130,23 @@ pub trait Building: Display + Debug {
     fn building_code(&self) -> &BuildingCode;
     /// Returns a list of ids of occupants that are here
     fn occupants(&self) -> &Vec<Uuid>;
+    fn as_any(&self) -> &dyn Any;
 }
 
-#[derive(Debug)]
+impl Serialize for dyn Building {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let raw = self.as_any();
+        if let Some(workplace) = raw.downcast_ref::<Workplace>() {
+            return workplace.serialize(serializer);
+        }
+        if let Some(household) = raw.downcast_ref::<Household>() {
+            return household.serialize(serializer);
+        }
+        Err(serde::ser::Error::custom("Unknown building type!"))
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub struct Household {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,
@@ -167,6 +176,10 @@ impl Building for Household {
     fn occupants(&self) -> &Vec<Uuid> {
         &self.occupants
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
 }
 
 impl Display for Household {
@@ -181,7 +194,7 @@ impl Display for Household {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Workplace {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,
@@ -229,6 +242,9 @@ impl Building for Workplace {
 
     fn occupants(&self) -> &Vec<Uuid> {
         &self.occupants
+    }
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
     }
 }
 

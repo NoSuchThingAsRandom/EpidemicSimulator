@@ -18,17 +18,19 @@
  *
  */
 
-use std::fmt::{Display, Formatter};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter, write};
 use std::hash::Hash;
 
 use log::error;
+use serde::Serialize;
 use uuid::Uuid;
 
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::models::building::BuildingCode;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize)]
 pub enum DiseaseStatus {
     Susceptible,
     /// The amount of steps(hours) the citizen has been exposed for
@@ -64,6 +66,25 @@ impl DiseaseStatus {
     }
 }
 
+impl Display for DiseaseStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DiseaseStatus::Susceptible => {
+                write!(f, "Susceptible to Infection")
+            }
+            DiseaseStatus::Exposed(since) => {
+                write!(f, "Exposed since: {}", since)
+            }
+            DiseaseStatus::Infected(since) => {
+                write!(f, "Infected since: {}", since)
+            }
+            DiseaseStatus::Recovered => {
+                write!(f, "Recovered/Died")
+            }
+        }
+    }
+}
+
 /// A snapshot of the disease per time step
 pub struct Statistics {
     time_step: u32,
@@ -71,17 +92,32 @@ pub struct Statistics {
     exposed: u32,
     infected: u32,
     recovered: u32,
+    /// First Instance, Amount
+    buildings_exposed: HashMap<BuildingCode, (u32, u32)>,
+    workplace_exposed: HashMap<BuildingCode, (u32, u32)>,
+    /// First Instance, Amount
+    output_areas_exposed: HashMap<String, (u32, u32)>,
 }
 
 impl Statistics {
-    pub fn new(hour: u32) -> Statistics {
+    pub fn new() -> Statistics {
         Statistics {
-            time_step: hour,
+            time_step: 0,
             susceptible: 0,
             exposed: 0,
             infected: 0,
             recovered: 0,
+            buildings_exposed: Default::default(),
+            workplace_exposed: Default::default(),
+            output_areas_exposed: Default::default(),
         }
+    }
+    pub fn next(&mut self) {
+        self.time_step += 1;
+        self.susceptible = 0;
+        self.exposed = 0;
+        self.infected = 0;
+        self.recovered = 0;
     }
     pub fn time_step(&self) -> u32 {
         self.time_step
@@ -120,11 +156,31 @@ impl Statistics {
     }
     /// When a citizen has been exposed, the susceptible count drops by one, and exposure count increases by 1
     /// Will error, if called when no Citizens are susceptible
-    pub fn citizen_exposed(&mut self) -> Result<(), crate::error::Error> {
+    pub fn citizen_exposed(&mut self, exposure: Exposure) -> Result<(), crate::error::Error> {
         let x = self.susceptible.checked_sub(1);
         if let Some(x) = x {
             self.susceptible = x;
             self.exposed += 1;
+            //debug!("Exposing: {}", exposure);
+            if let Some(data) = self.buildings_exposed.get_mut(&exposure.building_code) {
+                data.1 += 1;
+            } else {
+                self.buildings_exposed
+                    .insert(exposure.building_code.clone(), (self.time_step, 1));
+            }
+
+            if let Some(data) = self
+                .output_areas_exposed
+                .get_mut(&exposure.building_code.output_area_code().clone())
+            {
+                data.1 += 1;
+            } else {
+                self.output_areas_exposed.insert(
+                    exposure.building_code.output_area_code(),
+                    (self.time_step, 1),
+                );
+            }
+
             Ok(())
         } else {
             error!("Cannot log citizen being exposed, as no susceptible citizens left");
@@ -137,6 +193,25 @@ impl Statistics {
     pub fn disease_exists(&self) -> bool {
         self.exposed != 0 || self.infected != 0
     }
+
+    pub fn summarise(&self) {
+        println!("\n\n\n--------\n");
+        println!("Output Areas Exposed: ");
+        for area in &self.output_areas_exposed {
+            println!(
+                "         {} first infected at {} with total {}",
+                area.0, area.1.0, area.1.1
+            );
+        }
+        println!("\n\n\n--------\n");
+        println!("Buildings exposed Exposed: ");
+        for building in &self.buildings_exposed {
+            println!(
+                "         {} first infected at {} with total {}",
+                building.0, building.1.0, building.1.1
+            );
+        }
+    }
 }
 
 impl Default for Statistics {
@@ -147,6 +222,9 @@ impl Default for Statistics {
             exposed: 0,
             infected: 0,
             recovered: 0,
+            buildings_exposed: Default::default(),
+            workplace_exposed: Default::default(),
+            output_areas_exposed: Default::default(),
         }
     }
 }
@@ -190,9 +268,9 @@ impl DiseaseModel {
 }
 
 /// Represents an event where Citizens are exposed to an infected individual at the given building
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 pub struct Exposure {
-    /// The ID of the citizen who is infected
+    /// The Output Code, the Citizen Resides in, and the actual ID of the citizen who is infected
     pub infector_id: Uuid,
     /// The building the infection occurred in
     building_code: BuildingCode,
