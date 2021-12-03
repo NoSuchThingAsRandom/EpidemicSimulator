@@ -18,146 +18,102 @@
  *
  */
 
-use std::time::Duration;
+use std::cmp::{max, min};
+use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use log::{debug, error};
-use pixels::{Pixels, SurfaceTexture};
-use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
-use winit::event::{Event, VirtualKeyCode};
-use winit::event_loop::{ControlFlow, EventLoop};
+use geo_types::Coordinate;
+use ggez::{ContextBuilder, event, GameError, graphics, mint};
+use ggez::conf::WindowMode;
+use ggez::event::EventHandler;
+use ggez::event::KeyCode::I;
+use ggez::graphics::{Color, DrawMode, DrawParam, FillOptions, Rect, StrokeOptions, Transform};
+use ggez::mint::Point2;
+use log::{debug, error, info};
 
 use sim::simulator::Simulator;
 
-use crate::{convert_geo_point_to_pixel, DrawingResult};
+use crate::{convert_geo_point_to_pixel, DrawingResult, GRID_SIZE, X_OFFSET, Y_OFFSET};
 use crate::error::MyDrawingError;
 
 pub const SCREEN_WIDTH: u32 = 1920;
 pub const SCREEN_HEIGHT: u32 = 1080;
 
 pub fn run(mut simulator: Simulator) -> anyhow::Result<Simulator> {
-    let event_loop = EventLoop::new();
+    //.window_mode()
 
-    let (window, p_width, p_height, mut _hidpi_factor) =
-        create_window("Conway's Game of Life", &event_loop);
-
-    let surface_texture = SurfaceTexture::new(p_width, p_height, &window);
-
-    let mut pixels = Pixels::new(SCREEN_WIDTH, SCREEN_HEIGHT, surface_texture).unwrap();
-    let mut paused = false;
-
-    let mut draw_state: Option<bool> = None;
-    event_loop.run(move |event, _, control_flow| {
-        // The one and only event that winit_input_helper doesn't have for us...
-        if let Event::RedrawRequested(_) = event {
-            debug!("Drawing");
-            let mut screen = pixels.get_frame();
-            screen.fill(0);
-            render(&simulator, pixels.get_frame()).unwrap();
-            if pixels
-                .render()
-                .map_err(|e| error!("pixels.render() failed: {:?}", e))
-                .is_err()
-            {
-                *control_flow = ControlFlow::Exit;
-                return;
-            }
-        }
-        // Do update stuff here?
-        if !simulator.step().context("Simulation time step failed").unwrap() {
-            return;
-        }
-        /*        // Adjust high DPI factor
-                if let Some(factor) = input.scale_factor_changed() {
-                    _hidpi_factor = factor;
-                }
-                // Resize the window
-                if let Some(size) = input.window_resized() {
-                    pixels.resize_surface(size.width, size.height);
-                }
-                if !paused || input.key_pressed(VirtualKeyCode::Space) {
-                    life.update();
-                }*/
-        //std::thread::sleep(Duration::from_secs(1));
-        window.request_redraw();
-    });
+    let (mut ctx, event_loop) = ContextBuilder::new("my_game", "Cool Game Author").window_mode(WindowMode::dimensions(WindowMode::default(), 2560.0, 1440.0))
+        .build()
+        .expect("aieee, could not create ggez context!");
+    let mut render_sim = RenderSim::new(simulator);
+    render_sim.set_screen_bounds(&mut ctx);
+    event::run(ctx, event_loop, render_sim);
     Ok(simulator)
 }
 
-/// Copy pasted from: https://github.com/parasyte/pixels/blob/2a4ebbf19d47fd8e5cdc4d4311e82393ec50ca1d/examples/conway/src/main.rs#L129
-/// Create a window for the game.
-///
-/// Automatically scales the window to cover about 2/3 of the monitor height.
-///
-/// # Returns
-///
-/// Tuple of `(window, surface, width, height, hidpi_factor)`
-/// `width` and `height` are in `PhysicalSize` units.
-fn create_window(
-    title: &str,
-    event_loop: &EventLoop<()>,
-) -> (winit::window::Window, u32, u32, f64) {
-    // Create a hidden window so we can estimate a good default window size
-    let window = winit::window::WindowBuilder::new()
-        .with_visible(false)
-        .with_title(title)
-        .build(event_loop)
-        .unwrap();
-    let hidpi_factor = window.scale_factor();
 
-    // Get dimensions
-    let width = SCREEN_WIDTH as f64;
-    let height = SCREEN_HEIGHT as f64;
-    let (monitor_width, monitor_height) = {
-        if let Some(monitor) = window.current_monitor() {
-            let size = monitor.size().to_logical(hidpi_factor);
-            (size.width, size.height)
-        } else {
-            (width, height)
+pub struct RenderSim {
+    simulator: Simulator,
+    index: usize,
+    time_since_last_print: Instant,
+    scale: [f32; 2],
+}
+
+impl RenderSim {
+    pub fn new(simulator: Simulator) -> RenderSim {
+        RenderSim { simulator, index: 0, time_since_last_print: Instant::now(), scale: [1.0, 1.0] }
+    }
+    pub fn set_screen_bounds(&mut self, ctx: &mut ggez::Context) {
+        let mut min_width: f32 = f32::MAX;
+        let mut min_height: f32 = f32::MAX;
+        let mut max_width = 0.0;
+        let mut max_height = 0.0;
+
+        for (_, area) in &self.simulator.output_areas {
+            for point in &area.polygon.exterior().0 {
+                min_width = min(min_width as u32, point.x as u32) as f32;
+                min_height = min(min_width as u32, point.y as u32) as f32;
+                max_width = max(max_width as u32, point.x as u32) as f32;
+                max_height = max(max_height as u32, point.y as u32) as f32;
+            }
         }
-    };
-    let scale = (monitor_height / height * 2.0 / 3.0).round().max(1.0);
-
-    // Resize, center, and display the window
-    let min_size: winit::dpi::LogicalSize<f64> =
-        PhysicalSize::new(width, height).to_logical(hidpi_factor);
-    let default_size = LogicalSize::new(width * scale, height * scale);
-    let center = LogicalPosition::new(
-        (monitor_width - width * scale) / 2.0,
-        (monitor_height - height * scale) / 2.0,
-    );
-    window.set_inner_size(default_size);
-    window.set_min_inner_size(Some(min_size));
-    window.set_outer_position(center);
-    window.set_visible(true);
-
-    let size = default_size.to_physical::<f64>(hidpi_factor);
-
-    (
-        window,
-        size.width.round() as u32,
-        size.height.round() as u32,
-        hidpi_factor,
-    )
-}
-
-pub fn draw_pixel(x: usize, y: usize, screen: &mut [u8]) {
-    let pixel_size = 4;
-    let pixel_offset = (SCREEN_WIDTH as usize * y * pixel_size) + (x * pixel_size);
-    let c: &[u8] = &[255, 255, 255, 255];
-    for (index, c_val) in c.iter().enumerate() {
-        screen[pixel_offset + index] = *c_val;
+        min_width -= 10000.0;
+        min_height -= 10000.0;
+        max_width += 10000.0;
+        max_height += 10000.0;
+        info!("Chosen Grid Size: ({}, {}) to ({}, {})",min_width,min_height,max_width,max_height);
+        info!("Chosen Scale: {:?}",self.scale);
+        ggez::graphics::set_screen_coordinates(ctx, Rect::new(min_width, min_height, max_width - min_width, max_height - min_height)).unwrap();
     }
 }
 
-pub fn render(simulator: &Simulator, screen: &mut [u8]) -> anyhow::Result<()> {
-    for (index, area) in &simulator.output_areas {
-        area.polygon.exterior().0
-            .iter().for_each(|p| {
-            let p = convert_geo_point_to_pixel(*p).unwrap();
-            let p = (p.0 as usize, p.1 as usize);
-            draw_pixel(p.0, p.1, screen);
-        });
+impl EventHandler for RenderSim {
+    fn update(&mut self, _ctx: &mut ggez::Context) -> Result<(), GameError> {
+        self.index += 1;
+        if self.index % 100 == 0 {
+            info!("At index {} Time Passed: {:?}, - Statistics: {}",self.index,self.time_since_last_print.elapsed(),self.simulator.statistics);
+            self.time_since_last_print = Instant::now();
+        }
+        if !self.simulator.step().unwrap() {
+            panic!("Finished");
+        }
+        Ok(())
     }
-    Ok(())
+
+    fn draw(&mut self, ctx: &mut ggez::Context) -> Result<(), GameError> {
+        graphics::clear(ctx, [1.0, 1.0, 1.0, 1.0].into());
+        for (_, area) in &self.simulator.output_areas {
+            let points = area.polygon.exterior().0
+                .iter().map(|p| {
+                let p = [p.x as f32, p.y as f32];
+                p
+            }).collect::<Vec<[f32; 2]>>();
+            let stroke_polygon = graphics::Mesh::new_polygon(ctx, DrawMode::Stroke(StrokeOptions::default().with_line_width(100.0)), &points, Color::BLACK)?;
+            let fill_polygon = graphics::Mesh::new_polygon(ctx, DrawMode::Fill(FillOptions::default()), &points, Color::RED)?;
+            graphics::draw(ctx, &stroke_polygon, DrawParam::default().scale(self.scale))?;//ggez::mint::Point2 { x: 0, y: 0 })?;
+            graphics::draw(ctx, &fill_polygon, DrawParam::default().scale(self.scale))?;//ggez::mint::Point2 { x: 0, y: 0 })?;
+        }
+        graphics::present(ctx)?;
+        Ok(())
+    }
 }
