@@ -23,7 +23,6 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
-use std::path::Display;
 
 use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};

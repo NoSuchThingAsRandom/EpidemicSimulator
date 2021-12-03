@@ -23,12 +23,11 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use geo_types::{Coordinate, LineString, Polygon};
+use geo_types::{Coordinate, LineString};
 use log::info;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
-use load_census_data::CensusData;
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
 
@@ -122,4 +121,3 @@ pub fn build_polygons_for_output_areas(
     info!("Finished loading map data in {:?}", start_time.elapsed());
     Ok(data)
 }
-

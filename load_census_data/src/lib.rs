@@ -24,7 +24,7 @@ extern crate enum_map;
 
 use std::collections::HashMap;
 
-use log::{debug, info, warn};
+use log::{info, warn};
 use rand::{Rng, RngCore};
 
 use crate::parsing_error::CensusError;

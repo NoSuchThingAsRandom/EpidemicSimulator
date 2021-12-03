@@ -18,7 +18,6 @@
  *
  */
 
-use std::any::Any;
 use std::collections::HashMap;
 
 use anyhow::Context;
@@ -49,6 +48,7 @@ pub struct OutputArea {
     pub buildings: EnumMap<AreaClassification, HashMap<Uuid, Box<dyn Building>>>,
     /// A polygon for drawing this output area
     pub polygon: geo_types::Polygon<f64>,
+    pub total_residents: u32,
 }
 
 impl OutputArea {
@@ -63,48 +63,53 @@ impl OutputArea {
             output_area_code,
             buildings: EnumMap::default(),
             polygon,
+            total_residents: 0,
         })
     }
-    pub fn generate_citizens(&mut self, census_data: CensusDataEntry, rng: &mut dyn RngCore) -> anyhow::Result<HashMap<Uuid, Citizen>> {
+    pub fn generate_citizens(
+        &mut self,
+        census_data: CensusDataEntry,
+        rng: &mut dyn RngCore,
+    ) -> anyhow::Result<HashMap<Uuid, Citizen>> {
         // TODO Fix this
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
+        let area = AreaClassification::Total;
+        let pop_count = &census_data.population_count.population_counts[area];
+        //for (area, pop_count) in census_data.population_count.population_counts.iter() {
+        // TODO Currently assigning 4 people per household
+        // Should use census data instead
+        let household_number = pop_count[PersonType::All] / HOUSEHOLD_SIZE;
+        let mut generated_population = 0;
+        let mut households_for_area: HashMap<Uuid, Box<dyn Building>> =
+            HashMap::with_capacity(household_number as usize);
 
-        for (area, pop_count) in census_data.population_count.population_counts.iter() {
-            // TODO Currently assigning 4 people per household
-            // Should use census data instead
-            let household_number = pop_count[PersonType::All] / HOUSEHOLD_SIZE;
-            let mut generated_population = 0;
-            let mut households_for_area: HashMap<Uuid, Box<dyn Building>> =
-                HashMap::with_capacity(household_number as usize);
-
-            // Build households
-            for _ in 0..household_number {
-                let household_building_code = BuildingCode::new(self.output_area_code.clone(), area);
-                let mut household = Household::new(household_building_code.clone());
-                for _ in 0..HOUSEHOLD_SIZE {
-                    let occupation = census_data
-                        .occupation_count
-                        .get_random_occupation(rng)
-                        .context("Cannot generate a random occupation for new Citizen!")?;
-                    let citizen = Citizen::new(
-                        household_building_code.clone(),
-                        household_building_code.clone(),
-                        occupation,
-                    );
-                    household
-                        .add_citizen(citizen.id())
-                        .context("Failed to add Citizen to Household")?;
-                    citizens.insert(citizen.id(), citizen);
-                    generated_population += 1;
-                }
-                households_for_area
-                    .insert(household_building_code.building_id(), Box::new(household));
-                if generated_population >= pop_count[PersonType::All] {
-                    break;
-                }
+        // Build households
+        for _ in 0..household_number {
+            let household_building_code = BuildingCode::new(self.output_area_code.clone(), area);
+            let mut household = Household::new(household_building_code.clone());
+            for _ in 0..HOUSEHOLD_SIZE {
+                let occupation = census_data
+                    .occupation_count
+                    .get_random_occupation(rng)
+                    .context("Cannot generate a random occupation for new Citizen!")?;
+                let citizen = Citizen::new(
+                    household_building_code.clone(),
+                    household_building_code.clone(),
+                    occupation,
+                );
+                household
+                    .add_citizen(citizen.id())
+                    .context("Failed to add Citizen to Household")?;
+                citizens.insert(citizen.id(), citizen);
+                self.total_residents += 1;
+                generated_population += 1;
             }
-            self.buildings[area] = households_for_area;
+            households_for_area.insert(household_building_code.building_id(), Box::new(household));
+            if generated_population >= pop_count[PersonType::All] {
+                break;
+            }
         }
+        self.buildings[area] = households_for_area;
         Ok(citizens)
     }
     fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<Uuid> {

@@ -115,6 +115,19 @@ impl Simulator {
             "Initialization completed in {} seconds",
             start.elapsed().as_secs_f32()
         );
+        debug!(
+            "Starting Statistics:\n      There are {} total Citizens\n      {} Output Areas",
+            simulator.citizens.len(),
+            simulator.output_areas.len()
+        );
+        assert_eq!(
+            simulator.citizens.len() as u32,
+            simulator
+                .output_areas
+                .iter()
+                .map(|area| area.1.total_residents)
+                .sum::<u32>()
+        );
         Ok(simulator)
     }
 
@@ -249,7 +262,12 @@ impl Simulator {
                     },
                 })?;
             // Add any leftover Workplaces to the Output Area
-            current_workplaces_to_allocate.drain().for_each(|(_, workplace)| { workplace_buildings.insert(workplace.building_code().building_id(), Box::new(workplace)); });
+            current_workplaces_to_allocate
+                .drain()
+                .for_each(|(_, workplace)| {
+                    workplace_buildings
+                        .insert(workplace.building_code().building_id(), Box::new(workplace));
+                });
             workplace_output_area.buildings[AreaClassification::UrbanCity]
                 .extend(workplace_buildings);
         }
@@ -298,9 +316,7 @@ impl Simulator {
         let exposures = self.generate_exposures()?;
         self.apply_exposures(exposures)?;
         if !self.statistics.disease_exists() {
-            info!(
-                    "Disease finished as no one has the disease"
-                );
+            info!("Disease finished as no one has the disease");
             Ok(false)
         } else {
             Ok(true)
@@ -397,7 +413,6 @@ impl Simulator {
         for area in self.output_areas {
             let mut sub_areas = HashMap::new();
 
-
             for (area_type, mut building_map) in area.1.buildings {
                 let mut buildings = HashMap::new();
 
@@ -412,7 +427,11 @@ impl Simulator {
         for citizen in self.citizens {
             citizens.insert(citizen.0.to_string(), citizen.1);
         }
-        file.write_all(json!({"citizens":citizens,"output_areas":output_area_json}).to_string().as_ref())?;
+        file.write_all(
+            json!({"citizens":citizens,"output_areas":output_area_json})
+                .to_string()
+                .as_ref(),
+        )?;
 
         Ok(())
     }

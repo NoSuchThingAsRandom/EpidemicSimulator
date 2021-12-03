@@ -23,7 +23,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 
 use serde::{Serialize, Serializer};
-use serde_json::{json, Value};
 use uuid::Uuid;
 
 use load_census_data::tables::employment_densities::EmploymentDensities;
@@ -134,7 +133,10 @@ pub trait Building: Display + Debug {
 }
 
 impl Serialize for dyn Building {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
         let raw = self.as_any();
         if let Some(workplace) = raw.downcast_ref::<Workplace>() {
             return workplace.serialize(serializer);

@@ -32,7 +32,7 @@ use plotters::style::TextStyle;
 use polylabel::polylabel;
 
 use crate::{convert_geo_point_to_pixel, GRID_SIZE};
-use crate::error::{DrawingResult, MyDrawingError};
+use crate::error::DrawingResult;
 
 /// This is a representation of an Output Area to be passed to the Draw function
 pub struct DrawingRecord {

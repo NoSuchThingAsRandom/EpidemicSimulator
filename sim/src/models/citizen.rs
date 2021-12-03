@@ -18,11 +18,10 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter, write};
+use std::fmt::{Debug, Display, Formatter};
 
 use rand::{Rng, RngCore};
 use serde::Serialize;
-use serde_json::{json, Value};
 use uuid::Uuid;
 
 use load_census_data::tables::occupation_count::OccupationType;

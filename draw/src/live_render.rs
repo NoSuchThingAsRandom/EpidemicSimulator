@@ -19,49 +19,56 @@
  */
 
 use std::cmp::{max, min};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
-use anyhow::Context;
-use geo_types::Coordinate;
-use ggez::{ContextBuilder, event, GameError, graphics, mint};
+use ggez::{ContextBuilder, event, GameError, graphics};
 use ggez::conf::WindowMode;
 use ggez::event::EventHandler;
-use ggez::event::KeyCode::I;
-use ggez::graphics::{Color, DrawMode, DrawParam, FillOptions, Rect, StrokeOptions, Transform};
-use ggez::mint::Point2;
-use log::{debug, error, info};
+use ggez::graphics::{Color, DrawMode, DrawParam, FillOptions, Rect, StrokeOptions};
+use log::{error, info};
 
+use sim::models::output_area::OutputArea;
 use sim::simulator::Simulator;
-
-use crate::{convert_geo_point_to_pixel, DrawingResult, GRID_SIZE, X_OFFSET, Y_OFFSET};
-use crate::error::MyDrawingError;
 
 pub const SCREEN_WIDTH: u32 = 1920;
 pub const SCREEN_HEIGHT: u32 = 1080;
 
-pub fn run(mut simulator: Simulator) -> anyhow::Result<Simulator> {
-    //.window_mode()
-
-    let (mut ctx, event_loop) = ContextBuilder::new("my_game", "Cool Game Author").window_mode(WindowMode::dimensions(WindowMode::default(), 2560.0, 1440.0))
+pub fn run(simulator: Simulator) -> anyhow::Result<Simulator> {
+    let (mut ctx, event_loop) = ContextBuilder::new("my_game", "Cool Game Author")
+        .window_mode(WindowMode::dimensions(
+            WindowMode::default(),
+            2560.0,
+            1440.0,
+        ))
         .build()
         .expect("aieee, could not create ggez context!");
     let mut render_sim = RenderSim::new(simulator);
     render_sim.set_screen_bounds(&mut ctx);
     event::run(ctx, event_loop, render_sim);
-    Ok(simulator)
 }
 
+pub enum ColourCodingStrategy {
+    TotalPopulation { max_size: f32 },
+    InfectedCount { default_colour: Color },
+}
 
 pub struct RenderSim {
     simulator: Simulator,
     index: usize,
     time_since_last_print: Instant,
-    scale: [f32; 2],
+    colour_coding_strategy: ColourCodingStrategy,
 }
 
 impl RenderSim {
     pub fn new(simulator: Simulator) -> RenderSim {
-        RenderSim { simulator, index: 0, time_since_last_print: Instant::now(), scale: [1.0, 1.0] }
+        RenderSim {
+            simulator,
+            index: 0,
+            time_since_last_print: Instant::now(),
+            colour_coding_strategy: ColourCodingStrategy::InfectedCount {
+                default_colour: Color::GREEN,
+            },
+        }
     }
     pub fn set_screen_bounds(&mut self, ctx: &mut ggez::Context) {
         let mut min_width: f32 = f32::MAX;
@@ -77,13 +84,56 @@ impl RenderSim {
                 max_height = max(max_height as u32, point.y as u32) as f32;
             }
         }
+        // TODO Figure out why we need this?
         min_width -= 10000.0;
         min_height -= 10000.0;
         max_width += 10000.0;
         max_height += 10000.0;
-        info!("Chosen Grid Size: ({}, {}) to ({}, {})",min_width,min_height,max_width,max_height);
-        info!("Chosen Scale: {:?}",self.scale);
-        ggez::graphics::set_screen_coordinates(ctx, Rect::new(min_width, min_height, max_width - min_width, max_height - min_height)).unwrap();
+        info!(
+            "Chosen Grid Size: ({}, {}) to ({}, {})",
+            min_width, min_height, max_width, max_height
+        );
+        ggez::graphics::set_screen_coordinates(
+            ctx,
+            Rect::new(
+                min_width,
+                min_height,
+                max_width - min_width,
+                max_height - min_height,
+            ),
+        )
+            .unwrap();
+    }
+    fn get_colour_for_area(&self, area: &OutputArea) -> Color {
+        match self.colour_coding_strategy {
+            ColourCodingStrategy::TotalPopulation { max_size } => Color::from((
+                max(
+                    255,
+                    (255.0 * (area.total_residents as f32 / max_size)) as u32,
+                ) as u8,
+                0,
+                0,
+            )),
+            ColourCodingStrategy::InfectedCount { default_colour } => {
+                if let Some(amount) = self
+                    .simulator
+                    .statistics
+                    .output_areas_exposed
+                    .get(&area.output_area_code)
+                {
+                    Color::from((
+                        max(
+                            255,
+                            (255.0 * (area.total_residents as f32 / amount.1 as f32)) as u32,
+                        ) as u8,
+                        0,
+                        0,
+                    ))
+                } else {
+                    default_colour
+                }
+            }
+        }
     }
 }
 
@@ -91,7 +141,12 @@ impl EventHandler for RenderSim {
     fn update(&mut self, _ctx: &mut ggez::Context) -> Result<(), GameError> {
         self.index += 1;
         if self.index % 100 == 0 {
-            info!("At index {} Time Passed: {:?}, - Statistics: {}",self.index,self.time_since_last_print.elapsed(),self.simulator.statistics);
+            info!(
+                "At index {} Time Passed: {:?}, - Statistics: {}",
+                self.index,
+                self.time_since_last_print.elapsed(),
+                self.simulator.statistics
+            );
             self.time_since_last_print = Instant::now();
         }
         if !self.simulator.step().unwrap() {
@@ -103,15 +158,29 @@ impl EventHandler for RenderSim {
     fn draw(&mut self, ctx: &mut ggez::Context) -> Result<(), GameError> {
         graphics::clear(ctx, [1.0, 1.0, 1.0, 1.0].into());
         for (_, area) in &self.simulator.output_areas {
-            let points = area.polygon.exterior().0
-                .iter().map(|p| {
-                let p = [p.x as f32, p.y as f32];
-                p
-            }).collect::<Vec<[f32; 2]>>();
-            let stroke_polygon = graphics::Mesh::new_polygon(ctx, DrawMode::Stroke(StrokeOptions::default().with_line_width(100.0)), &points, Color::BLACK)?;
-            let fill_polygon = graphics::Mesh::new_polygon(ctx, DrawMode::Fill(FillOptions::default()), &points, Color::RED)?;
-            graphics::draw(ctx, &stroke_polygon, DrawParam::default().scale(self.scale))?;//ggez::mint::Point2 { x: 0, y: 0 })?;
-            graphics::draw(ctx, &fill_polygon, DrawParam::default().scale(self.scale))?;//ggez::mint::Point2 { x: 0, y: 0 })?;
+            let colour = self.get_colour_for_area(area);
+
+            let points = area
+                .polygon
+                .exterior()
+                .0
+                .iter()
+                .map(|p| [p.x as f32, p.y as f32])
+                .collect::<Vec<[f32; 2]>>();
+            let stroke_polygon = graphics::Mesh::new_polygon(
+                ctx,
+                DrawMode::Stroke(StrokeOptions::default().with_line_width(100.0)),
+                &points,
+                Color::BLACK,
+            )?;
+            let fill_polygon = graphics::Mesh::new_polygon(
+                ctx,
+                DrawMode::Fill(FillOptions::default()),
+                &points,
+                colour,
+            )?;
+            graphics::draw(ctx, &stroke_polygon, DrawParam::default())?;
+            graphics::draw(ctx, &fill_polygon, DrawParam::default())?;
         }
         graphics::present(ctx)?;
         Ok(())

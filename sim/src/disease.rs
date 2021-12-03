@@ -19,7 +19,7 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, write};
+use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
 use log::error;
@@ -93,10 +93,10 @@ pub struct Statistics {
     infected: u32,
     recovered: u32,
     /// First Instance, Amount
-    buildings_exposed: HashMap<BuildingCode, (u32, u32)>,
-    workplace_exposed: HashMap<BuildingCode, (u32, u32)>,
+    pub buildings_exposed: HashMap<BuildingCode, (u32, u32)>,
+    pub workplace_exposed: HashMap<BuildingCode, (u32, u32)>,
     /// First Instance, Amount
-    output_areas_exposed: HashMap<String, (u32, u32)>,
+    pub output_areas_exposed: HashMap<String, (u32, u32)>,
 }
 
 impl Statistics {
