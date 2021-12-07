@@ -258,7 +258,7 @@ impl DiseaseModel {
     pub fn covid() -> DiseaseModel {
         DiseaseModel {
             reproduction_rate: 2.5,
-            exposure_chance: 0.4,
+            exposure_chance: 0.04,
             death_rate: 0.2,
             exposed_time: 4 * 24,
             infected_time: 14 * 24,

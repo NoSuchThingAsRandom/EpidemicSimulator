@@ -13,3 +13,5 @@ geo-types = "0.7.2"
 plotters = "0.3"
 polylabel = "2.4.0"
 ggez = "0.7"
+ggez-egui = { path = "../../ggez-egui" }
+egui = "0.15.0"
