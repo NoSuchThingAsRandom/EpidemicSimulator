@@ -22,6 +22,7 @@ use std::cmp::{max, min};
 use std::fmt::format;
 use std::time::Instant;
 
+use geo_types::Coordinate;
 use ggez::{Context, ContextBuilder, event, GameError, graphics};
 use ggez::conf::WindowMode;
 use ggez::event::{EventHandler, MouseButton, quit};
@@ -59,7 +60,7 @@ pub struct RenderSim {
     index: usize,
     time_since_last_print: Instant,
     colour_coding_strategy: ColourCodingStrategy,
-    screen_coords: Rect,
+    output_area_size: Rect,
     egui_backend: EguiBackend,
     is_paused: bool,
 }
@@ -73,21 +74,12 @@ impl RenderSim {
             colour_coding_strategy: ColourCodingStrategy::InfectedCount {
                 default_colour: Color::GREEN,
             },
-            screen_coords: Rect::new(0.0, 0.0, SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
+            output_area_size: Rect::new(0.0, 0.0, SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
             egui_backend: EguiBackend::new(&ctx),
             is_paused: false,
         }
     }
     pub fn set_screen_bounds(&mut self, ctx: &mut ggez::Context) {
-        let r = Rect::new(100.0, 100.0, 1000.0, 1000.0);
-        self.screen_coords = r;
-        ggez::graphics::set_screen_coordinates(
-            ctx,
-            r,
-        );
-        self.egui_backend.set_x_offset(r.x);
-        self.egui_backend.set_y_offset(r.y);
-        return;
         let mut min_width: f32 = f32::MAX;
         let mut min_height: f32 = f32::MAX;
         let mut max_width = 0.0;
@@ -100,12 +92,18 @@ impl RenderSim {
                 max_width = max(max_width as u32, point.x as u32) as f32;
                 max_height = max(max_height as u32, point.y as u32) as f32;
             }
+            for area in area.polygon.interiors() {
+                for point in &area.0 {
+                    min_width = min(min_width as u32, point.x as u32) as f32;
+                    min_height = min(min_width as u32, point.y as u32) as f32;
+                    max_width = max(max_width as u32, point.x as u32) as f32;
+                    max_height = max(max_height as u32, point.y as u32) as f32;
+                }
+            }
         }
         // TODO Figure out why we need this?
         min_width -= 10000.0;
         min_height -= 10000.0;
-        max_width += 10000.0;
-        max_height += 10000.0;
         info!(
             "Chosen Grid Size: ({}, {}) to ({}, {})",
             min_width, min_height, max_width, max_height
@@ -116,12 +114,7 @@ impl RenderSim {
             max_width - min_width,
             max_height - min_height,
         );
-        self.screen_coords = r;
-        ggez::graphics::set_screen_coordinates(
-            ctx,
-            r,
-        )
-            .unwrap();
+        self.output_area_size = r;
     }
     fn get_colour_for_area(&self, area: &OutputArea) -> Color {
         match self.colour_coding_strategy {
@@ -153,6 +146,11 @@ impl RenderSim {
                 }
             }
         }
+    }
+    fn offset_point(&self, point: &Coordinate<f64>) -> [f32; 2] {
+        let x = (point.x as f32 - self.output_area_size.x) / (self.output_area_size.w / SCREEN_WIDTH as f32);
+        let y = (point.y as f32 - self.output_area_size.y) / (self.output_area_size.h / SCREEN_HEIGHT as f32);
+        [x, y]
     }
 }
 
@@ -188,6 +186,7 @@ impl EventHandler for RenderSim {
         Ok(())
     }
 
+
     fn draw(&mut self, ctx: &mut ggez::Context) -> Result<(), GameError> {
         graphics::clear(ctx, [1.0, 1.0, 1.0, 1.0].into());
         for (_, area) in &self.simulator.output_areas {
@@ -198,11 +197,11 @@ impl EventHandler for RenderSim {
                 .exterior()
                 .0
                 .iter()
-                .map(|p| [p.x as f32, p.y as f32])
+                .map(|p| self.offset_point(p))
                 .collect::<Vec<[f32; 2]>>();
             let stroke_polygon = graphics::Mesh::new_polygon(
                 ctx,
-                DrawMode::Stroke(StrokeOptions::default().with_line_width(100.0)),
+                DrawMode::Stroke(StrokeOptions::default().with_line_width(5.0)),
                 &points,
                 Color::BLACK,
             )?;
@@ -212,17 +211,17 @@ impl EventHandler for RenderSim {
                 &points,
                 colour,
             )?;
-            //graphics::draw(ctx, &stroke_polygon, DrawParam::default())?;
-            //graphics::draw(ctx, &fill_polygon, DrawParam::default())?;
+            graphics::draw(ctx, &stroke_polygon, DrawParam::default())?;
+            graphics::draw(ctx, &fill_polygon, DrawParam::default())?;
         }
         // Draw Statistics For Epidemic
         let mut statistics = graphics::Text::new(format!("{}", self.simulator.statistics));
-        statistics.set_font(Font::default(), PxScale::from(20.0 * self.screen_coords.w as f32 / 1920.0));
-        let mut coords = [self.screen_coords.x + (self.screen_coords.w / 2.0) - statistics.width(ctx) as f32 / 2.0, self.screen_coords.y + (self.screen_coords.h * 0.02)];
-        let mut params = graphics::DrawParam::default().dest(coords);
+        statistics.set_font(Font::default(), PxScale::from(20.0));
+        //let mut coords = [self.output_area_size.x + (self.output_area_size.w / 2.0) - statistics.width(ctx) as f32 / 2.0, self.output_area_size.y + (self.output_area_size.h * 0.02)];
+        let mut params = graphics::DrawParam::default();//.dest(coords);
         params.color = Color::BLACK;
         graphics::draw(ctx, &statistics, params)?;
-        draw(ctx, &self.egui_backend, graphics::DrawParam::default().dest(coords))?;
+        draw(ctx, &self.egui_backend, graphics::DrawParam::default());//.dest(coords))?;
         graphics::present(ctx)?;
         Ok(())
     }
