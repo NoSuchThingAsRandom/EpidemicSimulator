@@ -19,12 +19,13 @@
  */
 
 use std::cmp::{max, min};
+use std::fmt::format;
 use std::time::Instant;
 
 use ggez::{ContextBuilder, event, GameError, graphics};
 use ggez::conf::WindowMode;
 use ggez::event::EventHandler;
-use ggez::graphics::{Color, DrawMode, DrawParam, FillOptions, Rect, StrokeOptions};
+use ggez::graphics::{Color, DrawMode, DrawParam, FillOptions, Font, PxScale, Rect, StrokeOptions};
 use log::{error, info};
 
 use sim::models::output_area::OutputArea;
@@ -57,6 +58,7 @@ pub struct RenderSim {
     index: usize,
     time_since_last_print: Instant,
     colour_coding_strategy: ColourCodingStrategy,
+    screen_coords: Rect,
 }
 
 impl RenderSim {
@@ -68,6 +70,7 @@ impl RenderSim {
             colour_coding_strategy: ColourCodingStrategy::InfectedCount {
                 default_colour: Color::GREEN,
             },
+            screen_coords: Rect::new(0.0, 0.0, SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
         }
     }
     pub fn set_screen_bounds(&mut self, ctx: &mut ggez::Context) {
@@ -93,14 +96,16 @@ impl RenderSim {
             "Chosen Grid Size: ({}, {}) to ({}, {})",
             min_width, min_height, max_width, max_height
         );
+        let r = Rect::new(
+            min_width,
+            min_height,
+            max_width - min_width,
+            max_height - min_height,
+        );
+        self.screen_coords = r;
         ggez::graphics::set_screen_coordinates(
             ctx,
-            Rect::new(
-                min_width,
-                min_height,
-                max_width - min_width,
-                max_height - min_height,
-            ),
+            r,
         )
             .unwrap();
     }
@@ -182,6 +187,13 @@ impl EventHandler for RenderSim {
             graphics::draw(ctx, &stroke_polygon, DrawParam::default())?;
             graphics::draw(ctx, &fill_polygon, DrawParam::default())?;
         }
+        // Draw Statistics For Epidemic
+        let mut statistics = graphics::Text::new(format!("{}", self.simulator.statistics));
+        statistics.set_font(Font::default(), PxScale::from(20.0 * self.screen_coords.w as f32 / 1920.0));
+        let coords = [self.screen_coords.x + (self.screen_coords.w / 2.0) - statistics.width(ctx) as f32 / 2.0, self.screen_coords.y + (self.screen_coords.h * 0.02)];
+        let mut params = graphics::DrawParam::default().dest(coords);
+        params.color = Color::BLACK;
+        graphics::draw(ctx, &statistics, params)?;
         graphics::present(ctx)?;
         Ok(())
     }
