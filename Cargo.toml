@@ -1,5 +1,5 @@
 [workspace]
 
-members = ["load_census_data", "sim", "draw", "run"]
+members = ["load_census_data", "sim", "visualisation", "run"]
 
 resolver = "2"

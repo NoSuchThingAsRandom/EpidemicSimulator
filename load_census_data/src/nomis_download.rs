@@ -29,8 +29,11 @@ use crate::parsing_error::CensusError;
 use crate::tables::population_and_density_per_output_area::SELECTED_COLUMNS;
 
 const YORK_OUTPUT_AREA_CODE: &str = "1254162148...1254162748,1254262205...1254262240";
+//https://www.nomisweb.co.uk/api/v01/NM_144_1/summary?geography=2092957699TYPE299&recordlimit=20000&uid=0xca845fec90a78b8554b075b32294605f543d9c48
 //https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv?date=latest&geography=1254162148...1254162748,1254262205...1254262240&rural_urban=0&cell=0&measures=20100";
 const ENGLAND_OUTPUT_AREAS_CODE: &str = "2092957699TYPE299";
+const YORKSHIRE_AND_HUMBER_OUTPUT_AREA: &str = "2013265923TYPE299";
+
 const POPULATION_TABLE_CODE: &str = "NM_144_1";
 const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
 

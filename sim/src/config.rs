@@ -20,8 +20,8 @@
 
 pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per Workplace building
-pub const WORKPLACE_BUILDING_SIZE: u16 = 5000;
-pub const HOUSEHOLD_SIZE: u16 = 8;
+pub const WORKPLACE_BUILDING_SIZE: u16 = 1000;
+pub const HOUSEHOLD_SIZE: u16 = 4;
 
 /// How often to print debug statements
 pub const DEBUG_ITERATION_PRINT: usize = 10;

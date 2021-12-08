@@ -25,6 +25,7 @@ use crate::error::{DrawingResult, MyDrawingError};
 pub mod error;
 pub mod image_export;
 pub mod live_render;
+pub mod citizen_connections;
 
 pub const GRID_SIZE: u32 = 32800;
 const X_OFFSET: i32 = 75000;

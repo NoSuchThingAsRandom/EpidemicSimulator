@@ -74,8 +74,7 @@ impl Citizen {
 
     pub fn execute_time_step(&mut self, current_hour: u32, disease: &DiseaseModel) {
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
-
-        match current_hour {
+        match current_hour % 24 {
             hour if hour == self.start_working_hour => {
                 self.current_position = self.workplace_code.clone();
             }
@@ -106,7 +105,7 @@ impl Citizen {
 
 impl Display for Citizen {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Citizen {} Has Diease Status {}, Is Currently Located At {}, Resides at {}, Works at {}", self.id, self.disease_status, self.current_position, self.household_code, self.workplace_code)
+        write!(f, "Citizen {} Has Disease Status {}, Is Currently Located At {}, Resides at {}, Works at {}", self.id, self.disease_status, self.current_position, self.household_code, self.workplace_code)
     }
 }
 
@@ -119,3 +118,23 @@ pub enum WorkType {
     Student,
     NA,
 }
+/*
+#[cfg(test)]
+mod tests {
+    use load_census_data::tables::occupation_count::OccupationType;
+    use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
+    use crate::disease::DiseaseModel;
+    use crate::models::building::BuildingCode;
+    use crate::models::citizen::Citizen;
+
+    pub fn check_citizen_schedule() {
+        let work = BuildingCode::new("A".to_string(), AreaClassification::UrbanCity);
+        let home = BuildingCode::new("B".to_string(), AreaClassification::UrbanCity);
+        let mut citizen = Citizen::new(home, work, OccupationType::Sales);
+        let disease = DiseaseModel::covid();
+        for hour in 0..100 {
+            citizen.execute_time_step(hour, &disease);
+            if citizen.w
+        }
+    }
+}*/
