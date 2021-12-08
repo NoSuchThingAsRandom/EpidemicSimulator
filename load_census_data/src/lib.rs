@@ -159,6 +159,8 @@ impl CensusData {
     /// This downloads a Census table from the NOMIS API
     pub async fn download_york_population() -> Result<(), CensusError> {
         let path = nomis_download::table_144_york_output_areas(20000);
+        println!("{}", path);
+        panic!("");
         let fetcher = nomis_download::DataFetcher::default();
         fetcher
             .download_and_save_table(

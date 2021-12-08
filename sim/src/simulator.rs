@@ -50,7 +50,7 @@ pub struct Simulator {
     /// A list of all the sub areas containing agents
     pub output_areas: HashMap<String, OutputArea>,
     /// The list of citizens who have a "home" in this area
-    citizens: HashMap<Uuid, Citizen>,
+    pub citizens: HashMap<Uuid, Citizen>,
     pub statistics: Statistics,
     disease_model: DiseaseModel,
     rng: ThreadRng,
@@ -296,15 +296,16 @@ impl Simulator {
 /// Runtime Simulation Methods
 impl Simulator {
     pub fn simulate(&mut self) -> anyhow::Result<()> {
-        let start_time = Instant::now();
+        let mut start_time = Instant::now();
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
+            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
+                info!("Time: {:?} - {}", start_time.elapsed(), self.statistics);
+                start_time = Instant::now();
+            }
             if !self.step()? {
                 debug!("{}", self.statistics);
                 break;
-            }
-            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                info!("{:?}       - {}", start_time.elapsed(), self.statistics);
             }
         }
         Ok(())
