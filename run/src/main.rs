@@ -32,17 +32,32 @@ use visualisation::image_export::DrawingRecord;
 
 const USE_RENDER: bool = false;
 
+
+fn get_bool_env(env_name: &str) -> anyhow::Result<bool> {
+    std::env::var(env_name).context(format!("Missing env variable '{}'", env_name))?.parse().context(format!("'{}' is not a bool!", env_name))
+}
+
+fn get_string_env(env_name: &str) -> anyhow::Result<String> {
+    std::env::var(env_name).context(format!("Missing env variable '{}'", env_name))
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() {//-> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init();
+    let use_renderer: bool = get_bool_env("USE_RENDERER").unwrap();
+    let should_download: bool = get_bool_env("SHOULD_DOWNLOAD").unwrap();
+    let census_directory = get_string_env("CENSUS_TABLE_DIRECTORY").unwrap();
+    let area_code = get_string_env("AREA_CODE").unwrap();
+    let disease_filename = get_string_env("DISEASE_MODEL").unwrap();
+
     let total_time = Instant::now();
-    //load_census_data::CensusData::download_york_population().await;
-    //SimpleLogger::new().init().unwrap();
+    info!("Loading data from disk...");
+    let census_data = CensusData::load_all_tables(census_directory, area_code, should_download).await.context("Failed to load census data").unwrap();
+    info!("Loaded census data in {:?}", total_time.elapsed());
     info!("Epidemic simulator");
     info!("Loading simulator data...");
-    let sim = Simulator::new();
-    let mut sim = sim.unwrap();
+    let mut sim = Simulator::new(census_data).context("Failed to initialise sim").unwrap();
     build_graphs(&sim, false);
     info!("Starting simulator...");
 
@@ -56,6 +71,7 @@ async fn main() {
         sim.statistics.summarise();
     }
     info!("Finished in {:?}",total_time.elapsed());
+    //Ok(())
 }
 
 pub fn build_graphs(sim: &Simulator, save_to_file: bool) {

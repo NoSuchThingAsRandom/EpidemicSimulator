@@ -22,20 +22,25 @@
 use std::io::Write;
 use std::time::Instant;
 
-use log::{debug, info};
+use lazy_static::lazy_static;
+use log::{debug, info, trace};
 use serde_json::Value;
 
+use crate::CensusTableNames;
 use crate::parsing_error::CensusError;
-use crate::tables::population_and_density_per_output_area::SELECTED_COLUMNS;
 
+lazy_static! {
+pub static ref NOMIS_API_KEY: String =std::env::var("NOMIS_API_KEY").expect("Failed to load NOMIS UUID");
+}
 const YORK_OUTPUT_AREA_CODE: &str = "1254162148...1254162748,1254262205...1254262240";
-//https://www.nomisweb.co.uk/api/v01/NM_144_1/summary?geography=2092957699TYPE299&recordlimit=20000&uid=0xca845fec90a78b8554b075b32294605f543d9c48
+//https://www.nomisweb.co.uk/api/v01/NM_144_1/summary?geography=2092957699TYPE299&recordlimit=20000&uid=
 //https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv?date=latest&geography=1254162148...1254162748,1254262205...1254262240&rural_urban=0&cell=0&measures=20100";
 const ENGLAND_OUTPUT_AREAS_CODE: &str = "2092957699TYPE299";
 const YORKSHIRE_AND_HUMBER_OUTPUT_AREA: &str = "2013265923TYPE299";
 
 const POPULATION_TABLE_CODE: &str = "NM_144_1";
 const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
+const PAGE_SIZE: usize = 20000;
 
 /// This is a struct to download census tables from the NOMIS api
 pub struct DataFetcher {
@@ -101,8 +106,8 @@ impl DataFetcher {
             if index != 0 {
                 to_send.push_str("&ExcludeColumnHeadings=true");
             }
-            to_send.push_str("&select=");
-            to_send.push_str(SELECTED_COLUMNS);
+            /*            to_send.push_str("&select=");
+                        to_send.push_str(SELECTED_COLUMNS);*/
             info!("Making request to: {}", to_send);
             let request = self.client.get(to_send).send().await?;
             debug!("Got response: {:?}", request);
@@ -114,35 +119,64 @@ impl DataFetcher {
     }
     pub async fn download_and_save_table(
         &self,
-        filename: String,
+        filename: &String,
         request: String,
-        number_of_records: usize,
-        page_size: usize,
+        number_of_records: Option<usize>,
     ) -> Result<(), CensusError> {
+        info!("Using base request: {}",request);
+        let dir_path = filename.split("/").last().unwrap();
+        let dir_path = filename.to_string().replace(dir_path, "");
+        std::fs::create_dir_all(dir_path)?;
+
         let start_time = Instant::now();
         let mut file = std::fs::File::create(filename)?;
-        for index in 0..(number_of_records as f64 / page_size as f64).ceil() as usize {
-            let mut to_send = request.clone();
-            to_send.push_str("&RecordOffset=");
-            to_send.push_str((index * page_size).to_string().as_str());
-            if index != 0 {
-                to_send.push_str("&ExcludeColumnHeadings=true");
-            }
-            to_send.push_str("&select=");
-            to_send.push_str(SELECTED_COLUMNS);
-            info!("Making request to: {}", to_send);
-            let request = self.client.get(to_send).send().await?;
-            debug!("Got response: {:?}", request);
-            let new_data = request.text().await?;
-            if new_data.is_empty() {
-                info!("No more records, exiting");
+
+        if let Some(number_of_records) = number_of_records {
+            for index in 0..(number_of_records as f64 / PAGE_SIZE as f64).ceil() as usize {
+                let data = self.execute_request(index, request.clone()).await?;
+                if let Some(data) = data {
+                    file.write_all(data.as_bytes())?;
+                } else {
+                    break;
+                }
+                debug!("Completed request {} in {:?}", index, start_time.elapsed());
                 break;
             }
-            file.write_all(new_data.as_bytes())?;
-            info!("Completed request {} in {:?}", index, start_time.elapsed());
+        } else {
+            let mut index = 0;
+            let mut data = Some(String::new());
+            while data.is_some() {
+                if let Some(data) = data {
+                    file.write_all(data.as_bytes())?;
+                }
+                data = self.execute_request(index, request.clone()).await?;
+                index += 1;
+                if index == 2 {
+                    break;
+                }
+                debug!("Completed request {} in {:?}", index, start_time.elapsed());
+            }
         }
         file.flush()?;
         Ok(())
+    }
+    /// Execute the request, returning Data if it exists
+    async fn execute_request(&self, index: usize, base_request: String) -> Result<Option<String>, CensusError> {
+        let mut current_request = base_request.clone();
+        current_request.push_str("&RecordOffset=");
+        current_request.push_str((index * PAGE_SIZE).to_string().as_str());
+        if index != 0 {
+            current_request.push_str("&ExcludeColumnHeadings=true");
+        }
+        trace!("Making request to: {}", current_request);
+        let request = self.client.get(current_request).send().await?;
+        trace!("Got response: {:?}", request);
+        let data = request.text().await?;
+        if data.is_empty() {
+            info!("No more records, exiting");
+            return Ok(None);
+        }
+        Ok(Some(data))
     }
 }
 
@@ -155,5 +189,26 @@ pub fn table_144_york_output_areas(page_size: usize) -> String {
     path.push_str("&recordlimit=");
     path.push_str(page_size.to_string().as_str());
     path.push_str("&uid=0xca845fec90a78b8554b075b32294605f543d9c48");
+    path
+}
+
+
+pub fn build_table_request_string(table: CensusTableNames, area_code: String) -> String {
+    let mut path = String::from(NOMIS_API);
+    path.push_str("dataset/");
+    path.push_str(table.get_api_code());
+    path.push_str(".data.csv");
+    path.push_str("?geography=");
+    path.push_str(&area_code);
+    path.push_str("&recordlimit=");
+    path.push_str(PAGE_SIZE.to_string().as_str());
+    if let Some(columns) = table.get_required_columns() {
+        path.push_str("&select=");
+        path.push_str(columns);
+    }
+
+
+    path.push_str("&uid=");
+    path += &NOMIS_API_KEY;
     path
 }

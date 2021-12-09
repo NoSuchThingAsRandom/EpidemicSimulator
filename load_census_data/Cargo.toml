@@ -7,6 +7,7 @@ authors = ["Sam Ralph"]
 [dependencies]
 csv = "1.1.6"
 enum-map = "1.1.1"
+lazy_static = "1.4.0"
 log = "0.4.14"
 rand = "0.8.4"
 reqwest = { version = "0.11", features = ["json", "blocking"] }

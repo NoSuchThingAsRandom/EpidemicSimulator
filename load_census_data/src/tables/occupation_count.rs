@@ -59,7 +59,8 @@ pub enum OccupationType {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PreProcessingOccupationCountRecord {
+#[serde(rename_all = "UPPERCASE")]
+pub struct PreProcessingOccupationCountRecordOLD {
     pub date: String,
     pub geography: String,
     #[serde(alias = "geography code")]
@@ -91,15 +92,33 @@ pub struct PreProcessingOccupationCountRecord {
     //pub occupation_count: HashMap<OccupationType, u32>,
 }
 
-impl PreProcessingTable for PreProcessingOccupationCountRecord {}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct PreProcessingOccupationCountRecord {
+    pub geography_name: String,
+    geography_type: String,
+    cell_name: String,
+    measures_name: String,
+    obs_value: String,
+    obs_status: String,
+    record_offset: u32,
+    record_count: u32,
+}
+
+impl PreProcessingTable for PreProcessingOccupationCountRecord {
+    fn get_geography_code(&self) -> String {
+        self.geography_name.to_string()
+    }
+}
 
 #[derive(Debug)]
-pub struct OccupationCount {
+pub struct OccupationCountRecord {
     pub occupation_count: EnumMap<OccupationType, u32>,
+    /// This is the sum of the values per occupation, so can be used for random generation
     total_range: u32,
 }
 
-impl OccupationCount {
+impl OccupationCountRecord {
     pub fn get_random_occupation(
         &self,
         rng: &mut dyn RngCore,
@@ -121,50 +140,80 @@ impl OccupationCount {
     }
 }
 
-impl TableEntry for OccupationCount {
-    fn generate(
-        data: Vec<impl PreProcessingTable + 'static>,
-    ) -> Result<HashMap<String, Self>, CensusError> {
-        let mut output = HashMap::new();
-        // Group the pre processing records, by output area
-        for entry in data {
-            let entry = Box::new(entry) as Box<dyn Any>;
-            if let Ok(entry) = entry.downcast::<PreProcessingOccupationCountRecord>() {
-                output.insert(entry.geography_code.clone(), OccupationCount::from(entry));
-            } else {
+impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {
+    /*    fn generate(
+            data: Vec<impl PreProcessingTable + 'static>,
+        ) -> Result<HashMap<String, Self>, CensusError> {
+            let mut output = HashMap::new();
+            // Group the pre processing records, by output area
+    /*        for entry in data {
+                let entry = Box::new(entry) as Box<dyn Any>;
+                if let Ok(entry) = entry.downcast::<PreProcessingOccupationCountRecord>() {
+                    output.insert(entry.get_geography_code().clone(), OccupationCount::from(entry));
+                } else {
+                    return Err(CensusError::ValueParsingError {
+                        source: ParseErrorType::InvalidDataType {
+                            value: None,
+                            expected_type: "Invalid pre processing type, for population density table!"
+                                .to_string(),
+                        },
+                    });
+                }
+            }*/
+            Ok(output)
+        }*/
+}
+
+impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for OccupationCountRecord {
+    type Error = CensusError;
+
+    fn try_from(records: &'a Vec<Box<PreProcessingOccupationCountRecord>>) -> Result<Self, Self::Error> {
+        if records.is_empty() {
+            return Err(CensusError::ValueParsingError {
+                source: ParseErrorType::IsEmpty {
+                    message: String::from(
+                        "PreProcessingRecord list is empty, can't build a OccupationCountRecord!",
+                    ),
+                },
+            });
+        }
+        let geography_code = String::from(&records[0].geography_name);
+        let geography_type = String::from(&records[0].geography_type);
+        let mut total_range = 0;
+        let mut occupation_count: EnumMap<OccupationType, u32> = EnumMap::default();
+        for record in records {
+            if record.geography_name != geography_code {
                 return Err(CensusError::ValueParsingError {
-                    source: ParseErrorType::InvalidDataType {
-                        value: None,
-                        expected_type: "Invalid pre processing type, for population density table!"
-                            .to_string(),
+                    source: ParseErrorType::Mismatching {
+                        message: String::from(
+                            "Mis matching geography codes for pre processing records",
+                        ),
+                        value_1: geography_code,
+                        value_2: record.geography_name.clone(),
                     },
                 });
             }
+            if record.geography_type != geography_type {
+                return Err(CensusError::ValueParsingError {
+                    source: ParseErrorType::Mismatching {
+                        message: String::from(
+                            "Mis matching geography type for pre processing records",
+                        ),
+                        value_1: geography_type,
+                        value_2: record.geography_type.clone(),
+                    },
+                });
+            }
+            if record.measures_name == "Value" {
+                let occupation: OccupationType = serde_plain::from_str(&record.cell_name)?;
+                let count = record.obs_value.parse()?;
+                total_range += count;
+                occupation_count[occupation] = count;
+            }
         }
-        Ok(output)
-    }
-}
-
-impl From<Box<PreProcessingOccupationCountRecord>> for OccupationCount {
-    fn from(pre_processing: Box<PreProcessingOccupationCountRecord>) -> Self {
-        let output = enum_map! {
-                // TODO I hate this
-                //OccupationType::All=> pre_processing.all,
-                OccupationType::Managers=> pre_processing.managers,
-                OccupationType::Professional=> pre_processing.professional,
-                OccupationType::Technical=> pre_processing.technical,
-
-                OccupationType::Administrative=>pre_processing.administrative,
-                OccupationType::SkilledTrades=> pre_processing.skilled_trades,
-                OccupationType::Caring=> pre_processing.caring,
-                OccupationType::Sales=> pre_processing.sales,
-
-                OccupationType::MachineOperatives=>pre_processing.machine_operatives,
-                OccupationType::Teaching=> pre_processing.teaching
-        };
-        Self {
-            occupation_count: output,
-            total_range: pre_processing.all,
-        }
+        Ok(OccupationCountRecord {
+            occupation_count,
+            total_range,
+        })
     }
 }

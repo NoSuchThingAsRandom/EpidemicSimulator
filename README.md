@@ -21,12 +21,11 @@ Workpalce position Table (https://www.nomisweb.co.uk/census/2011/wf01bew)
 * Add support for disease intervention techniques (mask wearing, lockdowns, vaccinations, etc)
 * Better visualisation support for summaries
 
-## Current Problem
+## Environment Variables
 
-Trying to allow spread of disease (increase the networks of agents), as seems to get stuck in a cluster
-
-Measures taken:
-
-1. Randomly allocating households
-2. Assigning workplaces inside the same output area
-3. Assigning workplaces outside the output area
+| Name             | Description                                                                                  | Example                       |
+|------------------|----------------------------------------------------------------------------------------------|-------------------------------|
+| CENSUS_DIRECTORY | The area to use for loading census data from. (Can either be a NOMIS Area Code, or nickname) | 2092957699TYPE299  or England |
+| USE_RENDERER     | Whether to use the live rendering engine                                                     | false                         |
+| DOWNLOAD_DATA    | If any Census tables are missing locally, should they be downloaded?                         | false                         |
+| DISEASE_MODEL    | The name of the file to load disease data from                                               | data/diseases/covid.json      |

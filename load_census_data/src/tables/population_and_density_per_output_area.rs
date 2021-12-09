@@ -66,6 +66,7 @@ impl std::fmt::Display for AreaClassification {
         write!(f, "{:?}", self)
     }
 }
+
 #[derive(Deserialize, Debug, Enum)]
 pub enum PersonType {
     #[serde(alias = "All usual residents")]
@@ -79,13 +80,10 @@ pub enum PersonType {
     #[serde(alias = "Lives in a communal establishment")]
     LivesInCommunalEstablishment,
     #[serde(
-        alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
+    alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
     )]
     Schoolchild,
 }
-
-/// The columns that should be fetched from the API
-pub const SELECTED_COLUMNS: &str = "GEOGRAPHY_NAME,GEOGRAPHY_TYPE,RURAL_URBAN_NAME,RURAL_URBAN_TYPECODE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -101,62 +99,50 @@ pub struct PreProcessingPopulationDensityRecord {
     record_count: u32,
 }
 
-impl PreProcessingTable for PreProcessingPopulationDensityRecord {}
+impl PreProcessingTable for PreProcessingPopulationDensityRecord {
+    fn get_geography_code(&self) -> String {
+        self.geography_name.to_string()
+    }
+}
 
 #[derive(Debug)]
 pub struct PopulationRecord {
-    pub geography_code: String,
-    pub geography_type: String,
+    //pub geography_code: String,
+    //pub geography_type: String,
     pub area_size: f32,
     pub density: f32,
     pub population_counts: EnumMap<AreaClassification, EnumMap<PersonType, u16>>,
     pub population_size: u16,
 }
 
-impl TableEntry for PopulationRecord {
-    /// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
-    ///
-    /// First iterates through the records, and checks they are all of type `PreProcessingRecord`, then adds them to a hashmap with keys of output areas
-    ///
-    /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
-    ///
-    /// TODO: THIS IS SO FUCKING CURSED - NEEDS A REWRITE
-    fn generate(
-        data: Vec<impl PreProcessingTable + 'static>,
-    ) -> Result<HashMap<String, Self>, CensusError> {
-        let mut buffer = HashMap::new();
-        // Group the pre processing records, by output area
-        for entry in data {
-            let entry = Box::new(entry) as Box<dyn Any>;
-            if let Ok(entry) = entry.downcast::<PreProcessingPopulationDensityRecord>() {
-                if !buffer.contains_key(&entry.geography_name) {
-                    buffer.insert(entry.geography_name.to_string(), Vec::new());
-                }
-                buffer.get_mut(&entry.geography_name.to_string()).ok_or_else(|| CensusError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Pre processing record, does not have a matching output area code, even though it should've been added???".to_string(), key: (entry.geography_name).to_string() } })?.push(entry);
-            } else {
-                return Err(CensusError::ValueParsingError {
-                    source: ParseErrorType::InvalidDataType {
-                        value: None,
-                        expected_type: "Invalid pre processing type, for population density table!"
-                            .to_string(),
-                    },
-                });
-            }
-        }
-        // Convert into Population Records
-        let mut output = HashMap::new();
-        for (code, records) in buffer {
-            output.insert(code.to_string(), PopulationRecord::try_from(records)?);
-        }
-        Ok(output)
+impl TableEntry<PreProcessingPopulationDensityRecord> for PopulationRecord {}
+/*
+/// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
+///
+/// First iterates through the records, and checks they are all of type `PreProcessingRecord`, then adds them to a hashmap with keys of output areas
+///
+/// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
+///
+/// TODO: THIS IS SO FUCKING CURSED - NEEDS A REWRITE
+fn generate(
+    data: Vec<impl PreProcessingTable + 'static>,
+) -> Result<HashMap<String, Self>, CensusError> {
+    let mut grouped:HashMap<String,Vec<Box<PreProcessingPopulationDensityRecord>>> = PreProcessingPopulationDensityRecord::group_by_area(data)?;
+    // Convert into Population Records
+    TableEntry::generate()
+    let mut output = HashMap::new();
+    for (code, records) in grouped.drain() {
+        output.insert(code.to_string(), PopulationRecord::try_from(records)?);
     }
+    Ok(output)
 }
+}*/
 
-impl TryFrom<Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
+impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
     type Error = CensusError;
 
     fn try_from(
-        records: Vec<Box<PreProcessingPopulationDensityRecord>>,
+        records: &'a Vec<Box<PreProcessingPopulationDensityRecord>>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(CensusError::ValueParsingError {
@@ -213,8 +199,6 @@ impl TryFrom<Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecor
             }
         }
         Ok(PopulationRecord {
-            geography_code,
-            geography_type,
             area_size,
             density,
             population_counts: data,

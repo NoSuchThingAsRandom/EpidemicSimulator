@@ -1,3 +1,31 @@
+# Format
+
+The `data` directory contains two folders
+
+* `map`
+  - This contains subdirectories for sections of the output area shape files
+* `tables`
+  - This has subdirectories for each collection of Output Areas to run
+  - i.e. England, Yorkshire and The Humber, York, etc
+    * For each of these directories, all the required census tables are stored in csv format
+
+i.e.\
+England Shape Files:\
+`data/map/England_oa_2011/england_oa_2011.shp`\
+`data/map/England_oa_2011/england_oa_2011.shx`\
+`data/map/England_oa_2011/england_oa_2011.dbf`\
+`data/map/England_oa_2011/england_oa_2011.prj`\
+
+England Census Tables:\
+`data/tables/2092957699TYPE299/ks101ew.csv` - Population\
+`data/tables/2092957699TYPE299/ks608uk.csv` - Occupation Counts\
+`data/tables/2092957699TYPE299/wf01bew.csv` - Home To Workplace
+
+Yorkshire And The Humber Census Tables:\
+`data/tables/2013265923TYPE299/ks101ew.csv` - Population\
+`data/tables/2013265923TYPE299/ks608uk.csv` - Occupation Counts\
+`data/tables/2013265923TYPE299/wf01bew.csv` - Home To Workplace
+
 # Table 1 - Usual resident population
 
 https://www.nomisweb.co.uk/census/2011/ks101ew
@@ -35,6 +63,8 @@ https://www.gov.uk/government/publications/employment-densities-guide
 
 https://www.nomisweb.co.uk/census/2011/wd702ew
 
+Api Code: NM_154_1
+
 Need to figure out size of output areas But can be used to spread out workers to different areas
 
 # Home Residence to Work Place Position - wf01bew
@@ -43,6 +73,10 @@ Counts the number of workers in output areas, against the output area they resid
 workers
 https://www.nomisweb.co.uk/census/2011/wf01bew
 
+Api Code: NM_1228_1
+
 # Occupation Type Counts - ks608uk
 
 https://www.nomisweb.co.uk/census/2011/ks608uk
+
+Api Code: NM_1518_1

@@ -58,14 +58,11 @@ pub struct Simulator {
 
 /// Initialisation Methods
 impl Simulator {
-    pub fn new() -> Result<Simulator> {
+    pub fn new(census_data: CensusData) -> Result<Simulator> {
         let start = Instant::now();
         let mut rng = thread_rng();
 
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
-        info!("Loading data from disk...");
-        let census_data = CensusData::load().context("Failed to load census data")?;
-        info!("Loaded census data in {:?}", start.elapsed());
         let mut output_areas_polygons =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
                 .context("Loading polygons for output areas")?;
