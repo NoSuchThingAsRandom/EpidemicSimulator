@@ -21,6 +21,7 @@
 //! Module used for reading and parsing Census Table
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Formatter};
 use std::fs::File;
 use std::io::Write;

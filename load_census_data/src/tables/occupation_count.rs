@@ -20,6 +20,7 @@
 
 use std::any::Any;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt::Debug;
 
 use enum_map::EnumMap;

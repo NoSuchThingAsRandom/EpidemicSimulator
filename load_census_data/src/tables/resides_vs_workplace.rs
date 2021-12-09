@@ -18,6 +18,7 @@
  *
  */
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 use serde::Deserialize;
 
@@ -28,7 +29,6 @@ use crate::parsing_error::ParseErrorType;
 #[serde(rename_all = "UPPERCASE")]
 pub struct PreProcessingWorkplaceResidentialRecord {
     pub currently_residing_in_code: String,
-    place_of_work_code: String,
     place_of_work_type: String,
     place_of_work_name: String,
     obs_value: String,
@@ -82,7 +82,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>> for Work
                 let count = record.obs_value.parse()?;
                 if count > 0 {
                     total += count;
-                    workplace_count.insert(record.place_of_work_code.to_string(), count);
+                    workplace_count.insert(record.place_of_work_name.to_string(), count);
                 }
             }
         }

@@ -201,7 +201,7 @@ impl CensusData {
     /// Returns an iterator over Output Areas
     pub fn values(&self) -> impl Iterator<Item=CensusDataEntry> {
         let keys = self.population_counts.keys();
-        keys.filter_map(|key| {
+        keys.filter_map(move |key| {
             let data = self.get_output_area(key);
             if data.is_none() {
                 warn!("Output Area: {} is incomplete", key);
