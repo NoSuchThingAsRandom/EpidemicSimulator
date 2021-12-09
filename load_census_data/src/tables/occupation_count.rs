@@ -23,6 +23,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 use enum_map::EnumMap;
+use log::debug;
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumCount as EnumCountMacro;
@@ -32,29 +33,29 @@ use crate::tables::{PreProcessingTable, TableEntry};
 
 #[derive(Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy)]
 pub enum OccupationType {
-    /*    #[serde(alias = "Occupation: all categories: Occupation; measures: Value")]
-    All,*/
-    #[serde(alias = "Occupation: 1. managers, directors and senior officials; measures: Value")]
+    #[serde(alias = "All categories: Occupation")]
+    All,
+    #[serde(alias = "1. Managers, directors and senior officials")]
     Managers,
-    #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
+    #[serde(alias = "2. Professional occupations")]
     Professional,
     #[serde(
-        alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
+    alias = "3. Associate professional and technical occupations"
     )]
     Technical,
-    #[serde(alias = "Occupation: 4. administrative and secretarial occupations; measures: Value")]
+    #[serde(alias = "4. Administrative and secretarial occupations")]
     Administrative,
-    #[serde(alias = "Occupation: 5. Skilled trades occupations; measures: Value")]
+    #[serde(alias = "5. Skilled trades occupations")]
     SkilledTrades,
     #[serde(
-        alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
+    alias = "6. Caring, leisure and other service occupations"
     )]
     Caring,
-    #[serde(alias = "Occupation: 7. sales and customer service occupations; measures: Value")]
+    #[serde(alias = "7. Sales and customer service occupations")]
     Sales,
-    #[serde(alias = "Occupation: 8. Process plant and machine operatives; measures: Value")]
+    #[serde(alias = "8. Process plant and machine operatives")]
     MachineOperatives,
-    #[serde(alias = "Occupation: 9. Elementary occupations; measures: Value")]
+    #[serde(alias = "9. Elementary occupations")]
     Teaching,
 }
 
@@ -141,27 +142,6 @@ impl OccupationCountRecord {
 }
 
 impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {
-    /*    fn generate(
-            data: Vec<impl PreProcessingTable + 'static>,
-        ) -> Result<HashMap<String, Self>, CensusError> {
-            let mut output = HashMap::new();
-            // Group the pre processing records, by output area
-    /*        for entry in data {
-                let entry = Box::new(entry) as Box<dyn Any>;
-                if let Ok(entry) = entry.downcast::<PreProcessingOccupationCountRecord>() {
-                    output.insert(entry.get_geography_code().clone(), OccupationCount::from(entry));
-                } else {
-                    return Err(CensusError::ValueParsingError {
-                        source: ParseErrorType::InvalidDataType {
-                            value: None,
-                            expected_type: "Invalid pre processing type, for population density table!"
-                                .to_string(),
-                        },
-                    });
-                }
-            }*/
-            Ok(output)
-        }*/
 }
 
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for OccupationCountRecord {

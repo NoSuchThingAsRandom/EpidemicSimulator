@@ -32,15 +32,16 @@ use crate::parsing_error::CensusError;
 lazy_static! {
 pub static ref NOMIS_API_KEY: String =std::env::var("NOMIS_API_KEY").expect("Failed to load NOMIS UUID");
 }
-const YORK_OUTPUT_AREA_CODE: &str = "1254162148...1254162748,1254262205...1254262240";
+pub const YORK_OUTPUT_AREA_CODE: &str = "1254162148...1254162748,1254262205...1254262240";
+pub const YORK_AND_HUMBER_OUTPUT_AREA_CODE: &str = "1254132824...1254267709";
 //https://www.nomisweb.co.uk/api/v01/NM_144_1/summary?geography=2092957699TYPE299&recordlimit=20000&uid=
 //https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv?date=latest&geography=1254162148...1254162748,1254262205...1254262240&rural_urban=0&cell=0&measures=20100";
 const ENGLAND_OUTPUT_AREAS_CODE: &str = "2092957699TYPE299";
 const YORKSHIRE_AND_HUMBER_OUTPUT_AREA: &str = "2013265923TYPE299";
 
 const POPULATION_TABLE_CODE: &str = "NM_144_1";
-const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
-const PAGE_SIZE: usize = 20000;
+pub const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
+pub const PAGE_SIZE: usize = 100000;
 
 /// This is a struct to download census tables from the NOMIS api
 pub struct DataFetcher {
@@ -128,36 +129,57 @@ impl DataFetcher {
         let dir_path = filename.to_string().replace(dir_path, "");
         std::fs::create_dir_all(dir_path)?;
 
-        let start_time = Instant::now();
+        let total_time = Instant::now();
         let mut file = std::fs::File::create(filename)?;
-
+        let mut processed_row_count = 0;
         if let Some(number_of_records) = number_of_records {
             for index in 0..(number_of_records as f64 / PAGE_SIZE as f64).ceil() as usize {
+                let current_time = Instant::now();
                 let data = self.execute_request(index, request.clone()).await?;
                 if let Some(data) = data {
                     file.write_all(data.as_bytes())?;
                 } else {
                     break;
                 }
-                debug!("Completed request {} in {:?}", index, start_time.elapsed());
-                break;
+                debug!("Completed request {} in {:?}", index, current_time.elapsed());
             }
         } else {
             let mut index = 0;
             let mut data = Some(String::new());
+            let mut row_count: Option<usize> = None;
             while data.is_some() {
+                let current_time = Instant::now();
                 if let Some(data) = data {
+                    // Get number of rows
+                    if row_count.is_none() {
+                        let mut rows = data.split("\n");
+                        rows.next();
+                        if let Some(row) = rows.next() {
+                            let split = row.split(",");
+                            if let Some(count) = split.last() {
+                                if let Ok(count) = count.parse() {
+                                    row_count = Some(count);
+                                }
+                            }
+                        }
+                    }
                     file.write_all(data.as_bytes())?;
                 }
                 data = self.execute_request(index, request.clone()).await?;
+                processed_row_count += PAGE_SIZE;
                 index += 1;
-                if index == 2 {
-                    break;
-                }
-                debug!("Completed request {} in {:?}", index, start_time.elapsed());
+                let est_time =
+                    if let Some(row_count) = row_count {
+                        Some(((row_count - processed_row_count) / PAGE_SIZE as usize) as u64 * current_time.elapsed().as_secs())
+                    } else { None };
+                let percentage = if let Some(total_row_count) = row_count {
+                    Some(processed_row_count / total_row_count)
+                } else { None };
+                info!("Completed request {} in {:?}, current row count {}/{:?}={:?}% Estimated Time: {:?} seconds", index, current_time.elapsed(),processed_row_count,row_count,percentage,est_time);
             }
         }
         file.flush()?;
+        info!("Finished downloading table with {} rows in {:?}",processed_row_count,total_time.elapsed());
         Ok(())
     }
     /// Execute the request, returning Data if it exists

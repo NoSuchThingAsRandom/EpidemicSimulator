@@ -25,11 +25,11 @@ extern crate enum_map;
 use std::collections::HashMap;
 use std::path::Path;
 
-use log::{info, warn};
+use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 use serde::de::Unexpected::Str;
 
-use crate::nomis_download::{build_table_request_string, DataFetcher};
+use crate::nomis_download::{build_table_request_string, DataFetcher, NOMIS_API, NOMIS_API_KEY, PAGE_SIZE, YORK_AND_HUMBER_OUTPUT_AREA_CODE, YORK_OUTPUT_AREA_CODE};
 use crate::parsing_error::CensusError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::employment_densities::EmploymentDensities;
@@ -37,6 +37,7 @@ use crate::tables::occupation_count::{OccupationCountRecord, PreProcessingOccupa
 use crate::tables::population_and_density_per_output_area::{
     PopulationRecord, PreProcessingPopulationDensityRecord,
 };
+use crate::tables::resides_vs_workplace::{PreProcessingWorkplaceResidentialRecord, WorkplaceResidentalRecord};
 
 mod nomis_download;
 pub mod parse_table;
@@ -49,9 +50,7 @@ pub struct CensusDataEntry<'a> {
     pub population_count: &'a PopulationRecord,
     pub occupation_count: &'a OccupationCountRecord,
 
-    pub workplace_area_distribution: &'a HashMap<String, u32>,
-    /// The sum of all the values in workplace_area_distrubution - Used for generating random areas
-    workplace_area_distribution_total: u32,
+    pub resides_workplace_count: &'a WorkplaceResidentalRecord,
     pub workplace_density: EmploymentDensities,
 }
 
@@ -60,9 +59,9 @@ impl<'a> CensusDataEntry<'a> {
         self.population_count.population_size
     }
     pub fn get_random_workplace_area(&self, rng: &mut dyn RngCore) -> Result<String, CensusError> {
-        let chosen = rng.gen_range(0..self.workplace_area_distribution_total);
+        let chosen = rng.gen_range(0..self.resides_workplace_count.total_workplace_count);
         let mut index = 0;
-        for (area_code, value) in self.workplace_area_distribution.iter() {
+        for (area_code, value) in self.resides_workplace_count.workplace_count.iter() {
             if index <= chosen && chosen <= index + *value {
                 return Ok(area_code.to_string());
             }
@@ -71,7 +70,7 @@ impl<'a> CensusDataEntry<'a> {
         Err(CensusError::Misc {
             source: format!(
                 "Allocating a output area failed, as chosen value ({}) is out of range (0..{})",
-                chosen, self.workplace_area_distribution_total
+                chosen, self.resides_workplace_count.total_workplace_count
             ),
         })
     }
@@ -83,7 +82,7 @@ pub struct CensusData {
     pub occupation_counts: HashMap<String, OccupationCountRecord>,
     pub workplace_density: EmploymentDensities,
     /// Residential Area -> Workplace Area -> Count
-    pub residents_workplace: HashMap<String, HashMap<String, u32>>,
+    pub residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
 }
 
 /// Initialization
@@ -91,18 +90,36 @@ impl CensusData {
     /// Attempts to load the given table from a file on disk
     ///
     /// If the file doesn't exist and data_fetcher exists, will attempt to download the table from the NOMIS api
-    async fn fetch_workplace_table(census_directory: &str, region_code: &str, data_fetcher: &Option<DataFetcher>) -> Result<HashMap<String, HashMap<String, u32>>, CensusError> {
+    async fn fetch_workplace_table(census_directory: &str, region_code: &str, data_fetcher: &Option<DataFetcher>) -> Result<HashMap<String, WorkplaceResidentalRecord>, CensusError> {
         let table_name = CensusTableNames::ResidentialAreaVsWorkplaceArea;
         let filename = String::new() + census_directory + region_code + "/" + table_name.get_filename();
         if !Path::new(&filename).exists() {
             warn!("Workplace table doesn't exist on disk!");
             if let Some(fetcher) = data_fetcher {
                 info!("Fetching table {:?} from api",table_name);
-                let request = build_table_request_string(table_name, region_code.to_string());
+                //https://www.nomisweb.co.uk/api/v01/dataset/NM_1228_1.data.csv?date=latest&currently_residing_in=1254162148...1254162748,1254262205...1254262240&place_of_work=1254162148...1254162748,1254262205...1254262240&measures=20100
+                //let request = build_table_request_string(table_name, region_code.to_string());
+                let mut request = String::from(NOMIS_API);
+                request.push_str("dataset/");
+                request.push_str(table_name.get_api_code());
+                request.push_str(".data.csv");
+                request.push_str("?currently_residing_in=");
+                request.push_str(&region_code);
+                request.push_str("&place_of_work=");
+                request.push_str(YORK_AND_HUMBER_OUTPUT_AREA_CODE);
+                request.push_str("&recordlimit=");
+                request.push_str(PAGE_SIZE.to_string().as_str());
+                if let Some(columns) = table_name.get_required_columns() {
+                    request.push_str("&select=");
+                    request.push_str(columns);
+                }
+                request.push_str("&uid=");
+                request += &NOMIS_API_KEY;
+
                 fetcher.download_and_save_table(&filename, request, None).await?;
             }
         }
-        CensusData::read_workplace_table(filename)
+        CensusData::read_generic_table_from_disk::<WorkplaceResidentalRecord, PreProcessingWorkplaceResidentialRecord>(&filename)
     }
 
     /// Loads the workplace table from disk
@@ -151,20 +168,16 @@ impl CensusData {
         let mut reader = csv::Reader::from_path(table_name)?;
 
         let data: Result<Vec<U>, csv::Error> = reader.deserialize().collect();
+        debug!("Loaded table into pre processing");
         let data = T::generate(data?)?;
         Ok(data)
     }
     /// Attempts to load all the Census Tables stored on disk into memory
     pub async fn load_all_tables(census_directory: String, region_code: String, should_download: bool) -> Result<CensusData, CensusError> {
         let data_fetcher = if should_download { Some(DataFetcher::default()) } else { None };
-
-        //<PopulationRecord<PreProcessingPopulationDensityRecord>,        PreProcessingPopulationDensityRecord>;
-        //CensusData::fetch_generic_table::<
-        //                 OccupationCount,
-        //                 PreProcessingOccupationCountRecord>(&census_directory, &region_code, CensusTableNames::OccupationCount, &data_fetcher).await?
         Ok(CensusData {
             population_counts: CensusData::fetch_generic_table::<PreProcessingPopulationDensityRecord, PopulationRecord>(&census_directory, &region_code, CensusTableNames::PopulationDensity, &data_fetcher).await?,
-            occupation_counts: CensusData::fetch_generic_table::<PreProcessingOccupationCountRecord, OccupationCountRecord>(&census_directory, &region_code, CensusTableNames::PopulationDensity, &data_fetcher).await?,
+            occupation_counts: CensusData::fetch_generic_table::<PreProcessingOccupationCountRecord, OccupationCountRecord>(&census_directory, &region_code, CensusTableNames::OccupationCount, &data_fetcher).await?,
             workplace_density: EmploymentDensities {},
             residents_workplace: CensusData::fetch_workplace_table(&census_directory, &region_code, &data_fetcher).await?,
         })
@@ -177,14 +190,12 @@ impl CensusData {
     /// Will return None, if at least one table is missing the entry
     pub fn get_output_area(&self, code: &String) -> Option<CensusDataEntry> {
         let workplace_area_distribution = self.residents_workplace.get(code)?;
-        let total = workplace_area_distribution.values().copied().sum();
         Some(CensusDataEntry {
             output_area_code: code.clone(),
             population_count: self.population_counts.get(code)?,
             occupation_count: self.occupation_counts.get(code)?,
             workplace_density: EmploymentDensities {},
-            workplace_area_distribution,
-            workplace_area_distribution_total: total,
+            resides_workplace_count: workplace_area_distribution,
         })
     }
     /// Returns an iterator over Output Areas

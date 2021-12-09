@@ -55,6 +55,7 @@ async fn main() {//-> anyhow::Result<()> {
     info!("Loading data from disk...");
     let census_data = CensusData::load_all_tables(census_directory, area_code, should_download).await.context("Failed to load census data").unwrap();
     info!("Loaded census data in {:?}", total_time.elapsed());
+    return;
     info!("Epidemic simulator");
     info!("Loading simulator data...");
     let mut sim = Simulator::new(census_data).context("Failed to initialise sim").unwrap();

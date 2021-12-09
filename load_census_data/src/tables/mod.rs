@@ -22,6 +22,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use log::{debug, trace};
 use serde::de::DeserializeOwned;
 
 use crate::parsing_error::{CensusError, ParseErrorType};
@@ -29,6 +30,7 @@ use crate::parsing_error::{CensusError, ParseErrorType};
 pub mod employment_densities;
 pub mod occupation_count;
 pub mod population_and_density_per_output_area;
+pub mod resides_vs_workplace;
 
 /// This is used to load in a CSV file, and each row corresponds to one struct
 pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
@@ -60,6 +62,7 @@ pub trait TableEntry<T: 'static + PreProcessingTable>: Debug + Sized + for<'a> T
         data: Vec<impl PreProcessingTable + 'static>,
     ) -> Result<HashMap<String, Self>, CensusError> {
         let mut grouped: HashMap<String, Vec<Box<T>>> = T::group_by_area(data)?;
+        trace!("Grouped table by area");
         // Convert into Population Records
         let mut output = HashMap::new();
         for (code, records) in grouped.drain() {
@@ -105,8 +108,8 @@ impl CensusTableNames {
         match &self {
             CensusTableNames::OccupationCount => { None }
             CensusTableNames::PopulationDensity => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,RURAL_URBAN_NAME,RURAL_URBAN_TYPECODE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
-            CensusTableNames::OutputAreaMap => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
-            CensusTableNames::ResidentialAreaVsWorkplaceArea => { None }
+            CensusTableNames::OutputAreaMap => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
+            CensusTableNames::ResidentialAreaVsWorkplaceArea => { Some("CURRENTLY_RESIDING_IN_CODE,PLACE_OF_WORK_TYPECODE,PLACE_OF_WORK_TYPE,PLACE_OF_WORK_NAME,OBS_VALUE,RECORD_OFFSET,RECORD_COUNT") }
         }
     }
 }
