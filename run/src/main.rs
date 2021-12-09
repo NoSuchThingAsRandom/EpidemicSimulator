@@ -27,8 +27,9 @@ use log::{error, info};
 
 use load_census_data::CensusData;
 use sim::simulator::Simulator;
-use visualisation::citizen_connections::{connected_groups, draw_graph};
-use visualisation::image_export::DrawingRecord;
+
+//use visualisation::citizen_connections::{connected_groups, draw_graph};
+//use visualisation::image_export::DrawingRecord;
 
 const USE_RENDER: bool = false;
 
@@ -59,12 +60,12 @@ async fn main() {//-> anyhow::Result<()> {
     info!("Epidemic simulator");
     info!("Loading simulator data...");
     let mut sim = Simulator::new(census_data).context("Failed to initialise sim").unwrap();
-    build_graphs(&sim, false);
+    //build_graphs(&sim, false);
     info!("Starting simulator...");
 
 
     if USE_RENDER {
-        visualisation::live_render::run(sim).context("Live render").unwrap();
+        //visualisation::live_render::run(sim).context("Live render").unwrap();
     } else if let Err(e) = sim.simulate() {
         error!("{}", e);
         sim.error_dump_json().expect("Failed to create core dump!");
@@ -74,7 +75,7 @@ async fn main() {//-> anyhow::Result<()> {
     info!("Finished in {:?}",total_time.elapsed());
     //Ok(())
 }
-
+/*
 pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
     let start = Instant::now();
     let graph = visualisation::citizen_connections::build_citizen_graph(sim);
@@ -134,4 +135,4 @@ pub fn draw_census_data(
         .collect();
     visualisation::image_export::draw(String::from("OccupationCounts.png"), data)?;
     Ok(())
-}
+}*/
