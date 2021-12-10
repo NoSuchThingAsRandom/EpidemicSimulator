@@ -106,7 +106,7 @@ pub enum InterventionsEnabled {
 
 impl InterventionStatus {
     pub fn update_status(&mut self, percentage_infected: f64) -> BTreeSet<InterventionsEnabled> {
-        debug!("Updating intervention status");
+        //debug!("Updating intervention status");
         let mut new_interventions = BTreeSet::new();
         // Lockdown
         if let Some(threshold) = self.thresholds.lockdown {
@@ -136,7 +136,6 @@ impl InterventionStatus {
                 }
             }
         }
-
         //Mask Wearing
         self.mask_status = match &self.mask_status {
             MaskStatus::None(hour) => {
@@ -147,9 +146,9 @@ impl InterventionStatus {
                     ));
                     MaskStatus::PublicTransport(0)
                 } else {
-                    MaskStatus::PublicTransport(hour + 1)
+                    MaskStatus::None(hour + 1)
                 }
-            }
+            },
             MaskStatus::PublicTransport(hour) => {
                 if percentage_infected < MaskStatus::PublicTransport(0).get_threshold() {
                     info!("Mask wearing on public transport is removed");
@@ -164,7 +163,7 @@ impl InterventionStatus {
                 } else {
                     MaskStatus::PublicTransport(hour + 1)
                 }
-            }
+            },
             MaskStatus::Everywhere(hour) => {
                 if percentage_infected < MaskStatus::Everywhere(0).get_threshold() {
                     info!("Mask wearing everywhere is removed");

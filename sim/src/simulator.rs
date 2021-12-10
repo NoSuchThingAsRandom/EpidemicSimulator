@@ -396,6 +396,7 @@ impl Simulator {
     }
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
         let infected_percent = self.statistics.infected_percentage();
+        //debug!("Infected percent: {}",infected_percent);
         let new_interventions = self.interventions.update_status(infected_percent);
         for intervention in new_interventions {
             match intervention {

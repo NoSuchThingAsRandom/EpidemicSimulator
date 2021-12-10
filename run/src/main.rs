@@ -149,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
             .context("Failed to load census data")
             .unwrap();
         info!(
-            "Finished loading data in {:?}\nInitialing simulator",
+            "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
         let mut sim = Simulator::new(census_data)
@@ -160,7 +160,7 @@ async fn main() -> anyhow::Result<()> {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
         } else {
-            sim.statistics.summarise();
+            //sim.statistics.summarise();
         }
         info!("Finished in {:?}", total_time.elapsed());
         Ok(())

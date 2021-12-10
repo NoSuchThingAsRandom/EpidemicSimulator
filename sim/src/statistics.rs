@@ -181,8 +181,8 @@ impl Display for Statistics {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Hour: {}, Susceptible: {}, Exposed: {}, Infected: {}, Recovered: {}",
-            self.time_step, self.susceptible, self.exposed, self.infected, self.recovered
+            "Hour: {}, Susceptible: {}, Exposed: {}, Infected: {}, Recovered: {} Vaccinated: {}",
+            self.time_step, self.susceptible, self.exposed, self.infected, self.recovered, self.vaccinated
         )
     }
 }
