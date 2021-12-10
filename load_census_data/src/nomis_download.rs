@@ -186,7 +186,7 @@ impl DataFetcher {
                         * current_time.elapsed().as_secs()
                 });
                 let percentage =
-                    row_count.map(|total_row_count| processed_row_count / total_row_count);
+                    row_count.map(|total_row_count| processed_row_count * 100 / total_row_count);
                 info!("Completed request {} in {:?}, current row count {}/{:?}={:?}% Estimated Time: {:?} seconds", index, current_time.elapsed(),processed_row_count,row_count,percentage,est_time);
             }
         }
