@@ -42,7 +42,7 @@ const YORKSHIRE_AND_HUMBER_OUTPUT_AREA: &str = "2013265923TYPE299";
 
 const POPULATION_TABLE_CODE: &str = "NM_144_1";
 pub const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
-pub const PAGE_SIZE: usize = 100000;
+pub const PAGE_SIZE: usize = 1000000;
 
 /// This is a struct to download census tables from the NOMIS api
 pub struct DataFetcher {
@@ -223,6 +223,7 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
     path.push_str(".data.csv");
     path.push_str("?geography=");
     path.push_str(&area_code);
+    path.push_str("&ExcludeZeroValues=true");
     path.push_str("&recordlimit=");
     path.push_str(PAGE_SIZE.to_string().as_str());
     if let Some(columns) = table.get_required_columns() {

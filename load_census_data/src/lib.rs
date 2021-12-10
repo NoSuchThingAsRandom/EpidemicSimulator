@@ -107,6 +107,7 @@ impl CensusData {
                 request.push_str(&region_code);
                 request.push_str("&place_of_work=");
                 request.push_str(YORK_AND_HUMBER_OUTPUT_AREA_CODE);
+                request.push_str("&ExcludeZeroValues=true");
                 request.push_str("&recordlimit=");
                 request.push_str(PAGE_SIZE.to_string().as_str());
                 if let Some(columns) = table_name.get_required_columns() {
