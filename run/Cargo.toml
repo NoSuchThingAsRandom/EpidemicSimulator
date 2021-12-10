@@ -10,6 +10,7 @@ load_census_data = { path = "../load_census_data" }
 sim = { path = "../sim" }
 
 anyhow = "1.0"
+clap = "2.34.0"
 dotenv = "0.15"
 geo-types = "0.7"
 log = "0.4"

@@ -18,13 +18,10 @@
  *
  */
 
-use std::any::Any;
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
 use enum_map::EnumMap;
-use log::debug;
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumCount as EnumCountMacro;
@@ -40,17 +37,13 @@ pub enum OccupationType {
     Managers,
     #[serde(alias = "2. Professional occupations")]
     Professional,
-    #[serde(
-    alias = "3. Associate professional and technical occupations"
-    )]
+    #[serde(alias = "3. Associate professional and technical occupations")]
     Technical,
     #[serde(alias = "4. Administrative and secretarial occupations")]
     Administrative,
     #[serde(alias = "5. Skilled trades occupations")]
     SkilledTrades,
-    #[serde(
-    alias = "6. Caring, leisure and other service occupations"
-    )]
+    #[serde(alias = "6. Caring, leisure and other service occupations")]
     Caring,
     #[serde(alias = "7. Sales and customer service occupations")]
     Sales,
@@ -142,13 +135,14 @@ impl OccupationCountRecord {
     }
 }
 
-impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {
-}
+impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {}
 
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for OccupationCountRecord {
     type Error = CensusError;
 
-    fn try_from(records: &'a Vec<Box<PreProcessingOccupationCountRecord>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        records: &'a Vec<Box<PreProcessingOccupationCountRecord>>,
+    ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(CensusError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {

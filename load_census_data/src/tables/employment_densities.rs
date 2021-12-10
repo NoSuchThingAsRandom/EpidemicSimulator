@@ -52,7 +52,7 @@ impl EmploymentDensities {
             OccupationType::Sales => Self::RETAIL_HIGH_STREET,
             OccupationType::MachineOperatives => Self::INDUSTRIAL_GENERAL,
             OccupationType::Teaching => Self::RETAIL_HIGH_STREET,
-            OccupationType::All => { Self::RETAIL_HIGH_STREET }
+            OccupationType::All => Self::RETAIL_HIGH_STREET,
         }
     }
 }

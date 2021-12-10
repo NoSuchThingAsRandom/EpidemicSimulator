@@ -50,10 +50,14 @@ pub struct WorkplaceResidentalRecord {
 
 impl TableEntry<PreProcessingWorkplaceResidentialRecord> for WorkplaceResidentalRecord {}
 
-impl<'a> TryFrom<&'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>> for WorkplaceResidentalRecord {
+impl<'a> TryFrom<&'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>>
+for WorkplaceResidentalRecord
+{
     type Error = CensusError;
 
-    fn try_from(records: &'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        records: &'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>,
+    ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(CensusError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {

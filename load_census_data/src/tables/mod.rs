@@ -23,16 +23,16 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
-use log::{debug, trace};
+use log::trace;
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 
-use crate::parsing_error::{CensusError, ParseErrorType};
+use crate::parsing_error::CensusError;
 
 pub mod employment_densities;
 pub mod occupation_count;
 pub mod population_and_density_per_output_area;
 pub mod resides_vs_workplace;
-
 /// This is used to load in a CSV file, and each row corresponds to one struct
 pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
     fn get_geography_code(&self) -> String;
@@ -43,7 +43,9 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
         let mut buffer = HashMap::new();
         // Group the pre processing records, by output area
         for entry in data {
-            let container = buffer.entry(entry.get_geography_code()).or_insert(Vec::new());
+            let container = buffer
+                .entry(entry.get_geography_code())
+                .or_insert_with(Vec::new);
             let entry = Box::new(entry) as Box<dyn Any>;
             if let Ok(entry) = entry.downcast::<T>() {
                 container.push(entry);
@@ -57,7 +59,9 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
 /// This is a container for the entire processed CSV
 ///
 /// Should contain a hashmap of OutputArea Codes to TableEntries
-pub trait TableEntry<T: 'static + PreProcessingTable>: Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=CensusError> {
+pub trait TableEntry<T: 'static + PreProcessingTable>:
+Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=CensusError>
+{
     /// Returns the entire processed CSV per output area
     fn generate(
         data: Vec<impl PreProcessingTable + 'static>,
@@ -73,7 +77,7 @@ pub trait TableEntry<T: 'static + PreProcessingTable>: Debug + Sized + for<'a> T
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub enum CensusTableNames {
     OccupationCount,
     PopulationDensity,
@@ -90,7 +94,9 @@ impl CensusTableNames {
             CensusTableNames::OutputAreaMap => {
                 "data/census_map_areas/England_oa_2011/england_oa_2011.shp"
             }
-            CensusTableNames::ResidentialAreaVsWorkplaceArea => "wf01bew_residential_vs_workplace_NM_1228_1.csv",
+            CensusTableNames::ResidentialAreaVsWorkplaceArea => {
+                "wf01bew_residential_vs_workplace_NM_1228_1.csv"
+            }
         }
     }
     /// Returns the api code for table
@@ -112,5 +118,21 @@ impl CensusTableNames {
             CensusTableNames::OutputAreaMap => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
             CensusTableNames::ResidentialAreaVsWorkplaceArea => { Some("CURRENTLY_RESIDING_IN_CODE,PLACE_OF_WORK_TYPE,PLACE_OF_WORK_NAME,OBS_VALUE,RECORD_OFFSET,RECORD_COUNT") }
         }
+    }
+}
+
+impl TryFrom<String> for CensusTableNames {
+    type Error = CensusError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(serde_plain::from_str(&value)?)
+    }
+}
+
+impl TryFrom<&str> for CensusTableNames {
+    type Error = CensusError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(serde_plain::from_str(value)?)
     }
 }
