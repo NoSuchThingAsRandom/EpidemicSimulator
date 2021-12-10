@@ -5,6 +5,7 @@ edition = "2018"
 authors = ["Sam Ralph"]
 
 [dependencies]
+async-recursion = "0.3"
 csv = "1.1.6"
 enum-map = "1.1.1"
 lazy_static = "1.4.0"

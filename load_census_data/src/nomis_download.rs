@@ -19,14 +19,17 @@
  */
 
 //! Module used for download Census Tables from the NOMIS API
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::Instant;
 
+use async_recursion::async_recursion;
 use lazy_static::lazy_static;
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use serde_json::Value;
 
 use crate::CensusTableNames;
+use crate::CensusTableNames::ResidentialAreaVsWorkplaceArea;
 use crate::parsing_error::CensusError;
 
 lazy_static! {
@@ -39,22 +42,15 @@ pub const YORK_AND_HUMBER_OUTPUT_AREA_CODE: &str = "1254132824...1254136983,1254
 //https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv?date=latest&geography=1254162148...1254162748,1254262205...1254262240&rural_urban=0&cell=0&measures=20100";
 const ENGLAND_OUTPUT_AREAS_CODE: &str = "2092957699TYPE299";
 const YORKSHIRE_AND_HUMBER_OUTPUT_AREA: &str = "2013265923TYPE299";
-
+const MAX_RETRY_COUNT: u8 = 3;
 const POPULATION_TABLE_CODE: &str = "NM_144_1";
 pub const NOMIS_API: &str = "https://www.nomisweb.co.uk/api/v01/";
 pub const PAGE_SIZE: usize = 1000000;
 
 /// This is a struct to download census tables from the NOMIS api
+#[derive(Default)]
 pub struct DataFetcher {
     client: reqwest::Client,
-}
-
-impl Default for DataFetcher {
-    fn default() -> Self {
-        DataFetcher {
-            client: reqwest::Client::default(),
-        }
-    }
 }
 
 impl DataFetcher {
@@ -121,22 +117,23 @@ impl DataFetcher {
     }
     pub async fn download_and_save_table(
         &self,
-        filename: &String,
+        filename: &str,
         request: String,
         number_of_records: Option<usize>,
+        resume_from_record: Option<usize>,
     ) -> Result<(), CensusError> {
         info!("Using base request: {}",request);
-        let dir_path = filename.split("/").last().unwrap();
+        let dir_path = filename.split('/').last().unwrap();
         let dir_path = filename.to_string().replace(dir_path, "");
         std::fs::create_dir_all(dir_path)?;
 
         let total_time = Instant::now();
-        let mut file = std::fs::File::create(filename)?;
+        let mut file = OpenOptions::new().write(true).create(true).append(resume_from_record.is_some()).open(filename)?;
         let mut processed_row_count = 0;
         if let Some(number_of_records) = number_of_records {
-            for index in 0..(number_of_records as f64 / PAGE_SIZE as f64).ceil() as usize {
+            for index in resume_from_record.map(|value| value / PAGE_SIZE).unwrap_or(0)..(number_of_records as f64 / PAGE_SIZE as f64).ceil() as usize {
                 let current_time = Instant::now();
-                let data = self.execute_request(index, request.clone()).await?;
+                let data = self.execute_request(index, request.clone(), 0).await?;
                 if let Some(data) = data {
                     file.write_all(data.as_bytes())?;
                 } else {
@@ -145,7 +142,7 @@ impl DataFetcher {
                 debug!("Completed request {} in {:?}", index, current_time.elapsed());
             }
         } else {
-            let mut index = 0;
+            let mut index = resume_from_record.map(|value| value / PAGE_SIZE).unwrap_or(0);
             let mut data = Some(String::new());
             let mut row_count: Option<usize> = None;
             while data.is_some() {
@@ -153,10 +150,10 @@ impl DataFetcher {
                 if let Some(data) = data {
                     // Get number of rows
                     if row_count.is_none() {
-                        let mut rows = data.split("\n");
+                        let mut rows = data.split('\n');
                         rows.next();
                         if let Some(row) = rows.next() {
-                            let split = row.split(",");
+                            let split = row.split(',');
                             if let Some(count) = split.last() {
                                 if let Ok(count) = count.parse() {
                                     row_count = Some(count);
@@ -166,16 +163,11 @@ impl DataFetcher {
                     }
                     file.write_all(data.as_bytes())?;
                 }
-                data = self.execute_request(index, request.clone()).await?;
+                data = self.execute_request(index, request.clone(), 0).await?;
                 processed_row_count += PAGE_SIZE;
                 index += 1;
-                let est_time =
-                    if let Some(row_count) = row_count {
-                        Some(((row_count - processed_row_count) / PAGE_SIZE as usize) as u64 * current_time.elapsed().as_secs())
-                    } else { None };
-                let percentage = if let Some(total_row_count) = row_count {
-                    Some(processed_row_count / total_row_count)
-                } else { None };
+                let est_time = row_count.map(|row_count| ((row_count - processed_row_count) / PAGE_SIZE as usize) as u64 * current_time.elapsed().as_secs());
+                let percentage = row_count.map(|total_row_count| processed_row_count / total_row_count);
                 info!("Completed request {} in {:?}, current row count {}/{:?}={:?}% Estimated Time: {:?} seconds", index, current_time.elapsed(),processed_row_count,row_count,percentage,est_time);
             }
         }
@@ -184,7 +176,8 @@ impl DataFetcher {
         Ok(())
     }
     /// Execute the request, returning Data if it exists
-    async fn execute_request(&self, index: usize, base_request: String) -> Result<Option<String>, CensusError> {
+    #[async_recursion]
+    async fn execute_request(&self, index: usize, base_request: String, retry_count: u8) -> Result<Option<String>, CensusError> {
         let mut current_request = base_request.clone();
         current_request.push_str("&RecordOffset=");
         current_request.push_str((index * PAGE_SIZE).to_string().as_str());
@@ -192,20 +185,33 @@ impl DataFetcher {
             current_request.push_str("&ExcludeColumnHeadings=true");
         }
         trace!("Making request to: {}", current_request);
-        let request = self.client.get(current_request).send().await?;
-        trace!("Got response: {:?}", request);
-        let data = request.text().await?;
-        if data.is_empty() {
-            info!("No more records, exiting");
-            return Ok(None);
+
+        match self.client.get(current_request).send().await {
+            Err(e) => {
+                error!("Request failed: {}",e);
+                return if retry_count < MAX_RETRY_COUNT {
+                    info!("Retrying web request...");
+                    self.execute_request(index, base_request, retry_count + 1).await
+                } else {
+                    Err(CensusError::from(e))
+                };
+            }
+            Ok(request) => {
+                trace!("Got response: {:?}", request);
+                let data = request.text().await?;
+                if data.is_empty() {
+                    info!("No more records, exiting");
+                    return Ok(None);
+                }
+                Ok(Some(data))
+            }
         }
-        Ok(Some(data))
     }
 }
 
 pub fn table_144_york_output_areas(page_size: usize) -> String {
     let mut path = String::from(NOMIS_API);
-    path.push_str(&POPULATION_TABLE_CODE);
+    path.push_str(POPULATION_TABLE_CODE);
     path.push_str(".data.csv");
     path.push_str("?geography=");
     path.push_str(YORK_OUTPUT_AREA_CODE);
@@ -221,8 +227,16 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
     path.push_str("dataset/");
     path.push_str(table.get_api_code());
     path.push_str(".data.csv");
-    path.push_str("?geography=");
-    path.push_str(&area_code);
+
+    if let ResidentialAreaVsWorkplaceArea = table {
+        path.push_str("?currently_residing_in=");
+        path.push_str(&area_code);
+        path.push_str("&place_of_work=");
+        path.push_str(YORK_AND_HUMBER_OUTPUT_AREA_CODE);
+    } else {
+        path.push_str("?geography=");
+        path.push_str(&area_code);
+    }
     path.push_str("&ExcludeZeroValues=true");
     path.push_str("&recordlimit=");
     path.push_str(PAGE_SIZE.to_string().as_str());
@@ -230,8 +244,6 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
         path.push_str("&select=");
         path.push_str(columns);
     }
-
-
     path.push_str("&uid=");
     path += &NOMIS_API_KEY;
     path

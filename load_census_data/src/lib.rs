@@ -27,7 +27,6 @@ use std::path::Path;
 
 use log::{debug, info, warn};
 use rand::{Rng, RngCore};
-use serde::de::Unexpected::Str;
 
 use crate::nomis_download::{build_table_request_string, DataFetcher, NOMIS_API, NOMIS_API_KEY, PAGE_SIZE, YORK_AND_HUMBER_OUTPUT_AREA_CODE, YORK_OUTPUT_AREA_CODE};
 use crate::parsing_error::CensusError;
@@ -87,42 +86,6 @@ pub struct CensusData {
 
 /// Initialization
 impl CensusData {
-    /// Attempts to load the given table from a file on disk
-    ///
-    /// If the file doesn't exist and data_fetcher exists, will attempt to download the table from the NOMIS api
-    async fn fetch_workplace_table(census_directory: &str, region_code: &str, data_fetcher: &Option<DataFetcher>) -> Result<HashMap<String, WorkplaceResidentalRecord>, CensusError> {
-        let table_name = CensusTableNames::ResidentialAreaVsWorkplaceArea;
-        let filename = String::new() + census_directory + region_code + "/" + table_name.get_filename();
-        if !Path::new(&filename).exists() {
-            warn!("Workplace table doesn't exist on disk!");
-            if let Some(fetcher) = data_fetcher {
-                info!("Fetching table {:?} from api",table_name);
-                //https://www.nomisweb.co.uk/api/v01/dataset/NM_1228_1.data.csv?date=latest&currently_residing_in=1254162148...1254162748,1254262205...1254262240&place_of_work=1254162148...1254162748,1254262205...1254262240&measures=20100
-                //let request = build_table_request_string(table_name, region_code.to_string());
-                let mut request = String::from(NOMIS_API);
-                request.push_str("dataset/");
-                request.push_str(table_name.get_api_code());
-                request.push_str(".data.csv");
-                request.push_str("?currently_residing_in=");
-                request.push_str(&region_code);
-                request.push_str("&place_of_work=");
-                request.push_str(YORK_AND_HUMBER_OUTPUT_AREA_CODE);
-                request.push_str("&ExcludeZeroValues=true");
-                request.push_str("&recordlimit=");
-                request.push_str(PAGE_SIZE.to_string().as_str());
-                if let Some(columns) = table_name.get_required_columns() {
-                    request.push_str("&select=");
-                    request.push_str(columns);
-                }
-                request.push_str("&uid=");
-                request += &NOMIS_API_KEY;
-
-                fetcher.download_and_save_table(&filename, request, None).await?;
-            }
-        }
-        CensusData::read_generic_table_from_disk::<WorkplaceResidentalRecord, PreProcessingWorkplaceResidentialRecord>(&filename)
-    }
-
     /// Loads the workplace table from disk
     fn read_workplace_table(filename: String) -> Result<HashMap<String, HashMap<String, u32>>, CensusError> {
         let mut workplace_reader = csv::ReaderBuilder::new()
@@ -155,7 +118,7 @@ impl CensusData {
             if let Some(fetcher) = data_fetcher {
                 info!("Downloading table '{:?}' from api",table_name);
                 let request = build_table_request_string(table_name, region_code.to_string());
-                fetcher.download_and_save_table(&filename, request, None).await?;
+                fetcher.download_and_save_table(&filename, request, None, None).await?;
             }
         }
         CensusData::read_generic_table_from_disk::<T, U>(&filename)
@@ -180,8 +143,22 @@ impl CensusData {
             population_counts: CensusData::fetch_generic_table::<PreProcessingPopulationDensityRecord, PopulationRecord>(&census_directory, &region_code, CensusTableNames::PopulationDensity, &data_fetcher).await?,
             occupation_counts: CensusData::fetch_generic_table::<PreProcessingOccupationCountRecord, OccupationCountRecord>(&census_directory, &region_code, CensusTableNames::OccupationCount, &data_fetcher).await?,
             workplace_density: EmploymentDensities {},
-            residents_workplace: CensusData::fetch_workplace_table(&census_directory, &region_code, &data_fetcher).await?,
+            residents_workplace: CensusData::fetch_generic_table::<PreProcessingWorkplaceResidentialRecord, WorkplaceResidentalRecord>(&census_directory, &region_code, CensusTableNames::ResidentialAreaVsWorkplaceArea, &data_fetcher).await?,
         })
+    }
+    pub async fn resume_download(census_directory: &str, region_code: &str, table_name: CensusTableNames, resume_from_value: usize) -> Result<(), CensusError> {
+        info!("Resuming download of table {:?} from record {}",table_name,resume_from_value);
+        let mut data_fetcher = DataFetcher::default();
+        let filename = String::new() + census_directory + region_code + "/" + table_name.get_filename();
+        match &table_name {
+            CensusTableNames::OccupationCount | CensusTableNames::PopulationDensity | CensusTableNames::ResidentialAreaVsWorkplaceArea => {
+                info!("Downloading table '{:?}' from api",table_name);
+                let request = build_table_request_string(table_name, region_code.to_string());
+                data_fetcher.download_and_save_table(&filename, request, None, Some(resume_from_value)).await?;
+            }
+            CensusTableNames::OutputAreaMap => {}
+        }
+        Ok(())
     }
 }
 

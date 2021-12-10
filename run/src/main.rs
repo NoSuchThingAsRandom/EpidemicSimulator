@@ -26,6 +26,7 @@ use geo_types::Polygon;
 use log::{error, info};
 
 use load_census_data::CensusData;
+use load_census_data::tables::CensusTableNames;
 use sim::simulator::Simulator;
 
 //use visualisation::citizen_connections::{connected_groups, draw_graph};
@@ -43,7 +44,7 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 }
 
 #[tokio::main]
-async fn main() {//-> anyhow::Result<()> {
+async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init();
     let use_renderer: bool = get_bool_env("USE_RENDERER").unwrap();
@@ -54,9 +55,10 @@ async fn main() {//-> anyhow::Result<()> {
 
     let total_time = Instant::now();
     info!("Loading data from disk...");
-    let census_data = CensusData::load_all_tables(census_directory, area_code, should_download).await.context("Failed to load census data").unwrap();
+    //let census_data = CensusData::load_all_tables(census_directory, area_code, should_download).await.context("Failed to load census data").unwrap();
+    CensusData::resume_download(&census_directory, &area_code, CensusTableNames::OutputAreaMap, 60000000).await?;
     info!("Loaded census data in {:?}", total_time.elapsed());
-    return;
+    return Ok(());
     info!("Epidemic simulator");
     info!("Loading simulator data...");
     let mut sim = Simulator::new(census_data).context("Failed to initialise sim").unwrap();
@@ -73,7 +75,7 @@ async fn main() {//-> anyhow::Result<()> {
         sim.statistics.summarise();
     }
     info!("Finished in {:?}",total_time.elapsed());
-    //Ok(())
+    Ok(())
 }
 /*
 pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
