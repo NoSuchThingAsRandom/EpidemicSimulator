@@ -18,7 +18,6 @@
  *
  */
 
-
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -78,7 +77,9 @@ impl Statistics {
     pub fn recovered(&self) -> u32 {
         self.recovered
     }
-    pub fn infected_percentage(&self) -> f64 { self.infected as f64 / (self.susceptible + self.exposed + self.recovered) as f64 }
+    pub fn infected_percentage(&self) -> f64 {
+        self.infected as f64 / (self.susceptible + self.exposed + self.recovered) as f64
+    }
     pub fn increment(&mut self) {
         self.time_step += 1;
     }
@@ -97,9 +98,7 @@ impl Statistics {
             DiseaseStatus::Recovered => {
                 self.recovered += 1;
             }
-            DiseaseStatus::Vaccinated => {
-                self.vaccinated += 1
-            }
+            DiseaseStatus::Vaccinated => self.vaccinated += 1,
         }
     }
     /// When a citizen has been exposed, the susceptible count drops by one, and exposure count increases by 1

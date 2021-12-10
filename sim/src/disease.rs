@@ -66,7 +66,7 @@ impl DiseaseStatus {
             }
             DiseaseStatus::Recovered => DiseaseStatus::Recovered,
             // TODO Allow "break through" infections
-            DiseaseStatus::Vaccinated => DiseaseStatus::Vaccinated
+            DiseaseStatus::Vaccinated => DiseaseStatus::Vaccinated,
         }
     }
 }
@@ -126,11 +126,13 @@ impl DiseaseModel {
     }
     // TODO Redo this function
     pub fn get_exposure_chance(&self, is_vaccinated: bool, mask_status: &MaskStatus) -> f64 {
-        let mut chance = self.exposure_chance - match mask_status {
-            MaskStatus::None(_) => { 0.0 }
-            MaskStatus::PublicTransport(_) => { 0.2 }
-            MaskStatus::Everywhere(_) => { 0.4 }
-        } - if is_vaccinated { 1.0 } else { 0.0 };
+        let mut chance = self.exposure_chance
+            - match mask_status {
+            MaskStatus::None(_) => 0.0,
+            MaskStatus::PublicTransport(_) => 0.2,
+            MaskStatus::Everywhere(_) => 0.4,
+        }
+            - if is_vaccinated { 1.0 } else { 0.0 };
         if chance.is_sign_negative() {
             chance = 0.0;
         }

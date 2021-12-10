@@ -333,7 +333,11 @@ impl Simulator {
         let mut exposure_list: HashSet<Exposure> = HashSet::new();
         self.statistics.next();
         for citizen in &mut self.citizens.values_mut() {
-            citizen.execute_time_step(self.statistics.time_step(), &self.disease_model, self.interventions.lockdown_enabled());
+            citizen.execute_time_step(
+                self.statistics.time_step(),
+                &self.disease_model,
+                self.interventions.lockdown_enabled(),
+            );
             self.statistics.add_citizen(&citizen.disease_status);
             if let Infected(_) = citizen.disease_status {
                 exposure_list.insert(Exposure::new(
@@ -359,7 +363,11 @@ impl Simulator {
                         let citizen = self.citizens.get_mut(citizen_id);
                         match citizen {
                             Some(citizen) => {
-                                if citizen.expose(&self.disease_model, &self.interventions.mask_status, &mut self.rng) {
+                                if citizen.expose(
+                                    &self.disease_model,
+                                    &self.interventions.mask_status,
+                                    &mut self.rng,
+                                ) {
                                     self.statistics
                                         .citizen_exposed(exposure.clone())
                                         .context(format!("Exposing citizen {}", citizen_id))?;
@@ -392,7 +400,10 @@ impl Simulator {
         for intervention in new_interventions {
             match intervention {
                 InterventionsEnabled::Lockdown => {
-                    info!("Lockdown is enabled at hour {}",self.statistics.time_step());
+                    info!(
+                        "Lockdown is enabled at hour {}",
+                        self.statistics.time_step()
+                    );
                     // Send every Citizen home
                     for mut citizen in &mut self.citizens {
                         let home = citizen.1.household_code.clone();
@@ -400,21 +411,40 @@ impl Simulator {
                     }
                 }
                 InterventionsEnabled::Vaccination => {
-                    info!("Starting vaccination program at hour: {}",self.statistics.time_step());
+                    info!(
+                        "Starting vaccination program at hour: {}",
+                        self.statistics.time_step()
+                    );
                     let mut eligible = HashSet::new();
-                    self.citizens.iter().for_each(|(id, citizen)| if citizen.disease_status == DiseaseStatus::Susceptible { eligible.insert(*id); });
+                    self.citizens.iter().for_each(|(id, citizen)| {
+                        if citizen.disease_status == DiseaseStatus::Susceptible {
+                            eligible.insert(*id);
+                        }
+                    });
                     self.citizens_eligible_for_vaccine = Some(eligible);
                 }
                 InterventionsEnabled::MaskWearing(status) => {
-                    info!("Mask wearing status has changed: {} at hour {}",status,self.statistics.time_step())
+                    info!(
+                        "Mask wearing status has changed: {} at hour {}",
+                        status,
+                        self.statistics.time_step()
+                    )
                 }
             }
         }
         if let Some(citizens) = &mut self.citizens_eligible_for_vaccine {
-            let chosen: Vec<Uuid> = citizens.iter().choose_multiple(&mut self.rng, self.disease_model.vaccination_rate as usize).iter().map(|id| **id).collect();
+            let chosen: Vec<Uuid> = citizens
+                .iter()
+                .choose_multiple(&mut self.rng, self.disease_model.vaccination_rate as usize)
+                .iter()
+                .map(|id| **id)
+                .collect();
             for citizen_id in chosen {
                 citizens.remove(&citizen_id);
-                let citizen = self.citizens.get_mut(&citizen_id).context("Citizen '{}' due to be vaccinated, doesn't exist!")?;
+                let citizen = self
+                    .citizens
+                    .get_mut(&citizen_id)
+                    .context("Citizen '{}' due to be vaccinated, doesn't exist!")?;
                 citizen.disease_status = DiseaseStatus::Vaccinated;
             }
         }

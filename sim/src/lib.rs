@@ -25,8 +25,7 @@ extern crate pretty_env_logger;
 mod config;
 mod disease;
 mod error;
+mod interventions;
 pub mod models;
 pub mod simulator;
-mod interventions;
 mod statistics;
-

@@ -260,7 +260,7 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
         path.push_str("?currently_residing_in=");
         path.push_str(&area_code);
         path.push_str("&place_of_work=");
-        path.push_str(YORK_AND_HUMBER_OUTPUT_AREA_CODE);
+        path.push_str(YORK_OUTPUT_AREA_CODE);
     } else {
         path.push_str("?geography=");
         path.push_str(&area_code);

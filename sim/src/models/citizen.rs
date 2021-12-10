@@ -78,7 +78,12 @@ impl Citizen {
         self.id
     }
 
-    pub fn execute_time_step(&mut self, current_hour: u32, disease: &DiseaseModel, lockdown_enabled: bool) {
+    pub fn execute_time_step(
+        &mut self,
+        current_hour: u32,
+        disease: &DiseaseModel,
+        lockdown_enabled: bool,
+    ) {
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
         if !lockdown_enabled {
             match current_hour % 24 {
@@ -93,12 +98,23 @@ impl Citizen {
         }
     }
     /// Registers a new exposure to this citizen
-    pub fn expose(&mut self, disease_model: &DiseaseModel, mask_status: &MaskStatus, rng: &mut dyn RngCore) -> bool {
-        let mask_status = if self.is_mask_compliant { &MaskStatus::None(0) } else { mask_status };
-        let exposure_chance = disease_model.get_exposure_chance(self.disease_status == DiseaseStatus::Vaccinated, mask_status);
+    pub fn expose(
+        &mut self,
+        disease_model: &DiseaseModel,
+        mask_status: &MaskStatus,
+        rng: &mut dyn RngCore,
+    ) -> bool {
+        let mask_status = if self.is_mask_compliant {
+            &MaskStatus::None(0)
+        } else {
+            mask_status
+        };
+        let exposure_chance = disease_model.get_exposure_chance(
+            self.disease_status == DiseaseStatus::Vaccinated,
+            mask_status,
+        );
 
-        if self.disease_status == DiseaseStatus::Susceptible && rng.gen::<f64>() < exposure_chance
-        {
+        if self.disease_status == DiseaseStatus::Susceptible && rng.gen::<f64>() < exposure_chance {
             self.disease_status = DiseaseStatus::Exposed(0);
             return true;
         }

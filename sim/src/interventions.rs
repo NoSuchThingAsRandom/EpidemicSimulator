@@ -50,9 +50,9 @@ impl MaskStatus {
     pub fn get_threshold(&self) -> f64 {
         // TODO Make this loaded from a config file
         match self {
-            MaskStatus::None(_) => { 0.0 }
-            MaskStatus::PublicTransport(_) => { 0.2 }
-            MaskStatus::Everywhere(_) => { 0.4 }
+            MaskStatus::None(_) => 0.0,
+            MaskStatus::PublicTransport(_) => 0.2,
+            MaskStatus::Everywhere(_) => 0.4,
         }
     }
 }
@@ -118,12 +118,12 @@ impl InterventionStatus {
                     self.lockdown = Some(0);
                     new_interventions.insert(InterventionsEnabled::Lockdown);
                 }
-            } // Lockdown is removed
+            }
+            // Lockdown is removed
             else if self.lockdown.is_some() {
                 self.lockdown = None;
             }
         }
-
 
         // Vaccination
         if let Some(threshold) = self.thresholds.vaccination_threshold {
@@ -142,7 +142,9 @@ impl InterventionStatus {
             MaskStatus::None(hour) => {
                 if MaskStatus::PublicTransport(0).get_threshold() < percentage_infected {
                     info!("Mask wearing on public transport is enacted");
-                    new_interventions.insert(InterventionsEnabled::MaskWearing(MaskStatus::PublicTransport(0)));
+                    new_interventions.insert(InterventionsEnabled::MaskWearing(
+                        MaskStatus::PublicTransport(0),
+                    ));
                     MaskStatus::PublicTransport(0)
                 } else {
                     MaskStatus::PublicTransport(hour + 1)
@@ -151,11 +153,13 @@ impl InterventionStatus {
             MaskStatus::PublicTransport(hour) => {
                 if percentage_infected < MaskStatus::PublicTransport(0).get_threshold() {
                     info!("Mask wearing on public transport is removed");
-                    new_interventions.insert(InterventionsEnabled::MaskWearing(MaskStatus::None(0)));
+                    new_interventions
+                        .insert(InterventionsEnabled::MaskWearing(MaskStatus::None(0)));
                     MaskStatus::None(0)
                 } else if MaskStatus::Everywhere(0).get_threshold() < percentage_infected {
                     info!("Mask wearing everywhere is enacted");
-                    new_interventions.insert(InterventionsEnabled::MaskWearing(MaskStatus::Everywhere(0)));
+                    new_interventions
+                        .insert(InterventionsEnabled::MaskWearing(MaskStatus::Everywhere(0)));
                     MaskStatus::Everywhere(0)
                 } else {
                     MaskStatus::PublicTransport(hour + 1)
@@ -164,7 +168,9 @@ impl InterventionStatus {
             MaskStatus::Everywhere(hour) => {
                 if percentage_infected < MaskStatus::Everywhere(0).get_threshold() {
                     info!("Mask wearing everywhere is removed");
-                    new_interventions.insert(InterventionsEnabled::MaskWearing(MaskStatus::PublicTransport(0)));
+                    new_interventions.insert(InterventionsEnabled::MaskWearing(
+                        MaskStatus::PublicTransport(0),
+                    ));
                     MaskStatus::PublicTransport(0)
                 } else {
                     MaskStatus::Everywhere(hour + 1)
