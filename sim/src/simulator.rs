@@ -298,6 +298,8 @@ impl Simulator {
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
                 info!("Time: {:?} - {}", start_time.elapsed(), self.statistics);
+                let mem_usage = procinfo::pid::statm_self().context("Failed to load memory usage")?;
+                debug!("Memory Usage: {:?}",mem_usage.size);
                 start_time = Instant::now();
             }
             if !self.step()? {
