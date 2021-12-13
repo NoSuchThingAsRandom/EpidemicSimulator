@@ -47,7 +47,7 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
-    pretty_env_logger::init();
+    pretty_env_logger::init_timed();
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
@@ -116,7 +116,7 @@ async fn main() -> anyhow::Result<()> {
     let directory = matches
         .value_of("data_directory")
         .expect("Missing data directory argument");
-    let census_directory = directory.to_owned() + "/tables";
+    let census_directory = directory.to_owned() + "/tables/";
     let area = matches.value_of("area").expect("Missing area argument");
     info!("Using area: {}", area);
     if matches.is_present("download") {
@@ -141,6 +141,7 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("render") {
         unimplemented!("Cannot use renderer on current Rust version (2018")
     } else if matches.is_present("simulate") {
+        info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
         info!("Loading data from disk...");
         let census_data = CensusData::load_all_tables(census_directory, area.to_string(), true)
@@ -148,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
             .context("Failed to load census data")
             .unwrap();
         info!(
-            "Finished loading data in {:?}\nInitialing simulator",
+            "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
         let mut sim = Simulator::new(census_data)
@@ -157,9 +158,9 @@ async fn main() -> anyhow::Result<()> {
         info!("Initialised simulator, starting sim...");
         if let Err(e) = sim.simulate() {
             error!("{}", e);
-            sim.error_dump_json().expect("Failed to create core dump!");
+            //sim.error_dump_json().expect("Failed to create core dump!");
         } else {
-            sim.statistics.summarise();
+            //sim.statistics.summarise();
         }
         info!("Finished in {:?}", total_time.elapsed());
         Ok(())

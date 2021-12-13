@@ -36,13 +36,17 @@ use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
-use crate::config::{DEBUG_ITERATION_PRINT, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE};
-use crate::disease::{DiseaseModel, DiseaseStatus, Exposure, Statistics};
+use crate::config::{
+    DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
+};
+use crate::disease::{DiseaseModel, DiseaseStatus, Exposure};
 use crate::disease::DiseaseStatus::Infected;
+use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::build_polygons_for_output_areas;
 use crate::models::building::{Building, BuildingCode, Workplace};
 use crate::models::citizen::Citizen;
 use crate::models::output_area::OutputArea;
+use crate::statistics::Statistics;
 
 pub struct Simulator {
     /// The total size of the population
@@ -51,7 +55,9 @@ pub struct Simulator {
     pub output_areas: HashMap<String, OutputArea>,
     /// The list of citizens who have a "home" in this area
     pub citizens: HashMap<Uuid, Citizen>,
+    pub citizens_eligible_for_vaccine: Option<HashSet<Uuid>>,
     pub statistics: Statistics,
+    interventions: InterventionStatus,
     disease_model: DiseaseModel,
     rng: ThreadRng,
 }
@@ -61,8 +67,9 @@ impl Simulator {
     pub fn new(census_data: CensusData) -> Result<Simulator> {
         let start = Instant::now();
         let mut rng = thread_rng();
-
+        let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
+        debug!("Current memory usage: {}", get_memory_usage()?);
         let mut output_areas_polygons =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
                 .context("Loading polygons for output areas")?;
@@ -79,39 +86,53 @@ impl Simulator {
                         context: "Building output areas map".to_string(),
                         key: entry.output_area_code.to_string(),
                     },
-                })?;
+                })
+                .context(format!(
+                    "Loading polygon shape for area: {}",
+                    entry.output_area_code.to_string()
+                ))?;
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), polygon)?;
+            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), polygon)
+                .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
-                    .generate_citizens(entry, &mut rng)
+                    .generate_citizens(entry, disease_model.mask_percentage, &mut rng)
                     .context("Failed to generate residents")?,
             );
             output_areas.insert(new_area.output_area_code.to_string(), new_area);
         }
         info!("Built residential population in {:?}", start.elapsed());
+        debug!("Current memory usage: {}", get_memory_usage()?);
 
         let mut simulator = Simulator {
             current_population: starting_population,
             output_areas,
             citizens,
+            citizens_eligible_for_vaccine: None,
             statistics: Statistics::default(),
-            disease_model: DiseaseModel::covid(),
+            interventions: Default::default(),
+            disease_model,
             rng: thread_rng(),
         };
         // Build the workplaces
-        simulator.build_workplaces(census_data)?;
+        simulator
+            .build_workplaces(census_data)
+            .context("Failed to build workplaces")?;
         for citizen in simulator.citizens.values() {
             assert_ne!(citizen.household_code, citizen.workplace_code);
         }
         info!("Generated workplaces in {:?}", start.elapsed());
+        debug!("Current memory usage: {}", get_memory_usage()?);
         // Infect random citizens
-        simulator.apply_initial_infections()?;
+        simulator
+            .apply_initial_infections()
+            .context("Failed to create initial infections")?;
 
         info!(
             "Initialization completed in {} seconds",
             start.elapsed().as_secs_f32()
         );
+        debug!("Current memory usage: {}", get_memory_usage()?);
         debug!(
             "Starting Statistics:\n      There are {} total Citizens\n      {} Output Areas",
             simulator.citizens.len(),
@@ -157,8 +178,9 @@ impl Simulator {
                     },
                 })?;
             for citizen_id in household_output_area.get_residents() {
-                let workplace_output_area_code =
-                    household_census_data.get_random_workplace_area(&mut self.rng)?;
+                let workplace_output_area_code = household_census_data
+                    .get_random_workplace_area(&mut self.rng)
+                    .context("Selecting a random workplace")?;
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
                     citizens_to_allocate.insert(workplace_output_area_code.to_string(), Vec::new());
                 }
@@ -297,9 +319,7 @@ impl Simulator {
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                info!("Time: {:?} - {}", start_time.elapsed(), self.statistics);
-                let mem_usage = procinfo::pid::statm_self().context("Failed to load memory usage")?;
-                debug!("Memory Usage: {:?}",mem_usage.size);
+                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics, get_memory_usage()?);
                 start_time = Instant::now();
             }
             if !self.step()? {
@@ -315,6 +335,7 @@ impl Simulator {
     pub fn step(&mut self) -> anyhow::Result<bool> {
         let exposures = self.generate_exposures()?;
         self.apply_exposures(exposures)?;
+        self.apply_interventions()?;
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -323,12 +344,16 @@ impl Simulator {
         }
     }
 
-    pub fn generate_exposures(&mut self) -> anyhow::Result<HashSet<Exposure>> {
+    fn generate_exposures(&mut self) -> anyhow::Result<HashSet<Exposure>> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposure_list: HashSet<Exposure> = HashSet::new();
         self.statistics.next();
         for citizen in &mut self.citizens.values_mut() {
-            citizen.execute_time_step(self.statistics.time_step(), &self.disease_model);
+            citizen.execute_time_step(
+                self.statistics.time_step(),
+                &self.disease_model,
+                self.interventions.lockdown_enabled(),
+            );
             self.statistics.add_citizen(&citizen.disease_status);
             if let Infected(_) = citizen.disease_status {
                 exposure_list.insert(Exposure::new(
@@ -339,8 +364,8 @@ impl Simulator {
         }
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
-    }
-    pub fn apply_exposures(&mut self, exposure_list: HashSet<Exposure>) -> anyhow::Result<()> {
+    }12
+    fn apply_exposures(&mut self, exposure_list: HashSet<Exposure>) -> anyhow::Result<()> {
         for exposure in exposure_list {
             let area = self.output_areas.get_mut(&exposure.output_area_code());
             match area {
@@ -354,10 +379,20 @@ impl Simulator {
                         let citizen = self.citizens.get_mut(citizen_id);
                         match citizen {
                             Some(citizen) => {
-                                if citizen.expose(&self.disease_model, &mut self.rng) {
+                                if citizen.expose(
+                                    &self.disease_model,
+                                    &self.interventions.mask_status,
+                                    &mut self.rng,
+                                ) {
                                     self.statistics
                                         .citizen_exposed(exposure.clone())
                                         .context(format!("Exposing citizen {}", citizen_id))?;
+
+                                    if let Some(vaccine_list) =
+                                    &mut self.citizens_eligible_for_vaccine
+                                    {
+                                        vaccine_list.remove(citizen_id);
+                                    }
                                 }
                             }
                             None => {
@@ -379,6 +414,64 @@ impl Simulator {
                 }
             }
         }
+        Ok(())
+    }
+    fn apply_interventions(&mut self) -> anyhow::Result<()> {
+        let infected_percent = self.statistics.infected_percentage();
+        //debug!("Infected percent: {}",infected_percent);
+        let new_interventions = self.interventions.update_status(infected_percent);
+        for intervention in new_interventions {
+            match intervention {
+                InterventionsEnabled::Lockdown => {
+                    info!(
+                        "Lockdown is enabled at hour {}",
+                        self.statistics.time_step()
+                    );
+                    // Send every Citizen home
+                    for mut citizen in &mut self.citizens {
+                        let home = citizen.1.household_code.clone();
+                        citizen.1.current_position = home;
+                    }
+                }
+                InterventionsEnabled::Vaccination => {
+                    info!(
+                        "Starting vaccination program at hour: {}",
+                        self.statistics.time_step()
+                    );
+                    let mut eligible = HashSet::new();
+                    self.citizens.iter().for_each(|(id, citizen)| {
+                        if citizen.disease_status == DiseaseStatus::Susceptible {
+                            eligible.insert(*id);
+                        }
+                    });
+                    self.citizens_eligible_for_vaccine = Some(eligible);
+                }
+                InterventionsEnabled::MaskWearing(status) => {
+                    info!(
+                        "Mask wearing status has changed: {} at hour {}",
+                        status,
+                        self.statistics.time_step()
+                    )
+                }
+            }
+        }
+        if let Some(citizens) = &mut self.citizens_eligible_for_vaccine {
+            let chosen: Vec<Uuid> = citizens
+                .iter()
+                .choose_multiple(&mut self.rng, self.disease_model.vaccination_rate as usize)
+                .iter()
+                .map(|id| **id)
+                .collect();
+            for citizen_id in chosen {
+                citizens.remove(&citizen_id);
+                let citizen = self
+                    .citizens
+                    .get_mut(&citizen_id)
+                    .context("Citizen '{}' due to be vaccinated, doesn't exist!")?;
+                citizen.disease_status = DiseaseStatus::Vaccinated;
+            }
+        }
+
         Ok(())
     }
 }

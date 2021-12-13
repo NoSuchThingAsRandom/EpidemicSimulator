@@ -22,7 +22,7 @@
 #[macro_use]
 extern crate enum_map;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use log::{debug, info, warn};
@@ -79,6 +79,8 @@ impl<'a> CensusDataEntry<'a> {
 
 /// This is a container for all the Census Data Tables
 pub struct CensusData {
+    /// The list of output area codes that are valid and complete (records exist for each table)
+    pub valid_areas: HashSet<String>,
     pub population_counts: HashMap<String, PopulationRecord>,
     pub occupation_counts: HashMap<String, OccupationCountRecord>,
     pub workplace_density: EmploymentDensities,
@@ -140,7 +142,7 @@ impl CensusData {
     pub fn read_generic_table_from_disk<T: TableEntry<U>, U: 'static + PreProcessingTable>(
         table_name: &str,
     ) -> Result<HashMap<String, T>, CensusError> {
-        info!("Reading census table: '{}' from disk", table_name);
+        debug!("Reading census table: '{}' from disk", table_name);
         let mut reader = csv::Reader::from_path(table_name)?;
 
         let data: Result<Vec<U>, csv::Error> = reader.deserialize().collect();
@@ -159,38 +161,71 @@ impl CensusData {
         } else {
             None
         };
+        // Build population table
+        let mut population_counts = CensusData::fetch_generic_table::<
+            PreProcessingPopulationDensityRecord,
+            PopulationRecord,
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::PopulationDensity,
+            &data_fetcher,
+        )
+            .await?;
+
+        // Build occupation table
+        let mut occupation_counts = CensusData::fetch_generic_table::<
+            PreProcessingOccupationCountRecord,
+            OccupationCountRecord,
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::OccupationCount,
+            &data_fetcher,
+        )
+            .await?;
+
+        // Build residents workplace table
+        let mut residents_workplace = CensusData::fetch_generic_table::<
+            PreProcessingWorkplaceResidentialRecord,
+            WorkplaceResidentalRecord,
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::ResidentialAreaVsWorkplaceArea,
+            &data_fetcher,
+        )
+            .await?;
+
+        // Filter out areas
+        // TODO Is this the most optimal way?
+        let mut valid_areas = HashSet::with_capacity(population_counts.len());
+        for key in population_counts.keys() {
+            if occupation_counts.contains_key(key) && residents_workplace.contains_key(key) {
+                valid_areas.insert(key.to_string());
+            }
+        }
+        population_counts.retain(|area, _| valid_areas.contains(area));
+        occupation_counts.retain(|area, _| valid_areas.contains(area));
+        residents_workplace.retain(|area, _| valid_areas.contains(area));
+        for record in residents_workplace.values_mut() {
+            let mut total = 0;
+            record.workplace_count.retain(|code, count| {
+                if valid_areas.contains(code) {
+                    total += *count;
+                    true
+                } else {
+                    false
+                }
+            });
+            record.total_workplace_count = total;
+        }
         Ok(CensusData {
-            population_counts: CensusData::fetch_generic_table::<
-                PreProcessingPopulationDensityRecord,
-                PopulationRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::PopulationDensity,
-                &data_fetcher,
-            )
-                .await?,
-            occupation_counts: CensusData::fetch_generic_table::<
-                PreProcessingOccupationCountRecord,
-                OccupationCountRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::OccupationCount,
-                &data_fetcher,
-            )
-                .await?,
+            valid_areas,
+            population_counts,
+            occupation_counts,
             workplace_density: EmploymentDensities {},
-            residents_workplace: CensusData::fetch_generic_table::<
-                PreProcessingWorkplaceResidentialRecord,
-                WorkplaceResidentalRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::ResidentialAreaVsWorkplaceArea,
-                &data_fetcher,
-            )
-                .await?,
+            residents_workplace,
         })
     }
     pub async fn resume_download(

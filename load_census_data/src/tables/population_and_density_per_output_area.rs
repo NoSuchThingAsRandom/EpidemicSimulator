@@ -79,7 +79,7 @@ pub enum PersonType {
     #[serde(alias = "Lives in a communal establishment")]
     LivesInCommunalEstablishment,
     #[serde(
-    alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
+        alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
     )]
     Schoolchild,
 }

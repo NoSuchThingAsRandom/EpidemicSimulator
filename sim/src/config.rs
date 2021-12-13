@@ -25,3 +25,10 @@ pub const HOUSEHOLD_SIZE: u16 = 4;
 
 /// How often to print debug statements
 pub const DEBUG_ITERATION_PRINT: usize = 10;
+
+pub fn get_memory_usage() -> anyhow::Result<String> {
+    Ok(format!(
+        "{:.3} GB",
+        (procinfo::pid::statm_self()?.size * page_size::get() / 1024 / 1024) as f64 / 1024.0
+    ))
+}

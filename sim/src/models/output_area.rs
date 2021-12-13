@@ -22,7 +22,7 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use enum_map::EnumMap;
-use rand::RngCore;
+use rand::{Rng, RngCore};
 use uuid::Uuid;
 
 use load_census_data::CensusDataEntry;
@@ -69,6 +69,8 @@ impl OutputArea {
     pub fn generate_citizens(
         &mut self,
         census_data: CensusDataEntry,
+        // TODO Check if data on mask compliance ratio
+        mask_compliance_ratio: f64,
         rng: &mut dyn RngCore,
     ) -> anyhow::Result<HashMap<Uuid, Citizen>> {
         // TODO Fix this
@@ -96,6 +98,7 @@ impl OutputArea {
                     household_building_code.clone(),
                     household_building_code.clone(),
                     occupation,
+                    rng.gen_bool(mask_compliance_ratio),
                 );
                 household
                     .add_citizen(citizen.id())

@@ -27,6 +27,7 @@ use uuid::Uuid;
 use load_census_data::tables::occupation_count::OccupationType;
 
 use crate::disease::{DiseaseModel, DiseaseStatus};
+use crate::interventions::MaskStatus;
 use crate::models::building::BuildingCode;
 
 /// This is used to represent a single Citizen in the simulation
@@ -47,6 +48,8 @@ pub struct Citizen {
     pub current_position: BuildingCode,
     /// Disease Status
     pub disease_status: DiseaseStatus,
+    /// Whether this Citizen wears a mask
+    pub is_mask_compliant: bool,
 }
 
 impl Citizen {
@@ -55,6 +58,7 @@ impl Citizen {
         household_code: BuildingCode,
         workplace_code: BuildingCode,
         occupation_type: OccupationType,
+        is_mask_compliant: bool,
     ) -> Citizen {
         Citizen {
             id: Uuid::new_v4(),
@@ -65,6 +69,7 @@ impl Citizen {
             end_working_hour: 17,
             current_position: household_code,
             disease_status: DiseaseStatus::Susceptible,
+            is_mask_compliant,
         }
     }
     /// Returns the ID of this Citizen
@@ -72,24 +77,43 @@ impl Citizen {
         self.id
     }
 
-    pub fn execute_time_step(&mut self, current_hour: u32, disease: &DiseaseModel) {
+    pub fn execute_time_step(
+        &mut self,
+        current_hour: u32,
+        disease: &DiseaseModel,
+        lockdown_enabled: bool,
+    ) {
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
-        match current_hour % 24 {
-            hour if hour == self.start_working_hour => {
-                self.current_position = self.workplace_code.clone();
+        if !lockdown_enabled {
+            match current_hour % 24 {
+                hour if hour == self.start_working_hour => {
+                    self.current_position = self.workplace_code.clone();
+                }
+                hour if hour == self.end_working_hour => {
+                    self.current_position = self.household_code.clone();
+                }
+                _ => {}
             }
-            hour if hour == self.end_working_hour => {
-                self.current_position = self.household_code.clone();
-            }
-            _ => {}
         }
     }
     /// Registers a new exposure to this citizen
-    pub fn expose(&mut self, disease_model: &DiseaseModel, rng: &mut dyn RngCore) -> bool {
-        if self.disease_status == DiseaseStatus::Susceptible
-            && rng.gen::<f64>() < disease_model.exposure_chance
-        {
-            //debug!("                Exposing Citizen {} lives at {} works at {}",self.id(),self.household_code,self.workplace_code);
+    pub fn expose(
+        &mut self,
+        disease_model: &DiseaseModel,
+        mask_status: &MaskStatus,
+        rng: &mut dyn RngCore,
+    ) -> bool {
+        let mask_status = if self.is_mask_compliant {
+            &MaskStatus::None(0)
+        } else {
+            mask_status
+        };
+        let exposure_chance = disease_model.get_exposure_chance(
+            self.disease_status == DiseaseStatus::Vaccinated,
+            mask_status,
+        );
+
+        if self.disease_status == DiseaseStatus::Susceptible && rng.gen::<f64>() < exposure_chance {
             self.disease_status = DiseaseStatus::Exposed(0);
             return true;
         }
