@@ -36,10 +36,12 @@ use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
-use crate::config::{DEBUG_ITERATION_PRINT, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE};
+use crate::config::{
+    DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
+};
 use crate::disease::{DiseaseModel, DiseaseStatus, Exposure};
 use crate::disease::DiseaseStatus::Infected;
-use crate::interventions::{InterventionsEnabled, InterventionStatus, InterventionThresholds};
+use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::build_polygons_for_output_areas;
 use crate::models::building::{Building, BuildingCode, Workplace};
 use crate::models::citizen::Citizen;
@@ -67,6 +69,7 @@ impl Simulator {
         let mut rng = thread_rng();
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
+        debug!("Current memory usage: {}", get_memory_usage()?);
         let mut output_areas_polygons =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
                 .context("Loading polygons for output areas")?;
@@ -83,9 +86,14 @@ impl Simulator {
                         context: "Building output areas map".to_string(),
                         key: entry.output_area_code.to_string(),
                     },
-                })?;
+                })
+                .context(format!(
+                    "Loading polygon shape for area: {}",
+                    entry.output_area_code.to_string()
+                ))?;
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), polygon)?;
+            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), polygon)
+                .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
                     .generate_citizens(entry, disease_model.mask_percentage, &mut rng)
@@ -94,6 +102,7 @@ impl Simulator {
             output_areas.insert(new_area.output_area_code.to_string(), new_area);
         }
         info!("Built residential population in {:?}", start.elapsed());
+        debug!("Current memory usage: {}", get_memory_usage()?);
 
         let mut simulator = Simulator {
             current_population: starting_population,
@@ -106,18 +115,24 @@ impl Simulator {
             rng: thread_rng(),
         };
         // Build the workplaces
-        simulator.build_workplaces(census_data)?;
+        simulator
+            .build_workplaces(census_data)
+            .context("Failed to build workplaces")?;
         for citizen in simulator.citizens.values() {
             assert_ne!(citizen.household_code, citizen.workplace_code);
         }
         info!("Generated workplaces in {:?}", start.elapsed());
+        debug!("Current memory usage: {}", get_memory_usage()?);
         // Infect random citizens
-        simulator.apply_initial_infections()?;
+        simulator
+            .apply_initial_infections()
+            .context("Failed to create initial infections")?;
 
         info!(
             "Initialization completed in {} seconds",
             start.elapsed().as_secs_f32()
         );
+        debug!("Current memory usage: {}", get_memory_usage()?);
         debug!(
             "Starting Statistics:\n      There are {} total Citizens\n      {} Output Areas",
             simulator.citizens.len(),
@@ -163,8 +178,9 @@ impl Simulator {
                     },
                 })?;
             for citizen_id in household_output_area.get_residents() {
-                let workplace_output_area_code =
-                    household_census_data.get_random_workplace_area(&mut self.rng)?;
+                let workplace_output_area_code = household_census_data
+                    .get_random_workplace_area(&mut self.rng)
+                    .context("Selecting a random workplace")?;
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
                     citizens_to_allocate.insert(workplace_output_area_code.to_string(), Vec::new());
                 }
@@ -303,7 +319,7 @@ impl Simulator {
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                info!("Time: {:?} - {}", start_time.elapsed(), self.statistics);
+                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics, get_memory_usage()?);
                 start_time = Instant::now();
             }
             if !self.step()? {
@@ -319,7 +335,7 @@ impl Simulator {
     pub fn step(&mut self) -> anyhow::Result<bool> {
         let exposures = self.generate_exposures()?;
         self.apply_exposures(exposures)?;
-        self.apply_interventions();
+        self.apply_interventions()?;
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -371,6 +387,12 @@ impl Simulator {
                                     self.statistics
                                         .citizen_exposed(exposure.clone())
                                         .context(format!("Exposing citizen {}", citizen_id))?;
+
+                                    if let Some(vaccine_list) =
+                                    &mut self.citizens_eligible_for_vaccine
+                                    {
+                                        vaccine_list.remove(citizen_id);
+                                    }
                                 }
                             }
                             None => {

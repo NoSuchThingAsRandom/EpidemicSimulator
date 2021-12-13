@@ -18,12 +18,9 @@
  *
  */
 
-use std::cmp::max;
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
-use log::error;
 use serde::Serialize;
 use uuid::Uuid;
 

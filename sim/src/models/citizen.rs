@@ -20,7 +20,6 @@
 
 use std::fmt::{Debug, Display, Formatter};
 
-use log::warn;
 use rand::{Rng, RngCore};
 use serde::Serialize;
 use uuid::Uuid;

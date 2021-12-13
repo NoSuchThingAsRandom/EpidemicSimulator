@@ -61,6 +61,7 @@ impl Statistics {
         self.exposed = 0;
         self.infected = 0;
         self.recovered = 0;
+        self.vaccinated = 0;
     }
     pub fn time_step(&self) -> u32 {
         self.time_step
@@ -77,8 +78,17 @@ impl Statistics {
     pub fn recovered(&self) -> u32 {
         self.recovered
     }
+    pub fn vaccinated(&self) -> u32 {
+        self.vaccinated
+    }
+
+    #[inline]
+    pub fn total(&self) -> u32 {
+        self.susceptible() + self.exposed() + self.infected() + self.recovered() + self.vaccinated()
+    }
+
     pub fn infected_percentage(&self) -> f64 {
-        self.infected as f64 / (self.susceptible + self.exposed + self.recovered) as f64
+        self.infected as f64 / (self.total() as f64)
     }
     pub fn increment(&mut self) {
         self.time_step += 1;
@@ -138,7 +148,7 @@ impl Statistics {
     }
     /// Returns true if at least one Citizen has the Disease
     pub fn disease_exists(&self) -> bool {
-        self.exposed != 0 || self.infected != 0
+        self.exposed != 0 || self.infected != 0 || self.susceptible != 0
     }
 
     pub fn summarise(&self) {
@@ -181,8 +191,8 @@ impl Display for Statistics {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Hour: {}, Susceptible: {}, Exposed: {}, Infected: {}, Recovered: {} Vaccinated: {}",
-            self.time_step, self.susceptible, self.exposed, self.infected, self.recovered, self.vaccinated
+            "Hour: {: >4}, Total: {: >8}, Susceptible: {: >8}, Exposed: {: >8}, Infected: {: >8}, Recovered: {: >8} Vaccinated: {: >8}",
+            self.time_step, self.total(), self.susceptible(), self.exposed(), self.infected(), self.recovered(), self.vaccinated()
         )
     }
 }

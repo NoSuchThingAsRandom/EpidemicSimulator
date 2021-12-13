@@ -47,7 +47,7 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
-    pretty_env_logger::init();
+    pretty_env_logger::init_timed();
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
@@ -141,7 +141,7 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("render") {
         unimplemented!("Cannot use renderer on current Rust version (2018")
     } else if matches.is_present("simulate") {
-        info!("Using mode simulate for area '{}'",area);
+        info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
         info!("Loading data from disk...");
         let census_data = CensusData::load_all_tables(census_directory, area.to_string(), true)

@@ -20,7 +20,7 @@
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 
-use log::{debug, info};
+use log::info;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 pub enum MaskStatus {
@@ -148,7 +148,7 @@ impl InterventionStatus {
                 } else {
                     MaskStatus::None(hour + 1)
                 }
-            },
+            }
             MaskStatus::PublicTransport(hour) => {
                 if percentage_infected < MaskStatus::PublicTransport(0).get_threshold() {
                     info!("Mask wearing on public transport is removed");
@@ -163,7 +163,7 @@ impl InterventionStatus {
                 } else {
                     MaskStatus::PublicTransport(hour + 1)
                 }
-            },
+            }
             MaskStatus::Everywhere(hour) => {
                 if percentage_infected < MaskStatus::Everywhere(0).get_threshold() {
                     info!("Mask wearing everywhere is removed");
