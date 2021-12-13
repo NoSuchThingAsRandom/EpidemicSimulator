@@ -22,7 +22,7 @@ use std::fmt::{Display, Formatter};
 
 use log::info;
 
-#[derive(Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum MaskStatus {
     None(u32),
     PublicTransport(u32),
@@ -60,6 +60,7 @@ impl MaskStatus {
 /// This contains the thresholds of percentage cases to trigger a given intervention
 ///
 /// If none, then the Intervention is never applied
+#[derive(Clone)]
 pub struct InterventionThresholds {
     /// The percent of cases to trigger a total lockdown
     lockdown: Option<f64>,
@@ -76,6 +77,7 @@ impl Default for InterventionThresholds {
     }
 }
 
+#[derive(Clone)]
 pub struct InterventionStatus {
     /// The hour at which lockdown was implemented
     lockdown: Option<u32>,

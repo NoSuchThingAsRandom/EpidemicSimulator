@@ -47,7 +47,7 @@ pub struct OutputArea {
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
     pub buildings: EnumMap<AreaClassification, HashMap<Uuid, Box<dyn Building>>>,
     /// A polygon for drawing this output area
-    pub polygon: geo_types::Polygon<f64>,
+    pub polygon: Option<geo_types::Polygon<f64>>,
     pub total_residents: u32,
 }
 
@@ -57,7 +57,7 @@ impl OutputArea {
     /// Builds the citizens and households for this area
     pub fn new(
         output_area_code: String,
-        polygon: geo_types::Polygon<f64>,
+        polygon: Option<geo_types::Polygon<f64>>,
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {
             output_area_code,

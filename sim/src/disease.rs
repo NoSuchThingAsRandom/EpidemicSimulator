@@ -29,7 +29,7 @@ use load_census_data::tables::population_and_density_per_output_area::AreaClassi
 use crate::interventions::MaskStatus;
 use crate::models::building::BuildingCode;
 
-#[derive(PartialEq, Debug, Serialize)]
+#[derive(PartialEq, Debug, Serialize, Clone)]
 pub enum DiseaseStatus {
     Susceptible,
     /// The amount of steps(hours) the citizen has been exposed for
@@ -90,6 +90,7 @@ impl Display for DiseaseStatus {
     }
 }
 
+#[derive(Clone)]
 pub struct DiseaseModel {
     pub reproduction_rate: f64,
     pub exposure_chance: f64,

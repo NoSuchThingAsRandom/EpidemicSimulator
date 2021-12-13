@@ -30,8 +30,30 @@ use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::interventions::MaskStatus;
 use crate::models::building::BuildingCode;
 
+fn factorial(n: u8) -> u32 {
+    match n {
+        0 => 1,
+        1 => 1,
+        2 => 2,
+        3 => 6,
+        4 => 24,
+        5 => 120,
+        6 => 720,
+        7 => 5040,
+        8 => 40320,
+        9 => 362880,
+        10 => 3628800,
+        _ => panic!("Increase the factorial count to {}", n)
+    }
+}
+
+/// Calculates the binomial distribution, with one success
+fn binomial(probability: f64, chances: u8) -> f64 {
+    factorial(chances) as f64 / factorial(chances - 1) as f64 * probability * (probability.powf(chances as f64 - 1.0))
+}
+
 /// This is used to represent a single Citizen in the simulation
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Citizen {
     /// A unique identifier for this Citizen
     id: Uuid,
@@ -97,8 +119,12 @@ impl Citizen {
         }
     }
     /// Registers a new exposure to this citizen
+    ///
+    /// # Paramaters
+    /// exposure_total: The amount of the exposures that occured in this time step
     pub fn expose(
         &mut self,
+        exposure_total: usize,
         disease_model: &DiseaseModel,
         mask_status: &MaskStatus,
         rng: &mut dyn RngCore,
@@ -108,10 +134,10 @@ impl Citizen {
         } else {
             mask_status
         };
-        let exposure_chance = disease_model.get_exposure_chance(
+        let exposure_chance = binomial(disease_model.get_exposure_chance(
             self.disease_status == DiseaseStatus::Vaccinated,
             mask_status,
-        );
+        ), exposure_total as u8);
 
         if self.disease_status == DiseaseStatus::Susceptible && rng.gen::<f64>() < exposure_chance {
             self.disease_status = DiseaseStatus::Exposed(0);
@@ -120,10 +146,14 @@ impl Citizen {
         false
     }
     pub fn set_workplace_code(&mut self, workplace_code: BuildingCode) {
-        self.workplace_code = workplace_code.clone();
+        self.workplace_code = workplace_code;
     }
     pub fn occupation(&self) -> OccupationType {
         self.occupation
+    }
+
+    pub fn is_susceptible(&self) -> bool {
+        self.disease_status == DiseaseStatus::Susceptible
     }
 }
 

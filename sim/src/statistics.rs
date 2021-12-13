@@ -27,6 +27,7 @@ use crate::disease::{DiseaseStatus, Exposure};
 use crate::models::building::BuildingCode;
 
 /// A snapshot of the disease per time step
+#[derive(Clone)]
 pub struct Statistics {
     time_step: u32,
     susceptible: u32,
@@ -113,27 +114,27 @@ impl Statistics {
     }
     /// When a citizen has been exposed, the susceptible count drops by one, and exposure count increases by 1
     /// Will error, if called when no Citizens are susceptible
-    pub fn citizen_exposed(&mut self, exposure: Exposure) -> Result<(), crate::error::Error> {
+    pub fn citizen_exposed(&mut self, location: BuildingCode) -> Result<(), crate::error::Error> {
         let x = self.susceptible.checked_sub(1);
         if let Some(x) = x {
             self.susceptible = x;
             self.exposed += 1;
             //debug!("Exposing: {}", exposure);
-            if let Some(data) = self.buildings_exposed.get_mut(&exposure.building_code) {
+            if let Some(data) = self.buildings_exposed.get_mut(&location) {
                 data.1 += 1;
             } else {
                 self.buildings_exposed
-                    .insert(exposure.building_code.clone(), (self.time_step, 1));
+                    .insert(location.clone(), (self.time_step, 1));
             }
 
             if let Some(data) = self
                 .output_areas_exposed
-                .get_mut(&exposure.building_code.output_area_code().clone())
+                .get_mut(&location.output_area_code().clone())
             {
                 data.1 += 1;
             } else {
                 self.output_areas_exposed.insert(
-                    exposure.building_code.output_area_code(),
+                    location.output_area_code(),
                     (self.time_step, 1),
                 );
             }

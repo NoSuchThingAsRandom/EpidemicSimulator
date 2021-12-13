@@ -70,29 +70,29 @@ impl Simulator {
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
         debug!("Current memory usage: {}", get_memory_usage()?);
-        let mut output_areas_polygons =
+/*        let mut output_areas_polygons =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
                 .context("Loading polygons for output areas")?;
-        info!("Loaded map data in {:?}", start.elapsed());
+        info!("Loaded map data in {:?}", start.elapsed());*/
         let mut starting_population = 0;
 
         let mut citizens = HashMap::new();
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
-            let polygon = output_areas_polygons
-                .remove(&entry.output_area_code)
-                .ok_or_else(|| CensusError::ValueParsingError {
-                    source: ParseErrorType::MissingKey {
-                        context: "Building output areas map".to_string(),
-                        key: entry.output_area_code.to_string(),
-                    },
-                })
-                .context(format!(
-                    "Loading polygon shape for area: {}",
-                    entry.output_area_code.to_string()
-                ))?;
+            /*            let polygon = output_areas_polygons
+                            .remove(&entry.output_area_code)
+                            .ok_or_else(|| CensusError::ValueParsingError {
+                                source: ParseErrorType::MissingKey {
+                                    context: "Building output areas map".to_string(),
+                                    key: entry.output_area_code.to_string(),
+                                },
+                            })
+                            .context(format!(
+                                "Loading polygon shape for area: {}",
+                                entry.output_area_code.to_string()
+                            ))?;*/
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), polygon)
+            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), None)
                 .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
@@ -333,9 +333,22 @@ impl Simulator {
     ///
     /// Returns False if it has finished
     pub fn step(&mut self) -> anyhow::Result<bool> {
+        let mut start = Instant::now();
         let exposures = self.generate_exposures()?;
+
+        let generate_exposure_time = start.elapsed().as_secs_f64();
+        start = Instant::now();
+
         self.apply_exposures(exposures)?;
+
+        let apply_exposure_time = start.elapsed().as_secs_f64();
+        start = Instant::now();
+
         self.apply_interventions()?;
+
+        let intervention_time = start.elapsed().as_secs_f64();
+        let total = generate_exposure_time + apply_exposure_time + intervention_time;
+        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,generate_exposure_time/total,apply_exposure_time,apply_exposure_time/total,intervention_time,intervention_time/total);
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -344,9 +357,9 @@ impl Simulator {
         }
     }
 
-    fn generate_exposures(&mut self) -> anyhow::Result<HashSet<Exposure>> {
+    fn generate_exposures(&mut self) -> anyhow::Result<HashMap<BuildingCode, Vec<Exposure>>> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        let mut exposure_list: HashSet<Exposure> = HashSet::new();
+        let mut exposure_list: HashMap<BuildingCode, Vec<Exposure>> = HashMap::new();
         self.statistics.next();
         for citizen in &mut self.citizens.values_mut() {
             citizen.execute_time_step(
@@ -356,7 +369,8 @@ impl Simulator {
             );
             self.statistics.add_citizen(&citizen.disease_status);
             if let Infected(_) = citizen.disease_status {
-                exposure_list.insert(Exposure::new(
+                let entry = exposure_list.entry(citizen.current_position.clone()).or_default();
+                entry.push(Exposure::new(
                     citizen.id(),
                     citizen.current_position.clone(),
                 ));
@@ -364,28 +378,29 @@ impl Simulator {
         }
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
-    }12
-    fn apply_exposures(&mut self, exposure_list: HashSet<Exposure>) -> anyhow::Result<()> {
-        for exposure in exposure_list {
-            let area = self.output_areas.get_mut(&exposure.output_area_code());
+    }
+    fn apply_exposures(&mut self, exposure_list: HashMap<BuildingCode, Vec<Exposure>>) -> anyhow::Result<()> {
+        for (building_code, exposures) in exposure_list {
+            let area = self.output_areas.get_mut(&building_code.output_area_code());
             match area {
                 Some(area) => {
                     // TODO Sometime there's a weird bug here?
-                    let building = &area.buildings[exposure.area_classification()]
-                        .get_mut(&exposure.building_code())
-                        .context(format!("Failed to retrieve exposure building {}", exposure))?;
+                    let building = &area.buildings[building_code.area_type()]
+                        .get_mut(&building_code.building_id())
+                        .context(format!("Failed to retrieve exposure building {}", building_code))?;
                     let building = building.as_ref();
                     for citizen_id in building.occupants() {
                         let citizen = self.citizens.get_mut(citizen_id);
                         match citizen {
                             Some(citizen) => {
-                                if citizen.expose(
+                                if citizen.is_susceptible() && citizen.expose(
+                                    exposures.len(),
                                     &self.disease_model,
                                     &self.interventions.mask_status,
                                     &mut self.rng,
                                 ) {
                                     self.statistics
-                                        .citizen_exposed(exposure.clone())
+                                        .citizen_exposed(building_code.clone())
                                         .context(format!("Exposing citizen {}", citizen_id))?;
 
                                     if let Some(vaccine_list) =
@@ -407,9 +422,8 @@ impl Simulator {
 
                 None => {
                     error!(
-                        "Cannot find area {}, that had an exposure ({}) occurred in!",
-                        &exposure.output_area_code(),
-                        exposure
+                        "Cannot find output area {}, that had an exposure occurred in!",
+                        &building_code.output_area_code()
                     );
                 }
             }

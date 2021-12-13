@@ -24,6 +24,7 @@ extern crate enum_map;
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::string::String;
 
 use log::{debug, info, warn};
 use rand::{Rng, RngCore};
@@ -78,6 +79,7 @@ impl<'a> CensusDataEntry<'a> {
 }
 
 /// This is a container for all the Census Data Tables
+#[derive(Clone)]
 pub struct CensusData {
     /// The list of output area codes that are valid and complete (records exist for each table)
     pub valid_areas: HashSet<String>,
@@ -137,6 +139,15 @@ impl CensusData {
         }
         CensusData::read_generic_table_from_disk::<T, U>(&filename)
     }
+    pub fn read_table_and_generate_filename<U: 'static + PreProcessingTable, T: TableEntry<U>>(
+        census_directory: &str,
+        region_code: &str,
+        table_name: CensusTableNames,
+        data_fetcher: &Option<DataFetcher>,
+    ) -> Result<HashMap<String, T>, CensusError> {
+        let filename = String::new() + census_directory + region_code + "/" + table_name.get_filename();
+        CensusData::read_generic_table_from_disk::<T, U>(&filename)
+    }
 
     /// This loads a census data table from disk
     pub fn read_generic_table_from_disk<T: TableEntry<U>, U: 'static + PreProcessingTable>(
@@ -151,7 +162,9 @@ impl CensusData {
         Ok(data)
     }
     /// Attempts to load all the Census Tables stored on disk into memory
-    pub async fn load_all_tables(
+    ///
+    /// If they are not on disk will attempt to download
+    pub async fn load_all_tables_async(
         census_directory: String,
         region_code: String,
         should_download: bool,
@@ -196,6 +209,83 @@ impl CensusData {
             &data_fetcher,
         )
             .await?;
+
+        // Filter out areas
+        // TODO Is this the most optimal way?
+        let mut valid_areas = HashSet::with_capacity(population_counts.len());
+        for key in population_counts.keys() {
+            if occupation_counts.contains_key(key) && residents_workplace.contains_key(key) {
+                valid_areas.insert(key.to_string());
+            }
+        }
+        population_counts.retain(|area, _| valid_areas.contains(area));
+        occupation_counts.retain(|area, _| valid_areas.contains(area));
+        residents_workplace.retain(|area, _| valid_areas.contains(area));
+        for record in residents_workplace.values_mut() {
+            let mut total = 0;
+            record.workplace_count.retain(|code, count| {
+                if valid_areas.contains(code) {
+                    total += *count;
+                    true
+                } else {
+                    false
+                }
+            });
+            record.total_workplace_count = total;
+        }
+        Ok(CensusData {
+            valid_areas,
+            population_counts,
+            occupation_counts,
+            workplace_density: EmploymentDensities {},
+            residents_workplace,
+        })
+    }
+
+    /// Attempts to load all the Census Tables stored on disk into memory
+    pub fn load_all_tables(
+        census_directory: String,
+        region_code: String,
+        should_download: bool,
+    ) -> Result<CensusData, CensusError> {
+        let data_fetcher = if should_download {
+            Some(DataFetcher::default())
+        } else {
+            None
+        };
+        // Build population table
+        let mut population_counts = CensusData::read_table_and_generate_filename::<
+            PreProcessingPopulationDensityRecord, PopulationRecord
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::PopulationDensity,
+            &data_fetcher,
+        )?;
+
+        // Build occupation table
+        let mut occupation_counts = CensusData::read_table_and_generate_filename::<
+            PreProcessingOccupationCountRecord,
+            OccupationCountRecord,
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::OccupationCount,
+            &data_fetcher,
+        )
+            ?;
+
+        // Build residents workplace table
+        let mut residents_workplace = CensusData::read_table_and_generate_filename::<
+            PreProcessingWorkplaceResidentialRecord,
+            WorkplaceResidentalRecord,
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::ResidentialAreaVsWorkplaceArea,
+            &data_fetcher,
+        )
+            ?;
 
         // Filter out areas
         // TODO Is this the most optimal way?
