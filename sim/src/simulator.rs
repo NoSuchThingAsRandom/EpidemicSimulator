@@ -364,7 +364,7 @@ impl Simulator {
         }
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
-    }
+    }12
     fn apply_exposures(&mut self, exposure_list: HashSet<Exposure>) -> anyhow::Result<()> {
         for exposure in exposure_list {
             let area = self.output_areas.get_mut(&exposure.output_area_code());
