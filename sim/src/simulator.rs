@@ -91,11 +91,11 @@ impl Simulator {
                 entry.output_area_code.to_string()
             ))?;*/
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), None)
+            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), None, disease_model.mask_percentage)
                 .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
-                    .generate_citizens(entry, disease_model.mask_percentage, &mut rng)
+                    .generate_citizens(entry, &mut rng)
                     .context("Failed to generate residents")?,
             );
             output_areas.insert(new_area.output_area_code.to_string(), new_area);

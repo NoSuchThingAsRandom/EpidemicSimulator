@@ -22,7 +22,8 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use enum_map::EnumMap;
-use rand::{Rng, RngCore};
+use rand::distributions::{Bernoulli, Distribution};
+use rand::RngCore;
 use uuid::Uuid;
 
 use load_census_data::CensusDataEntry;
@@ -49,34 +50,11 @@ pub struct OutputArea {
     /// A polygon for drawing this output area
     pub polygon: Option<geo_types::Polygon<f64>>,
     pub total_residents: u32,
+    /// The distribution to use to determine whether a Citizen is wearing a mask\
+    /// Is stored as a distribution to increase speed
+    mask_distribution: Bernoulli,
 }
 
-impl Clone for OutputArea {
-    fn clone(&self) -> Self {
-        let mut buildings_copy = EnumMap::default();
-        for (area, buildings_old) in self.buildings.iter() {
-            let mut new: HashMap<Uuid, Box<dyn Building>> =
-                HashMap::with_capacity(buildings_old.len());
-            for (code, current_building) in buildings_old {
-                let current_building = current_building.as_any();
-                if let Some(household) = current_building.downcast_ref::<Household>() {
-                    new.insert(*code, Box::new(household.clone()));
-                } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
-                    new.insert(*code, Box::new(workplace.clone()));
-                } else {
-                    unimplemented!()
-                }
-            }
-            buildings_copy[area] = new;
-        }
-        OutputArea {
-            output_area_code: self.output_area_code.clone(),
-            buildings: buildings_copy,
-            polygon: self.polygon.clone(),
-            total_residents: self.total_residents,
-        }
-    }
-}
 
 impl OutputArea {
     /// Builds a new output area, for the given code, polygon for drawing and a census record of the population
@@ -85,19 +63,19 @@ impl OutputArea {
     pub fn new(
         output_area_code: String,
         polygon: Option<geo_types::Polygon<f64>>,
+        mask_compliance_ratio: f64,
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {
             output_area_code,
             buildings: EnumMap::default(),
             polygon,
             total_residents: 0,
+            mask_distribution: Bernoulli::new(mask_compliance_ratio).context("Failed to initialise the mask distribution")?,
         })
     }
     pub fn generate_citizens(
         &mut self,
         census_data: CensusDataEntry,
-        // TODO Check if data on mask compliance ratio
-        mask_compliance_ratio: f64,
         rng: &mut dyn RngCore,
     ) -> anyhow::Result<HashMap<Uuid, Citizen>> {
         // TODO Fix this
@@ -124,8 +102,7 @@ impl OutputArea {
                 let citizen = Citizen::new(
                     household_building_code.clone(),
                     household_building_code.clone(),
-                    occupation,
-                    rng.gen_bool(mask_compliance_ratio),
+                    occupation, self.mask_distribution.sample(rng),
                 );
                 household
                     .add_citizen(citizen.id())
@@ -159,5 +136,33 @@ impl OutputArea {
     }
     pub fn get_workers(&self) -> Vec<Uuid> {
         self.extract_occupants_for_building_type::<Workplace>()
+    }
+}
+
+impl Clone for OutputArea {
+    fn clone(&self) -> Self {
+        let mut buildings_copy = EnumMap::default();
+        for (area, buildings_old) in self.buildings.iter() {
+            let mut new: HashMap<Uuid, Box<dyn Building>> =
+                HashMap::with_capacity(buildings_old.len());
+            for (code, current_building) in buildings_old {
+                let current_building = current_building.as_any();
+                if let Some(household) = current_building.downcast_ref::<Household>() {
+                    new.insert(*code, Box::new(household.clone()));
+                } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
+                    new.insert(*code, Box::new(workplace.clone()));
+                } else {
+                    unimplemented!()
+                }
+            }
+            buildings_copy[area] = new;
+        }
+        OutputArea {
+            output_area_code: self.output_area_code.clone(),
+            buildings: buildings_copy,
+            polygon: self.polygon.clone(),
+            total_residents: self.total_residents,
+            mask_distribution: self.mask_distribution.clone(),
+        }
     }
 }

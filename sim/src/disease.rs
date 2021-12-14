@@ -100,6 +100,8 @@ pub struct DiseaseModel {
     pub max_time_step: u16,
     /// The amount of people vaccinated per timestamp
     pub vaccination_rate: u16,
+
+    // TODO Check if data on mask compliance ratio
     pub mask_percentage: f64,
 }
 
