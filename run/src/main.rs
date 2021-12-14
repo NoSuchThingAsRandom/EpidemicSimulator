@@ -144,10 +144,11 @@ async fn main() -> anyhow::Result<()> {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
         info!("Loading data from disk...");
-        let census_data = CensusData::load_all_tables_async(census_directory, area.to_string(), true)
-            .await
-            .context("Failed to load census data")
-            .unwrap();
+        let census_data =
+            CensusData::load_all_tables_async(census_directory, area.to_string(), true)
+                .await
+                .context("Failed to load census data")
+                .unwrap();
         info!(
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()

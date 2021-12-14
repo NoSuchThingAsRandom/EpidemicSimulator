@@ -148,7 +148,7 @@ impl Serialize for dyn Building {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Household {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,
@@ -196,7 +196,7 @@ impl Display for Household {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Workplace {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingCode,

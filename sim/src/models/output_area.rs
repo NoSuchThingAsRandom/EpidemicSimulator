@@ -51,6 +51,33 @@ pub struct OutputArea {
     pub total_residents: u32,
 }
 
+impl Clone for OutputArea {
+    fn clone(&self) -> Self {
+        let mut buildings_copy = EnumMap::default();
+        for (area, buildings_old) in self.buildings.iter() {
+            let mut new: HashMap<Uuid, Box<dyn Building>> =
+                HashMap::with_capacity(buildings_old.len());
+            for (code, current_building) in buildings_old {
+                let current_building = current_building.as_any();
+                if let Some(household) = current_building.downcast_ref::<Household>() {
+                    new.insert(*code, Box::new(household.clone()));
+                } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
+                    new.insert(*code, Box::new(workplace.clone()));
+                } else {
+                    unimplemented!()
+                }
+            }
+            buildings_copy[area] = new;
+        }
+        OutputArea {
+            output_area_code: self.output_area_code.clone(),
+            buildings: buildings_copy,
+            polygon: self.polygon.clone(),
+            total_residents: self.total_residents,
+        }
+    }
+}
+
 impl OutputArea {
     /// Builds a new output area, for the given code, polygon for drawing and a census record of the population
     ///

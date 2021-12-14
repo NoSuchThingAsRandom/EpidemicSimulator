@@ -32,7 +32,6 @@ use uuid::Uuid;
 
 use load_census_data::CensusData;
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
-use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
@@ -42,12 +41,12 @@ use crate::config::{
 use crate::disease::{DiseaseModel, DiseaseStatus, Exposure};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::build_polygons_for_output_areas;
 use crate::models::building::{Building, BuildingCode, Workplace};
 use crate::models::citizen::Citizen;
 use crate::models::output_area::OutputArea;
 use crate::statistics::Statistics;
 
+#[derive(Clone)]
 pub struct Simulator {
     /// The total size of the population
     current_population: u32,
@@ -70,7 +69,7 @@ impl Simulator {
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
         debug!("Current memory usage: {}", get_memory_usage()?);
-/*        let mut output_areas_polygons =
+        /*        let mut output_areas_polygons =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
                 .context("Loading polygons for output areas")?;
         info!("Loaded map data in {:?}", start.elapsed());*/
@@ -80,17 +79,17 @@ impl Simulator {
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
             /*            let polygon = output_areas_polygons
-                            .remove(&entry.output_area_code)
-                            .ok_or_else(|| CensusError::ValueParsingError {
-                                source: ParseErrorType::MissingKey {
-                                    context: "Building output areas map".to_string(),
-                                    key: entry.output_area_code.to_string(),
-                                },
-                            })
-                            .context(format!(
-                                "Loading polygon shape for area: {}",
-                                entry.output_area_code.to_string()
-                            ))?;*/
+            .remove(&entry.output_area_code)
+            .ok_or_else(|| CensusError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: "Building output areas map".to_string(),
+                    key: entry.output_area_code.to_string(),
+                },
+            })
+            .context(format!(
+                "Loading polygon shape for area: {}",
+                entry.output_area_code.to_string()
+            ))?;*/
             starting_population += entry.total_population_size() as u32;
             let mut new_area = OutputArea::new(entry.output_area_code.to_string(), None)
                 .context("Failed to create Output Area")?;
@@ -369,7 +368,9 @@ impl Simulator {
             );
             self.statistics.add_citizen(&citizen.disease_status);
             if let Infected(_) = citizen.disease_status {
-                let entry = exposure_list.entry(citizen.current_position.clone()).or_default();
+                let entry = exposure_list
+                    .entry(citizen.current_position.clone())
+                    .or_default();
                 entry.push(Exposure::new(
                     citizen.id(),
                     citizen.current_position.clone(),
@@ -379,7 +380,10 @@ impl Simulator {
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
     }
-    fn apply_exposures(&mut self, exposure_list: HashMap<BuildingCode, Vec<Exposure>>) -> anyhow::Result<()> {
+    fn apply_exposures(
+        &mut self,
+        exposure_list: HashMap<BuildingCode, Vec<Exposure>>,
+    ) -> anyhow::Result<()> {
         for (building_code, exposures) in exposure_list {
             let area = self.output_areas.get_mut(&building_code.output_area_code());
             match area {
@@ -387,18 +391,23 @@ impl Simulator {
                     // TODO Sometime there's a weird bug here?
                     let building = &area.buildings[building_code.area_type()]
                         .get_mut(&building_code.building_id())
-                        .context(format!("Failed to retrieve exposure building {}", building_code))?;
+                        .context(format!(
+                            "Failed to retrieve exposure building {}",
+                            building_code
+                        ))?;
                     let building = building.as_ref();
                     for citizen_id in building.occupants() {
                         let citizen = self.citizens.get_mut(citizen_id);
                         match citizen {
                             Some(citizen) => {
-                                if citizen.is_susceptible() && citizen.expose(
+                                if citizen.is_susceptible()
+                                    && citizen.expose(
                                     exposures.len(),
                                     &self.disease_model,
                                     &self.interventions.mask_status,
                                     &mut self.rng,
-                                ) {
+                                )
+                                {
                                     self.statistics
                                         .citizen_exposed(building_code.clone())
                                         .context(format!("Exposing citizen {}", citizen_id))?;

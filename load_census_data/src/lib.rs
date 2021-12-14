@@ -143,9 +143,9 @@ impl CensusData {
         census_directory: &str,
         region_code: &str,
         table_name: CensusTableNames,
-        data_fetcher: &Option<DataFetcher>,
     ) -> Result<HashMap<String, T>, CensusError> {
-        let filename = String::new() + census_directory + region_code + "/" + table_name.get_filename();
+        let filename =
+            String::new() + census_directory + region_code + "/" + table_name.get_filename();
         CensusData::read_generic_table_from_disk::<T, U>(&filename)
     }
 
@@ -246,21 +246,16 @@ impl CensusData {
     pub fn load_all_tables(
         census_directory: String,
         region_code: String,
-        should_download: bool,
+        _should_download: bool,
     ) -> Result<CensusData, CensusError> {
-        let data_fetcher = if should_download {
-            Some(DataFetcher::default())
-        } else {
-            None
-        };
         // Build population table
         let mut population_counts = CensusData::read_table_and_generate_filename::<
-            PreProcessingPopulationDensityRecord, PopulationRecord
+            PreProcessingPopulationDensityRecord,
+            PopulationRecord,
         >(
             &census_directory,
             &region_code,
             CensusTableNames::PopulationDensity,
-            &data_fetcher,
         )?;
 
         // Build occupation table
@@ -271,9 +266,7 @@ impl CensusData {
             &census_directory,
             &region_code,
             CensusTableNames::OccupationCount,
-            &data_fetcher,
-        )
-            ?;
+        )?;
 
         // Build residents workplace table
         let mut residents_workplace = CensusData::read_table_and_generate_filename::<
@@ -283,9 +276,7 @@ impl CensusData {
             &census_directory,
             &region_code,
             CensusTableNames::ResidentialAreaVsWorkplaceArea,
-            &data_fetcher,
-        )
-            ?;
+        )?;
 
         // Filter out areas
         // TODO Is this the most optimal way?

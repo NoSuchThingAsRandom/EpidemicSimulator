@@ -23,7 +23,7 @@ use std::fmt::{Display, Formatter};
 
 use log::error;
 
-use crate::disease::{DiseaseStatus, Exposure};
+use crate::disease::DiseaseStatus;
 use crate::models::building::BuildingCode;
 
 /// A snapshot of the disease per time step
@@ -133,10 +133,8 @@ impl Statistics {
             {
                 data.1 += 1;
             } else {
-                self.output_areas_exposed.insert(
-                    location.output_area_code(),
-                    (self.time_step, 1),
-                );
+                self.output_areas_exposed
+                    .insert(location.output_area_code(), (self.time_step, 1));
             }
 
             Ok(())
