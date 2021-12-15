@@ -26,7 +26,7 @@ use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumCount as EnumCountMacro;
 
-use crate::parsing_error::{CensusError, ParseErrorType};
+use crate::parsing_error::{DataLoadingError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
 #[derive(Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy)]
@@ -117,7 +117,7 @@ impl OccupationCountRecord {
     pub fn get_random_occupation(
         &self,
         rng: &mut dyn RngCore,
-    ) -> Result<OccupationType, CensusError> {
+    ) -> Result<OccupationType, DataLoadingError> {
         let chosen = rng.gen_range(0..self.total_range);
         let mut index = 0;
         for (occupation_type, value) in self.occupation_count.iter() {
@@ -126,7 +126,7 @@ impl OccupationCountRecord {
             }
             index += *value;
         }
-        Err(CensusError::Misc {
+        Err(DataLoadingError::Misc {
             source: format!(
                 "Allocating a occupation failed, as chosen value ({}) is out of range (0..{})",
                 chosen, self.total_range
@@ -138,13 +138,13 @@ impl OccupationCountRecord {
 impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {}
 
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for OccupationCountRecord {
-    type Error = CensusError;
+    type Error = DataLoadingError;
 
     fn try_from(
         records: &'a Vec<Box<PreProcessingOccupationCountRecord>>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
-            return Err(CensusError::ValueParsingError {
+            return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {
                     message: String::from(
                         "PreProcessingRecord list is empty, can't build a OccupationCountRecord!",
@@ -158,7 +158,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for Occupatio
         let mut occupation_count: EnumMap<OccupationType, u32> = EnumMap::default();
         for record in records {
             if record.geography_name != geography_code {
-                return Err(CensusError::ValueParsingError {
+                return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::Mismatching {
                         message: String::from(
                             "Mis matching geography codes for pre processing records",
@@ -169,7 +169,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for Occupatio
                 });
             }
             if record.geography_type != geography_type {
-                return Err(CensusError::ValueParsingError {
+                return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::Mismatching {
                         message: String::from(
                             "Mis matching geography type for pre processing records",

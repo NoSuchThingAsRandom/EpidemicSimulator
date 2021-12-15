@@ -21,6 +21,8 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
+use osmpbf::Error;
+
 #[derive(Debug)]
 pub enum SerdeErrors {
     Json { source: serde_json::Error },
@@ -92,7 +94,10 @@ impl Display for ParseErrorType {
 
 impl std::error::Error for ParseErrorType {}
 
-pub enum CensusError {
+pub enum DataLoadingError {
+    OSMError {
+        source: osmpbf::Error,
+    },
     /// An error occurs fetching via reqwest
     NetworkError {
         source: reqwest::Error,
@@ -115,76 +120,83 @@ pub enum CensusError {
     },
 }
 
-impl std::error::Error for CensusError {
+impl std::error::Error for DataLoadingError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
-            CensusError::NetworkError { ref source } => Some(source),
-            CensusError::SerdeParseError { ref source } => match source {
+            DataLoadingError::NetworkError { ref source } => Some(source),
+            DataLoadingError::SerdeParseError { ref source } => match source {
                 SerdeErrors::Json { ref source } => Some(source),
                 SerdeErrors::Plain { ref source } => Some(source),
             },
-            CensusError::ValueParsingError { ref source } => Some(source),
-            CensusError::IOError { ref source } => source.source(),
-            CensusError::Misc { .. } => None,
+            DataLoadingError::ValueParsingError { ref source } => Some(source),
+            DataLoadingError::IOError { ref source } => source.source(),
+            DataLoadingError::Misc { .. } => None,
+            DataLoadingError::OSMError { ref source } => Some(source),
         }
     }
 }
 
-impl From<reqwest::Error> for CensusError {
+impl From<reqwest::Error> for DataLoadingError {
     fn from(err: reqwest::Error) -> Self {
-        CensusError::NetworkError { source: err }
+        DataLoadingError::NetworkError { source: err }
     }
 }
 
-impl From<csv::Error> for CensusError {
+impl From<csv::Error> for DataLoadingError {
     fn from(err: csv::Error) -> Self {
-        CensusError::IOError {
+        DataLoadingError::IOError {
             source: Box::new(err),
         }
     }
 }
 
-impl From<std::io::Error> for CensusError {
+impl From<std::io::Error> for DataLoadingError {
     fn from(e: std::io::Error) -> Self {
-        CensusError::IOError {
+        DataLoadingError::IOError {
             source: Box::new(e),
         }
     }
 }
 
-impl From<serde_json::Error> for CensusError {
+impl From<serde_json::Error> for DataLoadingError {
     fn from(err: serde_json::Error) -> Self {
-        CensusError::SerdeParseError {
+        DataLoadingError::SerdeParseError {
             source: SerdeErrors::Json { source: err },
         }
     }
 }
 
-impl From<serde_plain::Error> for CensusError {
+impl From<serde_plain::Error> for DataLoadingError {
     fn from(err: serde_plain::Error) -> Self {
-        CensusError::SerdeParseError {
+        DataLoadingError::SerdeParseError {
             source: SerdeErrors::Plain { source: err },
         }
     }
 }
 
-impl From<ParseIntError> for CensusError {
+impl From<osmpbf::Error> for DataLoadingError {
+    fn from(err: Error) -> Self {
+        DataLoadingError::OSMError { source: err }
+    }
+}
+
+impl From<ParseIntError> for DataLoadingError {
     fn from(err: ParseIntError) -> Self {
-        CensusError::ValueParsingError {
+        DataLoadingError::ValueParsingError {
             source: ParseErrorType::Int { source: err },
         }
     }
 }
 
-impl From<ParseFloatError> for CensusError {
+impl From<ParseFloatError> for DataLoadingError {
     fn from(err: ParseFloatError) -> Self {
-        CensusError::ValueParsingError {
+        DataLoadingError::ValueParsingError {
             source: ParseErrorType::Float { source: err },
         }
     }
 }
 
-impl Debug for CensusError {
+impl Debug for DataLoadingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
     }
@@ -200,27 +212,30 @@ impl Debug for ParsingError {
     }
 }*/
 
-impl Display for CensusError {
+impl Display for DataLoadingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CensusError::NetworkError { source } => {
+            DataLoadingError::NetworkError { source } => {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: NetworkError\n        Source: {} ", source)
             }
-            CensusError::SerdeParseError { source } => {
+            DataLoadingError::SerdeParseError { source } => {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: SerdeError\n      Source: {:#?} ", source)
             }
-            CensusError::ValueParsingError { source } => {
+            DataLoadingError::ValueParsingError { source } => {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: ParsingError\n        Source: {} ", source)
             }
-            CensusError::IOError { source } => {
+            DataLoadingError::IOError { source } => {
                 write!(
                     f,
                     "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {} ",
                     source
                 )
             }
-            CensusError::Misc { source } => {
+            DataLoadingError::Misc { source } => {
                 write!(f, "{}", source)
+            }
+            DataLoadingError::OSMError { source } => {
+                write!(f, "\nAn error occurred loading Census Data\n     Type: OSM Error\n        Source: {} ", source)
             }
         }
     }

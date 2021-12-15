@@ -25,11 +25,13 @@ extern crate enum_map;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+use geo_types::Point;
 use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
-use crate::parsing_error::CensusError;
+use crate::osm_parsing::{BuildingTypes, read_osm_data};
+use crate::parsing_error::DataLoadingError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::employment_densities::EmploymentDensities;
 use crate::tables::occupation_count::{OccupationCountRecord, PreProcessingOccupationCountRecord};
@@ -41,9 +43,12 @@ use crate::tables::resides_vs_workplace::{
 };
 
 mod nomis_download;
+pub mod osm_parsing;
 pub mod parse_table;
 pub mod parsing_error;
 pub mod tables;
+
+const OSM_FILENAME: &str = "data/england-latest.osm.pbf";
 
 /// This is a container for all the Records relating to one Output Area for All Census Tables
 pub struct CensusDataEntry<'a> {
@@ -59,7 +64,10 @@ impl<'a> CensusDataEntry<'a> {
     pub fn total_population_size(&self) -> u16 {
         self.population_count.population_size
     }
-    pub fn get_random_workplace_area(&self, rng: &mut dyn RngCore) -> Result<String, CensusError> {
+    pub fn get_random_workplace_area(
+        &self,
+        rng: &mut dyn RngCore,
+    ) -> Result<String, DataLoadingError> {
         let chosen = rng.gen_range(0..self.resides_workplace_count.total_workplace_count);
         let mut index = 0;
         for (area_code, value) in self.resides_workplace_count.workplace_count.iter() {
@@ -68,7 +76,7 @@ impl<'a> CensusDataEntry<'a> {
             }
             index += *value;
         }
-        Err(CensusError::Misc {
+        Err(DataLoadingError::Misc {
             source: format!(
                 "Allocating a output area failed, as chosen value ({}) is out of range (0..{})",
                 chosen, self.resides_workplace_count.total_workplace_count
@@ -86,6 +94,7 @@ pub struct CensusData {
     pub workplace_density: EmploymentDensities,
     /// Residential Area -> Workplace Area -> Count
     pub residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
+    pub osm_buildings: HashMap<Point<u64>, BuildingTypes>,
 }
 
 /// Initialization
@@ -93,7 +102,7 @@ impl CensusData {
     /// Loads the workplace table from disk
     fn read_workplace_table(
         filename: String,
-    ) -> Result<HashMap<String, HashMap<String, u32>>, CensusError> {
+    ) -> Result<HashMap<String, HashMap<String, u32>>, DataLoadingError> {
         let mut workplace_reader = csv::ReaderBuilder::new()
             .has_headers(true)
             .from_path(filename)?; //.context("Cannot create CSV Reader for workplace areas")?;
@@ -121,7 +130,7 @@ impl CensusData {
         region_code: &str,
         table_name: CensusTableNames,
         data_fetcher: &Option<DataFetcher>,
-    ) -> Result<HashMap<String, T>, CensusError> {
+    ) -> Result<HashMap<String, T>, DataLoadingError> {
         let filename =
             String::new() + census_directory + region_code + "/" + table_name.get_filename();
         info!("Fetching table '{}'", filename);
@@ -141,7 +150,7 @@ impl CensusData {
     /// This loads a census data table from disk
     pub fn read_generic_table_from_disk<T: TableEntry<U>, U: 'static + PreProcessingTable>(
         table_name: &str,
-    ) -> Result<HashMap<String, T>, CensusError> {
+    ) -> Result<HashMap<String, T>, DataLoadingError> {
         debug!("Reading census table: '{}' from disk", table_name);
         let mut reader = csv::Reader::from_path(table_name)?;
 
@@ -155,7 +164,7 @@ impl CensusData {
         census_directory: String,
         region_code: String,
         should_download: bool,
-    ) -> Result<CensusData, CensusError> {
+    ) -> Result<CensusData, DataLoadingError> {
         let data_fetcher = if should_download {
             Some(DataFetcher::default())
         } else {
@@ -226,6 +235,7 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
+            osm_buildings: read_osm_data(OSM_FILENAME.to_string())?,
         })
     }
     pub async fn resume_download(
@@ -233,7 +243,7 @@ impl CensusData {
         region_code: &str,
         table_name: CensusTableNames,
         resume_from_value: usize,
-    ) -> Result<(), CensusError> {
+    ) -> Result<(), DataLoadingError> {
         info!(
             "Resuming download of table {:?} from record {}",
             table_name, resume_from_value
@@ -262,12 +272,12 @@ impl CensusData {
     /// Attempts to retrieve all records relating to the given output area code
     ///
     /// Will return None, if at least one table is missing the entry
-    pub fn get_output_area(&self, code: &String) -> Option<CensusDataEntry> {
-        let workplace_area_distribution = self.residents_workplace.get(code)?;
+    pub fn get_output_area(&self, code: String) -> Option<CensusDataEntry> {
+        let workplace_area_distribution = self.residents_workplace.get(&code)?;
         Some(CensusDataEntry {
-            output_area_code: code.clone(),
-            population_count: self.population_counts.get(code)?,
-            occupation_count: self.occupation_counts.get(code)?,
+            population_count: self.population_counts.get(&code)?,
+            occupation_count: self.occupation_counts.get(&code)?,
+            output_area_code: code,
             workplace_density: EmploymentDensities {},
             resides_workplace_count: workplace_area_distribution,
         })
@@ -276,7 +286,7 @@ impl CensusData {
     pub fn values(&self) -> impl Iterator<Item=CensusDataEntry> {
         let keys = self.population_counts.keys();
         keys.filter_map(move |key| {
-            let data = self.get_output_area(key);
+            let data = self.get_output_area(key.to_string());
             if data.is_none() {
                 warn!("Output Area: {} is incomplete", key);
             }

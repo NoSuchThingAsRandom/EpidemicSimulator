@@ -31,7 +31,7 @@ use rand::thread_rng;
 use uuid::Uuid;
 
 use load_census_data::CensusData;
-use load_census_data::parsing_error::{CensusError, ParseErrorType};
+use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
@@ -81,7 +81,7 @@ impl Simulator {
         for entry in census_data.values() {
             let polygon = output_areas_polygons
                 .remove(&entry.output_area_code)
-                .ok_or_else(|| CensusError::ValueParsingError {
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Building output areas map".to_string(),
                         key: entry.output_area_code.to_string(),
@@ -163,15 +163,15 @@ impl Simulator {
             let household_output_area = self
                 .output_areas
                 .get_mut(&household_output_area_code)
-                .ok_or_else(|| CensusError::ValueParsingError {
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Retrieving output area for building workplaces ".to_string(),
                         key: household_output_area_code.to_string(),
                     },
                 })?;
             let household_census_data = census_data
-                .get_output_area(&household_output_area_code)
-                .ok_or_else(|| CensusError::ValueParsingError {
+                .get_output_area(household_output_area_code.to_string())
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Cannot retrieve Census Data for output area ".to_string(),
                         key: household_output_area_code.to_string(),
@@ -186,7 +186,7 @@ impl Simulator {
                 }
                 citizens_to_allocate
                     .get_mut(&workplace_output_area_code)
-                    .ok_or_else(|| CensusError::ValueParsingError {
+                    .ok_or_else(|| DataLoadingError::ValueParsingError {
                         source: ParseErrorType::MissingKey {
                             context: "Cannot retrieve Output Area to add Citizens to  ".to_string(),
                             key: workplace_output_area_code.to_string(),
@@ -208,7 +208,7 @@ impl Simulator {
             let mut workplace_buildings: HashMap<Uuid, Box<dyn Building>> = HashMap::new();
             for citizen_id in to_allocate {
                 let citizen = self.citizens.get_mut(&citizen_id).ok_or_else(|| {
-                    CensusError::ValueParsingError {
+                    DataLoadingError::ValueParsingError {
                         source: ParseErrorType::MissingKey {
                             context: "Cannot retrieve Citizen to assign Workplace ".to_string(),
                             key: citizen_id.to_string(),
@@ -274,7 +274,7 @@ impl Simulator {
             let workplace_output_area = self
                 .output_areas
                 .get_mut(&workplace_area_code)
-                .ok_or_else(|| CensusError::ValueParsingError {
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Retrieving output area for building workplaces ".to_string(),
                         key: workplace_area_code.to_string(),
@@ -299,7 +299,7 @@ impl Simulator {
                 .citizens
                 .values_mut()
                 .choose(&mut self.rng)
-                .ok_or_else(|| CensusError::ValueParsingError {
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::IsEmpty {
                         message: "No citizens exist in the output areas for seeding the disease"
                             .to_string(),
@@ -364,7 +364,7 @@ impl Simulator {
         }
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
-    }12
+    }
     fn apply_exposures(&mut self, exposure_list: HashSet<Exposure>) -> anyhow::Result<()> {
         for exposure in exposure_list {
             let area = self.output_areas.get_mut(&exposure.output_area_code());

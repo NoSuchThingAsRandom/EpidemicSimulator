@@ -28,7 +28,7 @@ use std::io::Write;
 
 use serde_json::Value;
 
-use crate::parsing_error::{CensusError, ParseErrorType};
+use crate::parsing_error::{DataLoadingError, ParseErrorType};
 
 pub struct TableInfo {
     id: String,
@@ -40,12 +40,12 @@ pub struct TableInfo {
 }
 
 impl TryFrom<HashMap<String, String>> for TableInfo {
-    type Error = CensusError;
+    type Error = DataLoadingError;
 
     fn try_from(value: HashMap<String, String>) -> Result<Self, Self::Error> {
         let id = value
             .get("id")
-            .ok_or_else(|| CensusError::ValueParsingError {
+            .ok_or_else(|| DataLoadingError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
                     context: String::from("Table info"),
                     key: "id".to_string(),
@@ -54,7 +54,7 @@ impl TryFrom<HashMap<String, String>> for TableInfo {
             .to_string();
         let source = value
             .get("contenttype/sources")
-            .ok_or_else(|| CensusError::ValueParsingError {
+            .ok_or_else(|| DataLoadingError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
                     context: String::from("Table info"),
                     key: "contenttype/sources".to_string(),
@@ -63,7 +63,7 @@ impl TryFrom<HashMap<String, String>> for TableInfo {
             .to_string();
         let coded_name = value
             .get("Mnemonic")
-            .ok_or_else(|| CensusError::ValueParsingError {
+            .ok_or_else(|| DataLoadingError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
                     context: String::from("Table info"),
                     key: "Mnemonic".to_string(),
@@ -72,7 +72,7 @@ impl TryFrom<HashMap<String, String>> for TableInfo {
             .to_string();
         let metadata = value
             .get("MetadataText0")
-            .ok_or_else(|| CensusError::ValueParsingError {
+            .ok_or_else(|| DataLoadingError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
                     context: String::from("Table info"),
                     key: "MetadataText0".to_string(),
@@ -81,7 +81,7 @@ impl TryFrom<HashMap<String, String>> for TableInfo {
             .to_string();
         let keywords = value
             .get("Keywords")
-            .ok_or_else(|| CensusError::ValueParsingError {
+            .ok_or_else(|| DataLoadingError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
                     context: String::from("Table info"),
                     key: "Keywords".to_string(),
@@ -92,7 +92,7 @@ impl TryFrom<HashMap<String, String>> for TableInfo {
             .collect();
         let geo_level = value
             .get("contenttype/geoglevel")
-            .ok_or_else(|| CensusError::ValueParsingError {
+            .ok_or_else(|| DataLoadingError::ValueParsingError {
                 source: ParseErrorType::MissingKey {
                     context: String::from("Table info"),
                     key: "contenttype/geoglevel".to_string(),
@@ -129,7 +129,7 @@ impl Debug for TableInfo {
     }
 }
 
-pub fn parse_jsontable_list(json: Value) -> Result<Vec<TableInfo>, CensusError> {
+pub fn parse_jsontable_list(json: Value) -> Result<Vec<TableInfo>, DataLoadingError> {
     let mut tables = Vec::new();
 
     let structure = extract_value_from_json(&json, "structure")?;
@@ -174,10 +174,13 @@ pub fn write_file(filename: String, data: String) -> Result<(), String> {
     Ok(())
 }
 
-fn extract_value_from_json<'a>(object: &'a Value, name: &str) -> Result<&'a Value, CensusError> {
+fn extract_value_from_json<'a>(
+    object: &'a Value,
+    name: &str,
+) -> Result<&'a Value, DataLoadingError> {
     let object = object
         .get(name)
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::MissingKey {
                 context: "Extracting value from JSON".to_string(),
                 key: name.to_string(),
@@ -186,10 +189,10 @@ fn extract_value_from_json<'a>(object: &'a Value, name: &str) -> Result<&'a Valu
     Ok(object)
 }
 
-fn extract_string_from_json(object: &Value, name: &str) -> Result<String, CensusError> {
+fn extract_string_from_json(object: &Value, name: &str) -> Result<String, DataLoadingError> {
     let object = object
         .get(name)
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::MissingKey {
                 context: "Extracting string from JSON".to_string(),
                 key: name.to_string(),
@@ -200,7 +203,7 @@ fn extract_string_from_json(object: &Value, name: &str) -> Result<String, Census
     }
     let object = object
         .as_str()
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::InvalidDataType {
                 value: Some(object.to_string()),
                 expected_type: "String".to_string(),
@@ -212,10 +215,10 @@ fn extract_string_from_json(object: &Value, name: &str) -> Result<String, Census
 fn extract_array_from_json<'a>(
     object: &'a Value,
     name: &str,
-) -> Result<&'a Vec<Value>, CensusError> {
+) -> Result<&'a Vec<Value>, DataLoadingError> {
     let object = object
         .get(name)
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::MissingKey {
                 context: "Extracting array from JSON".to_string(),
                 key: name.to_string(),
@@ -223,7 +226,7 @@ fn extract_array_from_json<'a>(
         })?;
     let object = object
         .as_array()
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::InvalidDataType {
                 value: Some(object.to_string()),
                 expected_type: "Array".to_string(),
@@ -235,10 +238,10 @@ fn extract_array_from_json<'a>(
 fn extract_map_from_json<'a>(
     object: &'a Value,
     name: &str,
-) -> Result<&'a serde_json::Map<String, Value>, CensusError> {
+) -> Result<&'a serde_json::Map<String, Value>, DataLoadingError> {
     let object = object
         .get(name)
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::MissingKey {
                 context: "Extracting map from JSON".to_string(),
                 key: name.to_string(),
@@ -246,7 +249,7 @@ fn extract_map_from_json<'a>(
         })?;
     let object = object
         .as_object()
-        .ok_or_else(|| CensusError::ValueParsingError {
+        .ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::InvalidDataType {
                 value: Some(object.to_string()),
                 expected_type: "Map".to_string(),

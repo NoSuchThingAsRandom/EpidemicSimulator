@@ -22,7 +22,7 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use crate::{CensusError, PreProcessingTable, TableEntry};
+use crate::{DataLoadingError, PreProcessingTable, TableEntry};
 use crate::parsing_error::ParseErrorType;
 
 #[derive(Debug, Deserialize)]
@@ -53,13 +53,13 @@ impl TableEntry<PreProcessingWorkplaceResidentialRecord> for WorkplaceResidental
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>>
 for WorkplaceResidentalRecord
 {
-    type Error = CensusError;
+    type Error = DataLoadingError;
 
     fn try_from(
         records: &'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
-            return Err(CensusError::ValueParsingError {
+            return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {
                     message: String::from(
                         "PreProcessingRecord list is empty, can't build a OccupationCountRecord!",
@@ -72,7 +72,7 @@ for WorkplaceResidentalRecord
         let mut workplace_count = HashMap::new();
         for record in records {
             if record.currently_residing_in_code != residential_code {
-                return Err(CensusError::ValueParsingError {
+                return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::Mismatching {
                         message: String::from(
                             "Mis matching geography codes for pre processing records",

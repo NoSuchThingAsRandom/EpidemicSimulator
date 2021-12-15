@@ -30,7 +30,7 @@ use serde_json::Value;
 
 use crate::CensusTableNames;
 use crate::CensusTableNames::ResidentialAreaVsWorkplaceArea;
-use crate::parsing_error::CensusError;
+use crate::parsing_error::DataLoadingError;
 
 lazy_static! {
     pub static ref NOMIS_API_KEY: String =
@@ -56,7 +56,7 @@ pub struct DataFetcher {
 
 impl DataFetcher {
     /// Retrieves a list of all the census 20211 tables
-    pub async fn get_list_of_census_2011_dataset_names(&self) -> Result<Value, CensusError> {
+    pub async fn get_list_of_census_2011_dataset_names(&self) -> Result<Value, DataLoadingError> {
         let api: String = format!(
             "{}dataset/def.sdmx.json?search=c2011*&uid=0xca845fec90a78b8554b075b32294605f543d9c48",
             NOMIS_API
@@ -70,7 +70,7 @@ impl DataFetcher {
     }
 
     /// Retrieves all the Output Area geography codes
-    pub async fn get_geography_code(&self, id: String) -> Result<(), CensusError> {
+    pub async fn get_geography_code(&self, id: String) -> Result<(), DataLoadingError> {
         let mut path = String::from("https://www.nomisweb.co.uk/api/v01/dataset/");
         path.push_str(&id);
         path.push_str("/geography.def.sdmx.json");
@@ -87,7 +87,7 @@ impl DataFetcher {
         id: String,
         number_of_records: usize,
         page_size: usize,
-    ) -> Result<String, CensusError> {
+    ) -> Result<String, DataLoadingError> {
         let mut path = String::from(NOMIS_API);
         path.push_str(&id);
         path.push_str(".data.csv");
@@ -122,7 +122,7 @@ impl DataFetcher {
         request: String,
         number_of_records: Option<usize>,
         resume_from_record: Option<usize>,
-    ) -> Result<(), CensusError> {
+    ) -> Result<(), DataLoadingError> {
         info!("Using base request: {}", request);
         let dir_path = filename.split('/').last().unwrap();
         let dir_path = filename.to_string().replace(dir_path, "");
@@ -205,7 +205,7 @@ impl DataFetcher {
         index: usize,
         base_request: String,
         retry_count: u8,
-    ) -> Result<Option<String>, CensusError> {
+    ) -> Result<Option<String>, DataLoadingError> {
         let mut current_request = base_request.clone();
         current_request.push_str("&RecordOffset=");
         current_request.push_str((index * PAGE_SIZE).to_string().as_str());
@@ -222,7 +222,7 @@ impl DataFetcher {
                     self.execute_request(index, base_request, retry_count + 1)
                         .await
                 } else {
-                    Err(CensusError::from(e))
+                    Err(DataLoadingError::from(e))
                 };
             }
             Ok(request) => {

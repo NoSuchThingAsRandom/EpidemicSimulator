@@ -27,7 +27,7 @@ use log::trace;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
-use crate::parsing_error::CensusError;
+use crate::parsing_error::DataLoadingError;
 
 pub mod employment_densities;
 pub mod occupation_count;
@@ -39,7 +39,7 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
 
     fn group_by_area<T: 'static + PreProcessingTable>(
         data: Vec<impl PreProcessingTable + 'static>,
-    ) -> Result<HashMap<String, Vec<Box<T>>>, CensusError> {
+    ) -> Result<HashMap<String, Vec<Box<T>>>, DataLoadingError> {
         let mut buffer = HashMap::new();
         // Group the pre processing records, by output area
         for entry in data {
@@ -60,12 +60,12 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
 ///
 /// Should contain a hashmap of OutputArea Codes to TableEntries
 pub trait TableEntry<T: 'static + PreProcessingTable>:
-Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=CensusError>
+Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=DataLoadingError>
 {
     /// Returns the entire processed CSV per output area
     fn generate(
         data: Vec<impl PreProcessingTable + 'static>,
-    ) -> Result<HashMap<String, Self>, CensusError> {
+    ) -> Result<HashMap<String, Self>, DataLoadingError> {
         let mut grouped: HashMap<String, Vec<Box<T>>> = T::group_by_area(data)?;
         trace!("Grouped table by area");
         // Convert into Population Records
@@ -122,7 +122,7 @@ impl CensusTableNames {
 }
 
 impl TryFrom<String> for CensusTableNames {
-    type Error = CensusError;
+    type Error = DataLoadingError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Ok(serde_plain::from_str(&value)?)
@@ -130,7 +130,7 @@ impl TryFrom<String> for CensusTableNames {
 }
 
 impl TryFrom<&str> for CensusTableNames {
-    type Error = CensusError;
+    type Error = DataLoadingError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Ok(serde_plain::from_str(value)?)

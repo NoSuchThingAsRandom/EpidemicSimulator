@@ -26,7 +26,7 @@ use std::fmt::{Debug, Formatter};
 use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};
 
-use crate::parsing_error::{CensusError, ParseErrorType};
+use crate::parsing_error::{DataLoadingError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
 /// This is a representation of Nomis Area Classifications for table 144
@@ -138,13 +138,13 @@ fn generate(
 }*/
 
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
-    type Error = CensusError;
+    type Error = DataLoadingError;
 
     fn try_from(
         records: &'a Vec<Box<PreProcessingPopulationDensityRecord>>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
-            return Err(CensusError::ValueParsingError {
+            return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {
                     message: String::from(
                         "PreProcessingRecord list is empty, can't build a PopulationRecord!",
@@ -160,7 +160,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
         let mut data: EnumMap<AreaClassification, EnumMap<PersonType, u16>> = EnumMap::default();
         for record in records {
             if record.geography_name != geography_code {
-                return Err(CensusError::ValueParsingError {
+                return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::Mismatching {
                         message: String::from(
                             "Mis matching geography codes for pre processing records",
@@ -171,7 +171,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
                 });
             }
             if record.geography_type != geography_type {
-                return Err(CensusError::ValueParsingError {
+                return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::Mismatching {
                         message: String::from(
                             "Mis matching geography type for pre processing records",

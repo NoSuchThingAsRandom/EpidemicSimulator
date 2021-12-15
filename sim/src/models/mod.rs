@@ -28,7 +28,7 @@ use log::info;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
-use load_census_data::parsing_error::{CensusError, ParseErrorType};
+use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
 
 pub mod building;
@@ -38,15 +38,16 @@ pub mod output_area;
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,
-) -> Result<HashMap<String, geo_types::Polygon<f64>>, CensusError> {
-    let mut reader = shapefile::Reader::from_path(filename).map_err(|e| CensusError::IOError {
-        source: Box::new(e),
-    })?;
+) -> Result<HashMap<String, geo_types::Polygon<f64>>, DataLoadingError> {
+    let mut reader =
+        shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
+            source: Box::new(e),
+        })?;
     let start_time = Instant::now();
     let mut data = HashMap::new();
     info!("Loading map data from file...");
     for (_, shape_record) in reader.iter_shapes_and_records().enumerate() {
-        let (shape, record) = shape_record.map_err(|e| CensusError::IOError {
+        let (shape, record) = shape_record.map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
         })?;
         if let Shape::Polygon(polygon) = shape {
@@ -75,7 +76,7 @@ pub fn build_polygons_for_output_areas(
                     .collect();
                 rings = interior_ring
                     .pop()
-                    .ok_or_else(|| CensusError::ValueParsingError {
+                    .ok_or_else(|| DataLoadingError::ValueParsingError {
                         source: ParseErrorType::IsEmpty {
                             message: "Expected an interior ring to exist!".to_string(),
                         },
@@ -85,19 +86,20 @@ pub fn build_polygons_for_output_areas(
             let new_poly = geo_types::Polygon::new(LineString::from(rings), interior_ring);
 
             // Retrieve the area code:
-            let code_record = record
-                .get("code")
-                .ok_or_else(|| CensusError::ValueParsingError {
-                    source: MissingKey {
-                        context: "Output Area is missing it's code".to_string(),
-                        key: "code".to_string(),
-                    },
-                })?;
+            let code_record =
+                record
+                    .get("code")
+                    .ok_or_else(|| DataLoadingError::ValueParsingError {
+                        source: MissingKey {
+                            context: "Output Area is missing it's code".to_string(),
+                            key: "code".to_string(),
+                        },
+                    })?;
             let code;
             if let FieldValue::Character(option_val) = code_record {
                 code = option_val.clone().unwrap_or_else(|| String::from(""));
             } else {
-                return Err(CensusError::ValueParsingError {
+                return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::InvalidDataType {
                         value: Some(code_record.field_type().to_string()),
                         expected_type: "Expected type 'character' for area code".to_string(),
@@ -107,7 +109,7 @@ pub fn build_polygons_for_output_areas(
 
             data.insert(code, new_poly);
         } else {
-            return Err(CensusError::ValueParsingError {
+            return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::InvalidDataType {
                     value: Some(shape.shapetype().to_string()),
                     expected_type: "Unexpected shape type!".to_string(),
