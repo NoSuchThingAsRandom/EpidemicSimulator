@@ -27,7 +27,9 @@ use uuid::Uuid;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::interventions::MaskStatus;
-use crate::models::building::BuildingCode;
+use crate::models::building::BuildingID;
+use crate::models::ID;
+use crate::models::output_area::OutputAreaID;
 
 #[derive(PartialEq, Debug, Serialize, Clone)]
 pub enum DiseaseStatus {
@@ -145,27 +147,27 @@ impl DiseaseModel {
 pub struct Exposure {
     /// The Output Code, the Citizen Resides in, and the actual ID of the citizen who is infected
     pub infector_id: Uuid,
-    /// The building the infection occurred in
-    pub building_code: BuildingCode,
+    /// The location the exposure occurred in
+    pub location: ID,
 }
 
 impl Exposure {
     /// Create a new exposure event from the given citizen at the given building
-    pub fn new(citizen_id: Uuid, building: BuildingCode) -> Exposure {
+    pub fn new(citizen_id: Uuid, location: ID) -> Exposure {
         Exposure {
             infector_id: citizen_id,
-            building_code: building,
+            location,
         }
     }
-    pub fn output_area_code(&self) -> String {
-        self.building_code.output_area_code()
-    }
-    pub fn area_classification(&self) -> AreaClassification {
-        self.building_code.area_type()
-    }
-    pub fn building_code(&self) -> Uuid {
-        self.building_code.building_id()
-    }
+    /*    pub fn output_area_code(&self) -> OutputAreaID {
+            self.location.output_area_id()
+        }
+        pub fn area_classification(&self) -> AreaClassification {
+            self.location.area_type()
+        }
+        pub fn building_code(&self) -> Uuid {
+            self.location.building_id()
+        }*/
 }
 
 impl Display for Exposure {
@@ -173,7 +175,7 @@ impl Display for Exposure {
         write!(
             f,
             "Exposure by {}, at {} ",
-            self.infector_id, self.building_code
+            self.infector_id, self.location
         )
     }
 }

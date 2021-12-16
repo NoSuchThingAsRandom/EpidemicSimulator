@@ -41,9 +41,11 @@ use crate::config::{
 use crate::disease::{DiseaseModel, DiseaseStatus, Exposure};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::building::{Building, BuildingCode, Workplace};
-use crate::models::citizen::Citizen;
-use crate::models::output_area::OutputArea;
+use crate::models::building::{Building, BuildingID, Workplace};
+use crate::models::citizen::{Citizen, CitizenID};
+use crate::models::ID;
+use crate::models::output_area::{OutputArea, OutputAreaID};
+use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::statistics::Statistics;
 
 #[derive(Clone)]
@@ -51,13 +53,14 @@ pub struct Simulator {
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
-    pub output_areas: HashMap<String, OutputArea>,
+    pub output_areas: HashMap<OutputAreaID, OutputArea>,
     /// The list of citizens who have a "home" in this area
-    pub citizens: HashMap<Uuid, Citizen>,
-    pub citizens_eligible_for_vaccine: Option<HashSet<Uuid>>,
+    pub citizens: HashMap<CitizenID, Citizen>,
+    pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
     pub statistics: Statistics,
     interventions: InterventionStatus,
     disease_model: DiseaseModel,
+    pub public_transport: HashMap<PublicTransportID, PublicTransport>,
     rng: ThreadRng,
 }
 
@@ -67,7 +70,7 @@ impl Simulator {
         let start = Instant::now();
         let mut rng = thread_rng();
         let disease_model = DiseaseModel::covid();
-        let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
+        let mut output_areas: HashMap<OutputAreaID, OutputArea> = HashMap::new();
         debug!("Current memory usage: {}", get_memory_usage()?);
         /*        let mut output_areas_polygons =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
@@ -91,14 +94,14 @@ impl Simulator {
                 entry.output_area_code.to_string()
             ))?;*/
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(entry.output_area_code.to_string(), None, disease_model.mask_percentage)
+            let mut new_area = OutputArea::new(OutputAreaID::from_code(entry.output_area_code.clone()), None, disease_model.mask_percentage)
                 .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
                     .generate_citizens(entry, &mut rng)
                     .context("Failed to generate residents")?,
             );
-            output_areas.insert(new_area.output_area_code.to_string(), new_area);
+            output_areas.insert(new_area.output_area_id.clone(), new_area);
         }
         info!("Built residential population in {:?}", start.elapsed());
         debug!("Current memory usage: {}", get_memory_usage()?);
@@ -111,6 +114,7 @@ impl Simulator {
             statistics: Statistics::default(),
             interventions: Default::default(),
             disease_model,
+            public_transport: Default::default(),
             rng: thread_rng(),
         };
         // Build the workplaces
@@ -154,10 +158,10 @@ impl Simulator {
     ///
     /// Allocates that Citizen to the Workplace Building in that chosen Output Area
     pub fn build_workplaces(&mut self, census_data: CensusData) -> anyhow::Result<()> {
-        let areas: Vec<String> = self.output_areas.keys().cloned().collect();
+        let areas: Vec<OutputAreaID> = self.output_areas.keys().cloned().collect();
 
         // Add Workplace Output Areas to Every Citizen
-        let mut citizens_to_allocate: HashMap<String, Vec<Uuid>> = HashMap::new();
+        let mut citizens_to_allocate: HashMap<OutputAreaID, Vec<CitizenID>> = HashMap::new();
         for household_output_area_code in areas {
             let household_output_area = self
                 .output_areas
@@ -169,7 +173,7 @@ impl Simulator {
                     },
                 })?;
             let household_census_data = census_data
-                .get_output_area(&household_output_area_code)
+                .for_output_area_code(household_output_area_code.code())
                 .ok_or_else(|| CensusError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Cannot retrieve Census Data for output area ".to_string(),
@@ -177,11 +181,11 @@ impl Simulator {
                     },
                 })?;
             for citizen_id in household_output_area.get_residents() {
-                let workplace_output_area_code = household_census_data
+                let workplace_output_area_code = OutputAreaID::from_code(household_census_data
                     .get_random_workplace_area(&mut self.rng)
-                    .context("Selecting a random workplace")?;
+                    .context("Selecting a random workplace")?);
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
-                    citizens_to_allocate.insert(workplace_output_area_code.to_string(), Vec::new());
+                    citizens_to_allocate.insert(workplace_output_area_code.clone(), Vec::new());
                 }
                 citizens_to_allocate
                     .get_mut(&workplace_output_area_code)
@@ -204,7 +208,7 @@ impl Simulator {
                 HashMap::new();
 
             // This is the list of full workplaces that need to be added to the parent Output Area
-            let mut workplace_buildings: HashMap<Uuid, Box<dyn Building>> = HashMap::new();
+            let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
             for citizen_id in to_allocate {
                 let citizen = self.citizens.get_mut(&citizen_id).ok_or_else(|| {
                     CensusError::ValueParsingError {
@@ -233,12 +237,12 @@ impl Simulator {
                             Ok(_) => workplace,
                             Err(_) => {
                                 workplace_buildings.insert(
-                                    workplace.building_code().building_id(),
+                                    workplace.id().clone(),
                                     Box::new(workplace),
                                 );
                                 // TODO Have better distribution of AreaClassification?
                                 let mut workplace = Workplace::new(
-                                    BuildingCode::new(
+                                    BuildingID::new(
                                         workplace_area_code.clone(),
                                         AreaClassification::UrbanCity,
                                     ),
@@ -255,7 +259,7 @@ impl Simulator {
                     None => {
                         // TODO Have better distribution of AreaClassification?
                         let mut workplace = Workplace::new(
-                            BuildingCode::new(
+                            BuildingID::new(
                                 workplace_area_code.clone(),
                                 AreaClassification::UrbanCity,
                             ),
@@ -266,7 +270,7 @@ impl Simulator {
                         workplace
                     }
                 };
-                citizen.set_workplace_code(workplace.building_code().clone());
+                citizen.set_workplace_code(workplace.id().clone());
                 // Add the unfilled Workplace back to the allocator
                 current_workplaces_to_allocate.insert(citizen.occupation(), workplace);
             }
@@ -284,7 +288,7 @@ impl Simulator {
                 .drain()
                 .for_each(|(_, workplace)| {
                     workplace_buildings
-                        .insert(workplace.building_code().building_id(), Box::new(workplace));
+                        .insert(workplace.id().clone(), Box::new(workplace));
                 });
             workplace_output_area.buildings[AreaClassification::UrbanCity]
                 .extend(workplace_buildings);
@@ -333,7 +337,9 @@ impl Simulator {
     /// Returns False if it has finished
     pub fn step(&mut self) -> anyhow::Result<bool> {
         let mut start = Instant::now();
-        let exposures = self.generate_exposures()?;
+        // Reset public transport containers
+        self.public_transport = Default::default();
+        let exposures: HashMap<ID, usize> = self.generate_exposures()?;
 
         let generate_exposure_time = start.elapsed().as_secs_f64();
         start = Instant::now();
@@ -356,10 +362,12 @@ impl Simulator {
         }
     }
 
-    fn generate_exposures(&mut self) -> anyhow::Result<HashMap<BuildingCode, Vec<Exposure>>> {
+    fn generate_exposures(&mut self) -> anyhow::Result<HashMap<ID, usize>> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        let mut exposure_list: HashMap<BuildingCode, Vec<Exposure>> = HashMap::new();
+        let mut exposure_list: HashMap<ID, usize> = HashMap::new();
         self.statistics.next();
+        let mut public_transport_pre_generate: HashMap<&(OutputAreaID, OutputAreaID), Vec<CitizenID>> = HashMap::new();
+        // Generate exposures for fixed building positions
         for citizen in &mut self.citizens.values_mut() {
             citizen.execute_time_step(
                 self.statistics.time_step(),
@@ -367,74 +375,82 @@ impl Simulator {
                 self.interventions.lockdown_enabled(),
             );
             self.statistics.add_citizen(&citizen.disease_status);
-            if let Infected(_) = citizen.disease_status {
+
+            // Either generate public transport session, or add exposure for fixed building position
+            if let Some(travel) = &citizen.on_public_transport {
+                let transport_session = public_transport_pre_generate.entry(travel).or_default();
+                transport_session.push(citizen.id());
+            } else if let Infected(_) = citizen.disease_status {
                 let entry = exposure_list
                     .entry(citizen.current_position.clone())
-                    .or_default();
-                entry.push(Exposure::new(
-                    citizen.id(),
-                    citizen.current_position.clone(),
-                ));
+                    .or_insert(1);
+                *entry = *entry + 1;
             }
         }
+
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
     }
     fn apply_exposures(
         &mut self,
-        exposure_list: HashMap<BuildingCode, Vec<Exposure>>,
+        exposure_list: HashMap<ID, usize>,
     ) -> anyhow::Result<()> {
         for (building_code, exposures) in exposure_list {
-            let area = self.output_areas.get_mut(&building_code.output_area_code());
-            match area {
-                Some(area) => {
-                    // TODO Sometime there's a weird bug here?
-                    let building = &area.buildings[building_code.area_type()]
-                        .get_mut(&building_code.building_id())
-                        .context(format!(
-                            "Failed to retrieve exposure building {}",
-                            building_code
-                        ))?;
-                    let building = building.as_ref();
-                    for citizen_id in building.occupants() {
-                        let citizen = self.citizens.get_mut(citizen_id);
-                        match citizen {
-                            Some(citizen) => {
-                                if citizen.is_susceptible()
-                                    && citizen.expose(
-                                    exposures.len(),
-                                    &self.disease_model,
-                                    &self.interventions.mask_status,
-                                    &mut self.rng,
-                                )
-                                {
-                                    self.statistics
-                                        .citizen_exposed(building_code.clone())
-                                        .context(format!("Exposing citizen {}", citizen_id))?;
+            match building_code {
+                ID::Building(building_code) => {
+                    let area = self.output_areas.get_mut(&building_code.output_area_code());
+                    match area {
+                        Some(area) => {
+                            // TODO Sometime there's a weird bug here?
+                            let building = &area.buildings[building_code.area_type()]
+                                .get_mut(&building_code)
+                                .context(format!(
+                                    "Failed to retrieve exposure building {}",
+                                    building_code
+                                ))?;
+                            let building = building.as_ref();
+                            for citizen_id in building.occupants() {
+                                let citizen = self.citizens.get_mut(citizen_id);
+                                match citizen {
+                                    Some(citizen) => {
+                                        if citizen.is_susceptible()
+                                            && citizen.expose(
+                                            exposures,
+                                            &self.disease_model,
+                                            &self.interventions.mask_status,
+                                            &mut self.rng,
+                                        )
+                                        {
+                                            self.statistics
+                                                .citizen_exposed(ID::Building(building_code.clone()))
+                                                .context(format!("Exposing citizen {}", citizen_id))?;
 
-                                    if let Some(vaccine_list) =
-                                    &mut self.citizens_eligible_for_vaccine
-                                    {
-                                        vaccine_list.remove(citizen_id);
+                                            if let Some(vaccine_list) =
+                                            &mut self.citizens_eligible_for_vaccine
+                                            {
+                                                vaccine_list.remove(citizen_id);
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        error!(
+                                    "Citizen {}, does not exist in the expected area {}",
+                                    citizen_id, area.output_area_id
+                                );
                                     }
                                 }
                             }
-                            None => {
-                                error!(
-                                    "Citizen {}, does not exist in the expected area {}",
-                                    citizen_id, area.output_area_code
-                                );
-                            }
+                        }
+
+                        None => {
+                            error!(
+                        "Cannot find output area {}, that had an exposure occurred in!",
+                        &building_code.output_area_code()
+                        );
                         }
                     }
                 }
-
-                None => {
-                    error!(
-                        "Cannot find output area {}, that had an exposure occurred in!",
-                        &building_code.output_area_code()
-                    );
-                }
+                _ => todo!()
             }
         }
         Ok(())
@@ -453,7 +469,7 @@ impl Simulator {
                     // Send every Citizen home
                     for mut citizen in &mut self.citizens {
                         let home = citizen.1.household_code.clone();
-                        citizen.1.current_position = home;
+                        citizen.1.current_position = ID::Building(home);
                     }
                 }
                 InterventionsEnabled::Vaccination => {
@@ -479,7 +495,7 @@ impl Simulator {
             }
         }
         if let Some(citizens) = &mut self.citizens_eligible_for_vaccine {
-            let chosen: Vec<Uuid> = citizens
+            let chosen: Vec<CitizenID> = citizens
                 .iter()
                 .choose_multiple(&mut self.rng, self.disease_model.vaccination_rate as usize)
                 .iter()
@@ -533,7 +549,7 @@ impl Simulator {
                 let mut buildings = HashMap::new();
 
                 for (_code, building) in building_map.drain() {
-                    buildings.insert(building.building_code().building_id().to_string(), building);
+                    buildings.insert(building.id().clone(), building);
                 }
                 sub_areas.insert(area_type.to_string(), buildings);
             }

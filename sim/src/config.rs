@@ -26,6 +26,9 @@ pub const HOUSEHOLD_SIZE: u16 = 4;
 /// How often to print debug statements
 pub const DEBUG_ITERATION_PRINT: usize = 10;
 
+pub const PUBLIC_TRANSPORT_PERCENTAGE: f64 = 0.2;
+pub const BUS_CAPACITY: u32 = 50;
+
 pub fn get_memory_usage() -> anyhow::Result<String> {
     Ok(format!(
         "{:.3} GB",

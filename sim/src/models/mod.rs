@@ -21,19 +21,54 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 use std::time::Instant;
 
 use geo_types::{Coordinate, LineString};
 use log::info;
+use serde::Serialize;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
 
+use crate::models::building::BuildingID;
+use crate::models::output_area::OutputAreaID;
+use crate::models::public_transport_route::PublicTransportID;
+
 pub mod building;
 pub mod citizen;
 pub mod output_area;
+pub mod public_transport_route;
+/*
+/// The ID of a physical location
+pub trait ID: Debug + Display+Hash {//+ Clone + Hash {
+    fn get_id(&self) -> Uuid;
+    //fn output_area_id(&self)->OutputAreaID;
+}
+
+//impl Eq for ID {}
+
+impl PartialEq for ID {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_id().eq(&other.get_id())
+    }
+}*/
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize)]
+pub enum ID {
+    Building(BuildingID),
+    OutputArea(OutputAreaID),
+    PublicTransport(PublicTransportID),
+}
+
+impl Display for ID {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(

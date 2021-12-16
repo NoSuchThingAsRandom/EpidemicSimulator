@@ -343,7 +343,7 @@ impl CensusData {
     /// Attempts to retrieve all records relating to the given output area code
     ///
     /// Will return None, if at least one table is missing the entry
-    pub fn get_output_area(&self, code: &String) -> Option<CensusDataEntry> {
+    pub fn for_output_area_code(&self, code: &String) -> Option<CensusDataEntry> {
         let workplace_area_distribution = self.residents_workplace.get(code)?;
         Some(CensusDataEntry {
             output_area_code: code.clone(),
@@ -357,7 +357,7 @@ impl CensusData {
     pub fn values(&self) -> impl Iterator<Item=CensusDataEntry> {
         let keys = self.population_counts.keys();
         keys.filter_map(move |key| {
-            let data = self.get_output_area(key);
+            let data = self.for_output_area_code(key);
             if data.is_none() {
                 warn!("Output Area: {} is incomplete", key);
             }

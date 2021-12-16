@@ -24,7 +24,9 @@ use std::fmt::{Display, Formatter};
 use log::error;
 
 use crate::disease::DiseaseStatus;
-use crate::models::building::BuildingCode;
+use crate::models::building::BuildingID;
+use crate::models::ID;
+use crate::models::output_area::OutputAreaID;
 
 /// A snapshot of the disease per time step
 #[derive(Clone)]
@@ -36,10 +38,10 @@ pub struct Statistics {
     recovered: u32,
     vaccinated: u32,
     /// First Instance, Amount
-    pub buildings_exposed: HashMap<BuildingCode, (u32, u32)>,
-    pub workplace_exposed: HashMap<BuildingCode, (u32, u32)>,
+    pub buildings_exposed: HashMap<BuildingID, (u32, u32)>,
+    pub workplace_exposed: HashMap<BuildingID, (u32, u32)>,
     /// First Instance, Amount
-    pub output_areas_exposed: HashMap<String, (u32, u32)>,
+    pub output_areas_exposed: HashMap<OutputAreaID, (u32, u32)>,
 }
 
 impl Statistics {
@@ -114,27 +116,22 @@ impl Statistics {
     }
     /// When a citizen has been exposed, the susceptible count drops by one, and exposure count increases by 1
     /// Will error, if called when no Citizens are susceptible
-    pub fn citizen_exposed(&mut self, location: BuildingCode) -> Result<(), crate::error::Error> {
+    pub fn citizen_exposed(&mut self, location: ID) -> Result<(), crate::error::Error> {
         let x = self.susceptible.checked_sub(1);
         if let Some(x) = x {
             self.susceptible = x;
             self.exposed += 1;
             //debug!("Exposing: {}", exposure);
-            if let Some(data) = self.buildings_exposed.get_mut(&location) {
-                data.1 += 1;
-            } else {
-                self.buildings_exposed
-                    .insert(location.clone(), (self.time_step, 1));
-            }
-
-            if let Some(data) = self
-                .output_areas_exposed
-                .get_mut(&location.output_area_code().clone())
-            {
-                data.1 += 1;
-            } else {
-                self.output_areas_exposed
-                    .insert(location.output_area_code(), (self.time_step, 1));
+            match location {
+                ID::Building(building) => {
+                    self.expose_building(building)
+                }
+                ID::OutputArea(output_area) => {
+                    self.expose_output_area(output_area)
+                }
+                ID::PublicTransport(_) => {
+                    todo!()
+                }
             }
 
             Ok(())
@@ -144,6 +141,15 @@ impl Statistics {
                 "Cannot expose citizen as no citizens are susceptible!",
             )));
         }
+    }
+
+    fn expose_building(&mut self, building_id: BuildingID) {
+        let building = self.buildings_exposed.entry(building_id).or_insert((self.time_step, 0));
+        building.1 += 1;
+    }
+    fn expose_output_area(&mut self, output_area: OutputAreaID) {
+        let output_area = self.output_areas_exposed.entry(output_area).or_insert((self.time_step, 0));
+        output_area.1 += 1;
     }
     /// Returns true if at least one Citizen has the Disease
     pub fn disease_exists(&self) -> bool {

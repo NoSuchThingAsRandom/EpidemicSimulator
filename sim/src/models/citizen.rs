@@ -23,69 +23,89 @@ use std::fmt::{Debug, Display, Formatter};
 use lazy_static::lazy_static;
 use rand::distributions::Distribution;
 use rand::distributions::Uniform;
-use rand::Rng;
 use rand::RngCore;
 use serde::Serialize;
 use uuid::Uuid;
 
 use load_census_data::tables::occupation_count::OccupationType;
 
+use crate::config::PUBLIC_TRANSPORT_PERCENTAGE;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::interventions::MaskStatus;
-use crate::models::building::BuildingCode;
+use crate::models::building::BuildingID;
+use crate::models::ID;
+use crate::models::output_area::OutputAreaID;
 
 lazy_static! {
-    static ref DISTRUBUTION: Uniform<f64> =Uniform::new_inclusive(0.0, 1.0);
+    /// This is a random uniform distribution, for fast random generation
+    static ref RANDOM_DISTRUBUTION: Uniform<f64> =Uniform::new_inclusive(0.0, 1.0);
 }
 /// Calculates the binomial distribution, with at least one success
 fn binomial(probability: f64, n: u8) -> f64 {
     1.0 - (1.0 - probability).powf(n as f64)
 }
 
+#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, Serialize)]
+pub struct CitizenID {
+    id: Uuid,
+}
+
+impl Display for CitizenID {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Citizen ID: {}", self.id)
+    }
+}
+
 /// This is used to represent a single Citizen in the simulation
 #[derive(Debug, Serialize, Clone)]
 pub struct Citizen {
     /// A unique identifier for this Citizen
-    id: Uuid,
+    id: CitizenID,
     /// The building they reside at (home)
-    pub household_code: BuildingCode,
+    pub household_code: BuildingID,
     /// The place they work at
-    pub workplace_code: BuildingCode,
+    pub workplace_code: BuildingID,
     occupation: OccupationType,
     /// The hour which they go to work
     start_working_hour: u32,
     /// The hour which they leave to work
     end_working_hour: u32,
     /// The building the Citizen is currently at
-    pub current_position: BuildingCode,
+    pub current_position: ID,
     /// Disease Status
     pub disease_status: DiseaseStatus,
     /// Whether this Citizen wears a mask
     pub is_mask_compliant: bool,
+    pub uses_public_transport: bool,
+    /// The source and destination for a Citizen on Transport this time step
+    pub on_public_transport: std::option::Option<(OutputAreaID, OutputAreaID)>,
 }
 
 impl Citizen {
     /// Generates a new Citizen with a random ID
     pub fn new(
-        household_code: BuildingCode,
-        workplace_code: BuildingCode,
+        household_code: BuildingID,
+        workplace_code: BuildingID,
         occupation_type: OccupationType,
         is_mask_compliant: bool,
+        rng: &mut dyn RngCore,
     ) -> Citizen {
         Citizen {
-            id: Uuid::new_v4(),
+            id: CitizenID::default(),
             household_code: household_code.clone(),
             workplace_code,
             occupation: occupation_type,
             start_working_hour: 9,
             end_working_hour: 17,
-            current_position: household_code,
+            current_position: ID::Building(household_code),
             disease_status: DiseaseStatus::Susceptible,
             is_mask_compliant,
+            uses_public_transport: RANDOM_DISTRUBUTION.sample(rng) < PUBLIC_TRANSPORT_PERCENTAGE,
+            on_public_transport: None,
         }
     }
     /// Returns the ID of this Citizen
-    pub fn id(&self) -> Uuid {
+    pub fn id(&self) -> CitizenID {
         self.id
     }
 
@@ -98,11 +118,21 @@ impl Citizen {
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
         if !lockdown_enabled {
             match current_hour % 24 {
-                hour if hour == self.start_working_hour => {
-                    self.current_position = self.workplace_code.clone();
+                // Travelling home to work
+                hour if hour == self.start_working_hour - 1 && self.uses_public_transport => {
+                    self.on_public_transport = Some((self.household_code.output_area_code(), self.workplace_code.output_area_code()))
                 }
+                // Starts work
+                hour if hour == self.start_working_hour => {
+                    self.current_position = ID::Building(self.workplace_code.clone());
+                }
+                // Travelling work to home
+                hour if hour == self.end_working_hour - 1 && self.uses_public_transport => {
+                    self.on_public_transport = Some((self.workplace_code.output_area_code(), self.household_code.output_area_code()))
+                }
+                // Finish work, goes home
                 hour if hour == self.end_working_hour => {
-                    self.current_position = self.household_code.clone();
+                    self.current_position = ID::Building(self.household_code.clone());
                 }
                 _ => {}
             }
@@ -131,13 +161,13 @@ impl Citizen {
             ),
             exposure_total as u8,
         );
-        if self.disease_status == DiseaseStatus::Susceptible && DISTRUBUTION.sample(rng) < exposure_chance {
+        if self.disease_status == DiseaseStatus::Susceptible && RANDOM_DISTRUBUTION.sample(rng) < exposure_chance {
             self.disease_status = DiseaseStatus::Exposed(0);
             return true;
         }
         false
     }
-    pub fn set_workplace_code(&mut self, workplace_code: BuildingCode) {
+    pub fn set_workplace_code(&mut self, workplace_code: BuildingID) {
         self.workplace_code = workplace_code;
     }
     pub fn occupation(&self) -> OccupationType {
