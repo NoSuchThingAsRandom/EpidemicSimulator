@@ -70,7 +70,7 @@ impl Simulator {
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<String, OutputArea> = HashMap::new();
         debug!("Current memory usage: {}", get_memory_usage()?);
-        let mut output_areas_polygons =
+        let (mut output_areas_polygons, point_lookup) =
             build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
                 .context("Loading polygons for output areas")?;
         info!("Loaded map data in {:?}", start.elapsed());
@@ -103,6 +103,19 @@ impl Simulator {
         }
         info!("Built residential population in {:?}", start.elapsed());
         debug!("Current memory usage: {}", get_memory_usage()?);
+        use crate::models::get_output_area_containing_point;
+        // Assign buildings
+        for (location, building_type) in &census_data.osm_buildings {
+            if let Ok(area_code) = get_output_area_containing_point(&location, &output_areas_polygons, &point_lookup) {
+                if let Some(area) = output_areas.get_mut(&area_code) {
+                    area.add_building(*location, *building_type);
+                }
+            }
+        }
+
+
+        // TODO Need a way of finding the closest building of type X to a point?
+
 
         let mut simulator = Simulator {
             current_population: starting_population,

@@ -29,7 +29,8 @@ use crate::DataLoadingError;
 
 mod convert;
 
-pub enum BuildingTypes {
+#[derive(Debug, Clone, Copy)]
+pub enum RawBuildingTypes {
     Shop,
     School,
     Hospital,
@@ -38,7 +39,7 @@ pub enum BuildingTypes {
     Unknown,
 }
 
-impl<'a> TryFrom<DenseTagIter<'a>> for BuildingTypes {
+impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
     type Error = ();
 
     fn try_from(value: DenseTagIter<'a>) -> Result<Self, Self::Error> {
@@ -49,25 +50,25 @@ impl<'a> TryFrom<DenseTagIter<'a>> for BuildingTypes {
         if let Some(building) = tags.get("building") {
             match *building {
                 "office" | "industrial" | "commercial" | "retail" | "warehouse" | "civic"
-                | "public" => return Ok(BuildingTypes::WorkPlace),
+                | "public" => return Ok(RawBuildingTypes::WorkPlace),
                 "house" | "detached" | "semidetached_house" | "farm" | "hut" | "static_caravan"
                 | "cabin" | "apartments" | "terrace" | "residential" => {
-                    return Ok(BuildingTypes::Household);
+                    return Ok(RawBuildingTypes::Household);
                 }
                 _ => (),
             }
         }
         if let Some(amenity) = tags.get("amenity") {
             match *amenity {
-                "school" => return Ok(BuildingTypes::School),
-                "hospital" => return Ok(BuildingTypes::Hospital),
+                "school" => return Ok(RawBuildingTypes::School),
+                "hospital" => return Ok(RawBuildingTypes::Hospital),
                 _ => (),
             }
         }
         if tags.contains_key("shop") {
-            Ok(BuildingTypes::Shop)
+            Ok(RawBuildingTypes::Shop)
         } else {
-            Ok(BuildingTypes::Unknown)
+            Ok(RawBuildingTypes::Unknown)
         }
     }
 }
@@ -75,7 +76,7 @@ impl<'a> TryFrom<DenseTagIter<'a>> for BuildingTypes {
 /// Returns a hashmap of buildings located at which points
 pub fn read_osm_data(
     filename: String,
-) -> Result<HashMap<Point<u64>, BuildingTypes>, DataLoadingError> {
+) -> Result<HashMap<Point<isize>, RawBuildingTypes>, DataLoadingError> {
     use osmpbf::{Element, ElementReader};
     info!("Reading OSM data from file: {}", filename);
     let reader = ElementReader::from_path(filename)?;
@@ -102,12 +103,12 @@ pub fn read_osm_data(
                         );
                         // TODO Do we need to keep decimal precision?
                         let position = (
-                            (position.0 * 1.0).round() as u64,
-                            (position.0 * 1.0).round() as u64,
+                            (position.0 * 1.0).round() as isize,
+                            (position.0 * 1.0).round() as isize,
                         );
                         let position = geo_types::Coordinate::from(position);
                         let position = geo_types::Point::from(position);
-                        if let Ok(building) = BuildingTypes::try_from(node.tags()) {
+                        if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
                             buildings.insert(position, building);
                         }
                     }

@@ -23,7 +23,10 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use geo_types::{Coordinate, LineString};
+use anyhow::Context;
+use geo::orient::Direction::Default;
+use geo::prelude::{BoundingRect, Contains};
+use geo_types::{Coordinate, line_string, LineString, Point, point, Polygon};
 use log::info;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
@@ -35,16 +38,65 @@ pub mod building;
 pub mod citizen;
 pub mod output_area;
 
+pub struct PointLookup {
+    // Row -> Column -> Code
+    boxes: Vec<Vec<Vec<String>>>,
+    box_size: usize,
+}
+
+
+impl PointLookup {
+    pub fn new() -> PointLookup {
+        // TODO Find a better box size?
+        PointLookup { boxes: Vec::with_capacity(2000), box_size: 200 }
+    }
+    pub fn add_area(&mut self, code: String, polygon: &geo_types::Polygon<isize>) {
+        let bounds = polygon.bounding_rect().expect("Failed to obtain bounding rect for polygon!");
+        if bounds.min().x < 0 || bounds.min().y < 0 {
+            panic!("Don't support negative Coordinates!");
+        }
+        for row_offset in 0..(bounds.height() as usize / self.box_size) {
+            // Extend rows to match new index
+            let row_index = bounds.min().y as usize + row_offset;
+            while self.boxes.len() < row_index {
+                self.boxes.push(Vec::new());
+            }
+            for col_offset in 0..(bounds.width() as usize / self.box_size) {
+                let col_index = bounds.min().x as usize + col_offset;
+                let current_row = self.boxes.get_mut(col_index).expect("Extending the rows failed in adding area");
+                // Extend cols to match new index
+                while current_row.len() < (col_index) as usize {
+                    current_row.push(Vec::new());
+                }
+                let cell = current_row.get_mut(col_index).expect("Extending the columns failed, in adding area");
+                cell.push(code.to_string());
+            }
+        }
+    }
+    pub fn get_possible_area_codes(&self, point: &geo_types::Point<isize>) -> Option<&Vec<String>> {
+        if point.x() < 0 || point.y() < 0 {
+            panic!("Don't support negative Coordinates!");
+        }
+        if let Some(row) = self.boxes.get((point.y() as usize / self.box_size) as usize) {
+            if let Some(cell) = row.get((point.x() as usize / self.box_size) as usize) {
+                return Some(cell);
+            }
+        }
+        return None;
+    }
+}
+
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,
-) -> Result<HashMap<String, geo_types::Polygon<f64>>, DataLoadingError> {
+) -> Result<(HashMap<String, geo_types::Polygon<isize>>, PointLookup), DataLoadingError> {
     let mut reader =
         shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
         })?;
     let start_time = Instant::now();
     let mut data = HashMap::new();
+    let mut lookup = PointLookup::new();
     info!("Loading map data from file...");
     for (_, shape_record) in reader.iter_shapes_and_records().enumerate() {
         let (shape, record) = shape_record.map_err(|e| DataLoadingError::IOError {
@@ -52,13 +104,13 @@ pub fn build_polygons_for_output_areas(
         })?;
         if let Shape::Polygon(polygon) = shape {
             assert!(!polygon.rings().is_empty());
-            let rings: Vec<Coordinate<f64>>;
+            let rings: Vec<Coordinate<isize>>;
             let mut interior_ring;
             if polygon.rings().len() == 1 {
                 rings = polygon.rings()[0]
                     .points()
                     .iter()
-                    .map(|p| geo_types::Coordinate::from(*p))
+                    .map(|p| geo_types::Coordinate::from((p.x.round() as isize, p.y.round() as isize)))
                     .collect();
                 interior_ring = Vec::new();
             } else {
@@ -69,8 +121,8 @@ pub fn build_polygons_for_output_areas(
                         LineString::from(
                             r.points()
                                 .iter()
-                                .map(|p| geo_types::Coordinate::from(*p))
-                                .collect::<Vec<Coordinate<f64>>>(),
+                                .map(|p| geo_types::Coordinate::from((p.x.round() as isize, p.y.round() as isize)))
+                                .collect::<Vec<Coordinate<isize>>>(),
                         )
                     })
                     .collect();
@@ -106,7 +158,7 @@ pub fn build_polygons_for_output_areas(
                     },
                 });
             }
-
+            lookup.add_area(code.to_string(), &new_poly);
             data.insert(code, new_poly);
         } else {
             return Err(DataLoadingError::ValueParsingError {
@@ -121,5 +173,22 @@ pub fn build_polygons_for_output_areas(
         }*/
     }
     info!("Finished loading map data in {:?}", start_time.elapsed());
-    Ok(data)
+    Ok((data, lookup))
+}
+
+pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<String, Polygon<isize>>, point_lookup: &PointLookup) -> anyhow::Result<String> {
+    let areas = point_lookup.get_possible_area_codes(&point).unwrap();
+    for poss_area in areas {
+        let poly = polygons.get(poss_area).ok_or_else(|| DataLoadingError::ValueParsingError {
+            source: ParseErrorType::MissingKey {
+                context: "Finding Output Area for Point".to_string(),
+                key: poss_area.to_string(),
+            }
+        }).context(format!("Area: {}, does not exist", poss_area))?;
+
+        if poly.contains(point) {
+            return Ok(poss_area.to_string());
+        }
+    }
+    Err(DataLoadingError::Misc { source: "No matching area for point".to_string() }).context("Doens;'t esit")
 }

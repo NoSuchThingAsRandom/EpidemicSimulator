@@ -30,7 +30,7 @@ use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
-use crate::osm_parsing::{BuildingTypes, read_osm_data};
+use crate::osm_parsing::{RawBuildingTypes, read_osm_data};
 use crate::parsing_error::DataLoadingError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::employment_densities::EmploymentDensities;
@@ -94,7 +94,7 @@ pub struct CensusData {
     pub workplace_density: EmploymentDensities,
     /// Residential Area -> Workplace Area -> Count
     pub residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
-    pub osm_buildings: HashMap<Point<u64>, BuildingTypes>,
+    pub osm_buildings: HashMap<Point<isize>, RawBuildingTypes>,
 }
 
 /// Initialization

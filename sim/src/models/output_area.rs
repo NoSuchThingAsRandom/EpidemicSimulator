@@ -22,10 +22,12 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use enum_map::EnumMap;
+use geo_types::Point;
 use rand::{Rng, RngCore};
 use uuid::Uuid;
 
 use load_census_data::CensusDataEntry;
+use load_census_data::osm_parsing::RawBuildingTypes;
 use load_census_data::tables::population_and_density_per_output_area::{
     AreaClassification, PersonType,
 };
@@ -47,7 +49,7 @@ pub struct OutputArea {
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
     pub buildings: EnumMap<AreaClassification, HashMap<Uuid, Box<dyn Building>>>,
     /// A polygon for drawing this output area
-    pub polygon: geo_types::Polygon<f64>,
+    pub polygon: geo_types::Polygon<isize>,
     pub total_residents: u32,
 }
 
@@ -57,7 +59,7 @@ impl OutputArea {
     /// Builds the citizens and households for this area
     pub fn new(
         output_area_code: String,
-        polygon: geo_types::Polygon<f64>,
+        polygon: geo_types::Polygon<isize>,
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {
             output_area_code,
@@ -65,6 +67,9 @@ impl OutputArea {
             polygon,
             total_residents: 0,
         })
+    }
+    pub fn add_building(&mut self, location: Point<isize>, raw_building_type: RawBuildingTypes) {
+        todo!()
     }
     pub fn generate_citizens(
         &mut self,
