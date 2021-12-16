@@ -40,7 +40,6 @@ impl Profiler for MyProfiler {
     }
 }
 
-
 fn load_data(c: &mut Criterion) {
     let directory = "../data/copy/tables/".to_string();
     let mut group = c.benchmark_group("bench-group");

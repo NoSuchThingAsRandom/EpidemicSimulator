@@ -119,7 +119,6 @@ impl PartialEq<Self> for BuildingID {
 
 impl Eq for BuildingID {}
 
-
 /// This represents a home for Citizens
 ///
 /// Has an AreaCode for referencing it, and a list of Citizen ID's that live here

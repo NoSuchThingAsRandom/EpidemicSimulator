@@ -69,7 +69,6 @@ impl Display for ID {
     }
 }
 
-
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,

@@ -120,7 +120,10 @@ impl Citizen {
             match current_hour % 24 {
                 // Travelling home to work
                 hour if hour == self.start_working_hour - 1 && self.uses_public_transport => {
-                    self.on_public_transport = Some((self.household_code.output_area_code(), self.workplace_code.output_area_code()))
+                    self.on_public_transport = Some((
+                        self.household_code.output_area_code(),
+                        self.workplace_code.output_area_code(),
+                    ))
                 }
                 // Starts work
                 hour if hour == self.start_working_hour => {
@@ -128,7 +131,10 @@ impl Citizen {
                 }
                 // Travelling work to home
                 hour if hour == self.end_working_hour - 1 && self.uses_public_transport => {
-                    self.on_public_transport = Some((self.workplace_code.output_area_code(), self.household_code.output_area_code()))
+                    self.on_public_transport = Some((
+                        self.workplace_code.output_area_code(),
+                        self.household_code.output_area_code(),
+                    ))
                 }
                 // Finish work, goes home
                 hour if hour == self.end_working_hour => {
@@ -161,7 +167,9 @@ impl Citizen {
             ),
             exposure_total as u8,
         );
-        if self.disease_status == DiseaseStatus::Susceptible && RANDOM_DISTRUBUTION.sample(rng) < exposure_chance {
+        if self.disease_status == DiseaseStatus::Susceptible
+            && RANDOM_DISTRUBUTION.sample(rng) < exposure_chance
+        {
             self.disease_status = DiseaseStatus::Exposed(0);
             return true;
         }

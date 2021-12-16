@@ -160,22 +160,18 @@ impl Exposure {
         }
     }
     /*    pub fn output_area_code(&self) -> OutputAreaID {
-            self.location.output_area_id()
-        }
-        pub fn area_classification(&self) -> AreaClassification {
-            self.location.area_type()
-        }
-        pub fn building_code(&self) -> Uuid {
-            self.location.building_id()
-        }*/
+        self.location.output_area_id()
+    }
+    pub fn area_classification(&self) -> AreaClassification {
+        self.location.area_type()
+    }
+    pub fn building_code(&self) -> Uuid {
+        self.location.building_id()
+    }*/
 }
 
 impl Display for Exposure {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Exposure by {}, at {} ",
-            self.infector_id, self.location
-        )
+        write!(f, "Exposure by {}, at {} ", self.infector_id, self.location)
     }
 }

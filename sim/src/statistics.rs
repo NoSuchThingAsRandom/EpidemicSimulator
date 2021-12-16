@@ -123,12 +123,8 @@ impl Statistics {
             self.exposed += 1;
             //debug!("Exposing: {}", exposure);
             match location {
-                ID::Building(building) => {
-                    self.expose_building(building)
-                }
-                ID::OutputArea(output_area) => {
-                    self.expose_output_area(output_area)
-                }
+                ID::Building(building) => self.expose_building(building),
+                ID::OutputArea(output_area) => self.expose_output_area(output_area),
                 ID::PublicTransport(_) => {
                     todo!()
                 }
@@ -144,11 +140,17 @@ impl Statistics {
     }
 
     fn expose_building(&mut self, building_id: BuildingID) {
-        let building = self.buildings_exposed.entry(building_id).or_insert((self.time_step, 0));
+        let building = self
+            .buildings_exposed
+            .entry(building_id)
+            .or_insert((self.time_step, 0));
         building.1 += 1;
     }
     fn expose_output_area(&mut self, output_area: OutputAreaID) {
-        let output_area = self.output_areas_exposed.entry(output_area).or_insert((self.time_step, 0));
+        let output_area = self
+            .output_areas_exposed
+            .entry(output_area)
+            .or_insert((self.time_step, 0));
         output_area.1 += 1;
     }
     /// Returns true if at least one Citizen has the Disease

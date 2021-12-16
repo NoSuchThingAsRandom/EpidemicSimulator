@@ -94,7 +94,11 @@ impl Simulator {
                 entry.output_area_code.to_string()
             ))?;*/
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(OutputAreaID::from_code(entry.output_area_code.clone()), None, disease_model.mask_percentage)
+            let mut new_area = OutputArea::new(
+                OutputAreaID::from_code(entry.output_area_code.clone()),
+                None,
+                disease_model.mask_percentage,
+            )
                 .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
@@ -181,9 +185,11 @@ impl Simulator {
                     },
                 })?;
             for citizen_id in household_output_area.get_residents() {
-                let workplace_output_area_code = OutputAreaID::from_code(household_census_data
-                    .get_random_workplace_area(&mut self.rng)
-                    .context("Selecting a random workplace")?);
+                let workplace_output_area_code = OutputAreaID::from_code(
+                    household_census_data
+                        .get_random_workplace_area(&mut self.rng)
+                        .context("Selecting a random workplace")?,
+                );
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
                     citizens_to_allocate.insert(workplace_output_area_code.clone(), Vec::new());
                 }
@@ -236,10 +242,8 @@ impl Simulator {
                         match workplace.add_citizen(citizen_id) {
                             Ok(_) => workplace,
                             Err(_) => {
-                                workplace_buildings.insert(
-                                    workplace.id().clone(),
-                                    Box::new(workplace),
-                                );
+                                workplace_buildings
+                                    .insert(workplace.id().clone(), Box::new(workplace));
                                 // TODO Have better distribution of AreaClassification?
                                 let mut workplace = Workplace::new(
                                     BuildingID::new(
@@ -287,8 +291,7 @@ impl Simulator {
             current_workplaces_to_allocate
                 .drain()
                 .for_each(|(_, workplace)| {
-                    workplace_buildings
-                        .insert(workplace.id().clone(), Box::new(workplace));
+                    workplace_buildings.insert(workplace.id().clone(), Box::new(workplace));
                 });
             workplace_output_area.buildings[AreaClassification::UrbanCity]
                 .extend(workplace_buildings);
@@ -366,7 +369,10 @@ impl Simulator {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposure_list: HashMap<ID, usize> = HashMap::new();
         self.statistics.next();
-        let mut public_transport_pre_generate: HashMap<&(OutputAreaID, OutputAreaID), Vec<CitizenID>> = HashMap::new();
+        let mut public_transport_pre_generate: HashMap<
+            &(OutputAreaID, OutputAreaID),
+            Vec<CitizenID>,
+        > = HashMap::new();
         // Generate exposures for fixed building positions
         for citizen in &mut self.citizens.values_mut() {
             citizen.execute_time_step(
@@ -391,10 +397,7 @@ impl Simulator {
         //debug!("There are {} exposures", exposure_list.len());
         Ok(exposure_list)
     }
-    fn apply_exposures(
-        &mut self,
-        exposure_list: HashMap<ID, usize>,
-    ) -> anyhow::Result<()> {
+    fn apply_exposures(&mut self, exposure_list: HashMap<ID, usize>) -> anyhow::Result<()> {
         for (building_code, exposures) in exposure_list {
             match building_code {
                 ID::Building(building_code) => {
@@ -422,8 +425,13 @@ impl Simulator {
                                         )
                                         {
                                             self.statistics
-                                                .citizen_exposed(ID::Building(building_code.clone()))
-                                                .context(format!("Exposing citizen {}", citizen_id))?;
+                                                .citizen_exposed(ID::Building(
+                                                    building_code.clone(),
+                                                ))
+                                                .context(format!(
+                                                    "Exposing citizen {}",
+                                                    citizen_id
+                                                ))?;
 
                                             if let Some(vaccine_list) =
                                             &mut self.citizens_eligible_for_vaccine
@@ -434,9 +442,9 @@ impl Simulator {
                                     }
                                     None => {
                                         error!(
-                                    "Citizen {}, does not exist in the expected area {}",
-                                    citizen_id, area.output_area_id
-                                );
+                                            "Citizen {}, does not exist in the expected area {}",
+                                            citizen_id, area.output_area_id
+                                        );
                                     }
                                 }
                             }
@@ -444,13 +452,13 @@ impl Simulator {
 
                         None => {
                             error!(
-                        "Cannot find output area {}, that had an exposure occurred in!",
-                        &building_code.output_area_code()
-                        );
+                                "Cannot find output area {}, that had an exposure occurred in!",
+                                &building_code.output_area_code()
+                            );
                         }
                     }
                 }
-                _ => todo!()
+                _ => todo!(),
             }
         }
         Ok(())

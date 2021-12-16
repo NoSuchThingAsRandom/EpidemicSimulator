@@ -49,10 +49,13 @@ impl PublicTransportID {
 
 impl Display for PublicTransportID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Transporting from: {} to {}, unique ID: {}", self.source, self.destination, self.id)
+        write!(
+            f,
+            "Transporting from: {} to {}, unique ID: {}",
+            self.source, self.destination, self.id
+        )
     }
 }
-
 
 /// This is a container representing a public transport object like a bus or train
 ///
@@ -66,7 +69,11 @@ pub struct PublicTransport {
 
 impl PublicTransport {
     pub fn new(source: String, destination: String) -> PublicTransport {
-        PublicTransport { id: PublicTransportID::new(source, destination), capacity: BUS_CAPACITY, citizens: Default::default() }
+        PublicTransport {
+            id: PublicTransportID::new(source, destination),
+            capacity: BUS_CAPACITY,
+            citizens: Default::default(),
+        }
     }
 }
 
@@ -81,7 +88,6 @@ impl Debug for PublicTransport {
         todo!()
     }
 }
-
 
 impl Building for PublicTransport {
     fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error> {

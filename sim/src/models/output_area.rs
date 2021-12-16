@@ -58,7 +58,6 @@ impl Display for OutputAreaID {
     }
 }
 
-
 /// This is a container for a Census Output Area
 ///
 /// Has a given code corresponding to an area of the country, and a list of households and citizens
@@ -79,7 +78,6 @@ pub struct OutputArea {
     mask_distribution: Bernoulli,
 }
 
-
 impl OutputArea {
     /// Builds a new output area, for the given code, polygon for drawing and a census record of the population
     ///
@@ -94,7 +92,8 @@ impl OutputArea {
             buildings: EnumMap::default(),
             polygon,
             total_residents: 0,
-            mask_distribution: Bernoulli::new(mask_compliance_ratio).context("Failed to initialise the mask distribution")?,
+            mask_distribution: Bernoulli::new(mask_compliance_ratio)
+                .context("Failed to initialise the mask distribution")?,
         })
     }
     pub fn generate_citizens(
@@ -126,7 +125,8 @@ impl OutputArea {
                 let citizen = Citizen::new(
                     household_building_id.clone(),
                     household_building_id.clone(),
-                    occupation, self.mask_distribution.sample(rng),
+                    occupation,
+                    self.mask_distribution.sample(rng),
                     rng,
                 );
                 household
