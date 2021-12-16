@@ -28,7 +28,6 @@ use log::{debug, error, info};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
-use uuid::Uuid;
 
 use load_census_data::CensusData;
 use load_census_data::parsing_error::{CensusError, ParseErrorType};
@@ -38,7 +37,7 @@ use load_census_data::tables::population_and_density_per_output_area::AreaClassi
 use crate::config::{
     DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
 };
-use crate::disease::{DiseaseModel, DiseaseStatus, Exposure};
+use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::building::{Building, BuildingID, Workplace};
@@ -342,21 +341,16 @@ impl Simulator {
         let mut start = Instant::now();
         // Reset public transport containers
         self.public_transport = Default::default();
-        let exposures: HashMap<ID, usize> = self.generate_exposures()?;
+        self.generate_and_apply_exposures()?;
 
-        let generate_exposure_time = start.elapsed().as_secs_f64();
-        start = Instant::now();
-
-        self.apply_exposures(exposures)?;
-
-        let apply_exposure_time = start.elapsed().as_secs_f64();
+        let exposure_time = start.elapsed().as_secs_f64();
         start = Instant::now();
 
         self.apply_interventions()?;
 
         let intervention_time = start.elapsed().as_secs_f64();
-        let total = generate_exposure_time + apply_exposure_time + intervention_time;
-        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,generate_exposure_time/total,apply_exposure_time,apply_exposure_time/total,intervention_time,intervention_time/total);
+        let total = exposure_time + intervention_time;
+        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",exposure_time,exposure_time/total,intervention_time,intervention_time/total);
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -365,16 +359,21 @@ impl Simulator {
         }
     }
 
-    fn generate_exposures(&mut self) -> anyhow::Result<HashMap<ID, usize>> {
+    fn generate_and_apply_exposures(&mut self) -> anyhow::Result<()> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        let mut exposure_list: HashMap<ID, usize> = HashMap::new();
+        let mut building_exposure_list: HashMap<BuildingID, usize> = HashMap::new();
         self.statistics.next();
+
+
+        // The list of Citizens on Public Transport, grouped by their origin and destination
         let mut public_transport_pre_generate: HashMap<
-            &(OutputAreaID, OutputAreaID),
-            Vec<CitizenID>,
+            (OutputAreaID, OutputAreaID),
+            Vec<(CitizenID, bool)>,
         > = HashMap::new();
+
+
         // Generate exposures for fixed building positions
-        for citizen in &mut self.citizens.values_mut() {
+        for citizen in self.citizens.values_mut() {
             citizen.execute_time_step(
                 self.statistics.time_step(),
                 &self.disease_model,
@@ -384,81 +383,98 @@ impl Simulator {
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {
-                let transport_session = public_transport_pre_generate.entry(travel).or_default();
-                transport_session.push(citizen.id());
+                let transport_session = public_transport_pre_generate.entry(travel.clone()).or_default();
+
+                transport_session.push((citizen.id(), citizen.is_infected()));
             } else if let Infected(_) = citizen.disease_status {
-                let entry = exposure_list
-                    .entry(citizen.current_position.clone())
+                let entry = building_exposure_list
+                    .entry(citizen.current_building_position.clone())
                     .or_insert(1);
-                *entry = *entry + 1;
+                *entry += 1;
             }
         }
 
-        //debug!("There are {} exposures", exposure_list.len());
-        Ok(exposure_list)
-    }
-    fn apply_exposures(&mut self, exposure_list: HashMap<ID, usize>) -> anyhow::Result<()> {
-        for (building_code, exposures) in exposure_list {
-            match building_code {
-                ID::Building(building_code) => {
-                    let area = self.output_areas.get_mut(&building_code.output_area_code());
-                    match area {
-                        Some(area) => {
-                            // TODO Sometime there's a weird bug here?
-                            let building = &area.buildings[building_code.area_type()]
-                                .get_mut(&building_code)
-                                .context(format!(
-                                    "Failed to retrieve exposure building {}",
-                                    building_code
-                                ))?;
-                            let building = building.as_ref();
-                            for citizen_id in building.occupants() {
-                                let citizen = self.citizens.get_mut(citizen_id);
-                                match citizen {
-                                    Some(citizen) => {
-                                        if citizen.is_susceptible()
-                                            && citizen.expose(
-                                            exposures,
-                                            &self.disease_model,
-                                            &self.interventions.mask_status,
-                                            &mut self.rng,
-                                        )
-                                        {
-                                            self.statistics
-                                                .citizen_exposed(ID::Building(
-                                                    building_code.clone(),
-                                                ))
-                                                .context(format!(
-                                                    "Exposing citizen {}",
-                                                    citizen_id
-                                                ))?;
+        // Apply Building Exposures
+        for (building_id, exposure_count) in building_exposure_list {
+            let area = self.output_areas.get(&building_id.output_area_code());
+            match area {
+                Some(area) => {
+                    // TODO Sometime there's a weird bug here?
+                    let building = &area.buildings[building_id.area_type()]
+                        .get(&building_id)
+                        .context(format!(
+                            "Failed to retrieve exposure building {}",
+                            building_id
+                        ))?;
+                    let building = building.as_ref();
+                    let occupants = building.occupants().clone();
+                    self.expose_citizens(occupants, exposure_count, ID::Building(building_id.clone()));
+                }
 
-                                            if let Some(vaccine_list) =
-                                            &mut self.citizens_eligible_for_vaccine
-                                            {
-                                                vaccine_list.remove(citizen_id);
-                                            }
-                                        }
-                                    }
-                                    None => {
-                                        error!(
-                                            "Citizen {}, does not exist in the expected area {}",
-                                            citizen_id, area.output_area_id
-                                        );
-                                    }
-                                }
-                            }
-                        }
-
-                        None => {
-                            error!(
-                                "Cannot find output area {}, that had an exposure occurred in!",
-                                &building_code.output_area_code()
+                None => {
+                    error!("Cannot find output area {}, that had an exposure occurred in!",
+                                &building_id.output_area_code()
                             );
+                }
+            }
+        }
+        // Generate public transport routes
+        for (route, mut citizens) in public_transport_pre_generate {
+            citizens.shuffle(&mut self.rng);
+            let mut current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
+            while let Some((citizen, is_infected)) = citizens.pop() {
+                // If bus is full, generate a new one
+                if let Err(_) = current_bus.add_citizen(citizen) {
+                    // Only need to save buses with exposures
+                    if current_bus.exposure_count > 0 {
+                        self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()));
+                    }
+                    current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
+                    current_bus.add_citizen(citizen).context("Failed to add Citizen to new bus")?;
+                }
+                if is_infected {
+                    current_bus.exposure_count += 1;
+                }
+            }
+            if current_bus.exposure_count > 0 {
+                self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()));
+            }
+        }
+        // Apply Public Transport Exposures
+        //debug!("There are {} exposures", exposure_list.len());
+        Ok(())
+    }
+
+    fn expose_citizens(&mut self, citizens: Vec<CitizenID>, exposure_count: usize, location: ID) -> anyhow::Result<()> {
+        for citizen_id in citizens {
+            let citizen = self.citizens.get_mut(&citizen_id);
+            match citizen {
+                Some(citizen) => {
+                    if citizen.is_susceptible()
+                        && citizen.expose(
+                        exposure_count,
+                        &self.disease_model,
+                        &self.interventions.mask_status,
+                        &mut self.rng,
+                    )
+                    {
+                        self.statistics
+                            .citizen_exposed(location.clone())
+                            .context(format!(
+                                "Exposing citizen {}",
+                                citizen_id
+                            ))?;
+
+                        if let Some(vaccine_list) =
+                        &mut self.citizens_eligible_for_vaccine
+                        {
+                            vaccine_list.remove(&citizen_id);
                         }
                     }
                 }
-                _ => todo!(),
+                None => {
+                    error!("Citizen {}, does not exist!",citizen_id);
+                }
             }
         }
         Ok(())
@@ -477,7 +493,7 @@ impl Simulator {
                     // Send every Citizen home
                     for mut citizen in &mut self.citizens {
                         let home = citizen.1.household_code.clone();
-                        citizen.1.current_position = ID::Building(home);
+                        citizen.1.current_building_position = home;
                     }
                 }
                 InterventionsEnabled::Vaccination => {

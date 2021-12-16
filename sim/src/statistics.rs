@@ -42,6 +42,7 @@ pub struct Statistics {
     pub workplace_exposed: HashMap<BuildingID, (u32, u32)>,
     /// First Instance, Amount
     pub output_areas_exposed: HashMap<OutputAreaID, (u32, u32)>,
+    pub public_trandport_exposure_count: u32,
 }
 
 impl Statistics {
@@ -56,6 +57,7 @@ impl Statistics {
             buildings_exposed: Default::default(),
             workplace_exposed: Default::default(),
             output_areas_exposed: Default::default(),
+            public_trandport_exposure_count: 0,
         }
     }
     pub fn next(&mut self) {
@@ -126,16 +128,16 @@ impl Statistics {
                 ID::Building(building) => self.expose_building(building),
                 ID::OutputArea(output_area) => self.expose_output_area(output_area),
                 ID::PublicTransport(_) => {
-                    todo!()
+                    self.public_trandport_exposure_count += 1;
                 }
             }
 
             Ok(())
         } else {
             error!("Cannot log citizen being exposed, as no susceptible citizens left");
-            return Err(crate::error::Error::new_simulation_error(String::from(
+            Err(crate::error::Error::new_simulation_error(String::from(
                 "Cannot expose citizen as no citizens are susceptible!",
-            )));
+            )))
         }
     }
 
@@ -190,6 +192,7 @@ impl Default for Statistics {
             buildings_exposed: Default::default(),
             workplace_exposed: Default::default(),
             output_areas_exposed: Default::default(),
+            public_trandport_exposure_count: 0,
         }
     }
 }

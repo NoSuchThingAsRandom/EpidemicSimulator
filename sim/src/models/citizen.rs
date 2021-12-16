@@ -33,7 +33,6 @@ use crate::config::PUBLIC_TRANSPORT_PERCENTAGE;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::interventions::MaskStatus;
 use crate::models::building::BuildingID;
-use crate::models::ID;
 use crate::models::output_area::OutputAreaID;
 
 lazy_static! {
@@ -45,9 +44,15 @@ fn binomial(probability: f64, n: u8) -> f64 {
     1.0 - (1.0 - probability).powf(n as f64)
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, Serialize)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, Serialize)]
 pub struct CitizenID {
     id: Uuid,
+}
+
+impl Default for CitizenID {
+    fn default() -> Self {
+        CitizenID { id: Uuid::new_v4() }
+    }
 }
 
 impl Display for CitizenID {
@@ -71,7 +76,9 @@ pub struct Citizen {
     /// The hour which they leave to work
     end_working_hour: u32,
     /// The building the Citizen is currently at
-    pub current_position: ID,
+    ///
+    /// Note that it will be the starting point, if Citizen is using Public Transport
+    pub current_building_position: BuildingID,
     /// Disease Status
     pub disease_status: DiseaseStatus,
     /// Whether this Citizen wears a mask
@@ -97,7 +104,7 @@ impl Citizen {
             occupation: occupation_type,
             start_working_hour: 9,
             end_working_hour: 17,
-            current_position: ID::Building(household_code),
+            current_building_position: household_code,
             disease_status: DiseaseStatus::Susceptible,
             is_mask_compliant,
             uses_public_transport: RANDOM_DISTRUBUTION.sample(rng) < PUBLIC_TRANSPORT_PERCENTAGE,
@@ -127,7 +134,8 @@ impl Citizen {
                 }
                 // Starts work
                 hour if hour == self.start_working_hour => {
-                    self.current_position = ID::Building(self.workplace_code.clone());
+                    self.current_building_position = self.workplace_code.clone();
+                    self.on_public_transport = None;
                 }
                 // Travelling work to home
                 hour if hour == self.end_working_hour - 1 && self.uses_public_transport => {
@@ -138,9 +146,12 @@ impl Citizen {
                 }
                 // Finish work, goes home
                 hour if hour == self.end_working_hour => {
-                    self.current_position = ID::Building(self.household_code.clone());
+                    self.current_building_position = self.household_code.clone();
+                    self.on_public_transport = None;
                 }
-                _ => {}
+                _ => {
+                    self.on_public_transport = None;
+                }
             }
         }
     }
@@ -185,11 +196,14 @@ impl Citizen {
     pub fn is_susceptible(&self) -> bool {
         self.disease_status == DiseaseStatus::Susceptible
     }
+    pub fn is_infected(&self) -> bool {
+        matches!(self.disease_status, DiseaseStatus::Infected(_))
+    }
 }
 
 impl Display for Citizen {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Citizen {} Has Disease Status {}, Is Currently Located At {}, Resides at {}, Works at {}", self.id, self.disease_status, self.current_position, self.household_code, self.workplace_code)
+        write!(f, "Citizen {} Has Disease Status {}, Is Currently Located At {}, Resides at {}, Works at {}", self.id, self.disease_status, self.current_building_position, self.household_code, self.workplace_code)
     }
 }
 

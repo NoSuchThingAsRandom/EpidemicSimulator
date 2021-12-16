@@ -42,20 +42,7 @@ pub mod building;
 pub mod citizen;
 pub mod output_area;
 pub mod public_transport_route;
-/*
-/// The ID of a physical location
-pub trait ID: Debug + Display+Hash {//+ Clone + Hash {
-    fn get_id(&self) -> Uuid;
-    //fn output_area_id(&self)->OutputAreaID;
-}
 
-//impl Eq for ID {}
-
-impl PartialEq for ID {
-    fn eq(&self, other: &Self) -> bool {
-        self.get_id().eq(&other.get_id())
-    }
-}*/
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize)]
 pub enum ID {
     Building(BuildingID),
@@ -65,7 +52,17 @@ pub enum ID {
 
 impl Display for ID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        match self {
+            ID::Building(id) => {
+                write!(f, "{}", id)
+            }
+            ID::OutputArea(id) => {
+                write!(f, "{}", id)
+            }
+            ID::PublicTransport(id) => {
+                write!(f, "{}", id)
+            }
+        }
     }
 }
 

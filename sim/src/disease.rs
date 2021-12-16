@@ -24,12 +24,8 @@ use std::hash::Hash;
 use serde::Serialize;
 use uuid::Uuid;
 
-use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
-
 use crate::interventions::MaskStatus;
-use crate::models::building::BuildingID;
 use crate::models::ID;
-use crate::models::output_area::OutputAreaID;
 
 #[derive(PartialEq, Debug, Serialize, Clone)]
 pub enum DiseaseStatus {

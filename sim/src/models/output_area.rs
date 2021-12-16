@@ -26,7 +26,6 @@ use enum_map::EnumMap;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
 use serde::Serialize;
-use uuid::Uuid;
 
 use load_census_data::CensusDataEntry;
 use load_census_data::tables::population_and_density_per_output_area::{
@@ -36,7 +35,6 @@ use load_census_data::tables::population_and_density_per_output_area::{
 use crate::config::HOUSEHOLD_SIZE;
 use crate::models::building::{Building, BuildingID, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
-use crate::models::ID;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
 pub struct OutputAreaID {
@@ -187,7 +185,7 @@ impl Clone for OutputArea {
             buildings: buildings_copy,
             polygon: self.polygon.clone(),
             total_residents: self.total_residents,
-            mask_distribution: self.mask_distribution.clone(),
+            mask_distribution: self.mask_distribution,
         }
     }
 }

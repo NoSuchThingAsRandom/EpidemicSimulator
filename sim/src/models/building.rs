@@ -31,7 +31,6 @@ use load_census_data::tables::population_and_density_per_output_area::AreaClassi
 
 use crate::error::Error;
 use crate::models::citizen::CitizenID;
-use crate::models::ID;
 use crate::models::output_area::OutputAreaID;
 
 /// This is used to represent a building location
