@@ -408,7 +408,7 @@ impl Simulator {
                         ))?;
                     let building = building.as_ref();
                     let occupants = building.occupants().clone();
-                    self.expose_citizens(occupants, exposure_count, ID::Building(building_id.clone()));
+                    self.expose_citizens(occupants, exposure_count, ID::Building(building_id.clone()))?;
                 }
 
                 None => {
@@ -424,10 +424,10 @@ impl Simulator {
             let mut current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
             while let Some((citizen, is_infected)) = citizens.pop() {
                 // If bus is full, generate a new one
-                if let Err(_) = current_bus.add_citizen(citizen) {
+                if current_bus.add_citizen(citizen).is_err() {
                     // Only need to save buses with exposures
                     if current_bus.exposure_count > 0 {
-                        self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()));
+                        self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()))?;
                     }
                     current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
                     current_bus.add_citizen(citizen).context("Failed to add Citizen to new bus")?;
@@ -437,7 +437,7 @@ impl Simulator {
                 }
             }
             if current_bus.exposure_count > 0 {
-                self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()));
+                self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()))?;
             }
         }
         // Apply Public Transport Exposures

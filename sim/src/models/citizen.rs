@@ -175,6 +175,7 @@ impl Citizen {
             disease_model.get_exposure_chance(
                 self.disease_status == DiseaseStatus::Vaccinated,
                 mask_status,
+                self.is_mask_compliant && self.on_public_transport.is_some()
             ),
             exposure_total as u8,
         );

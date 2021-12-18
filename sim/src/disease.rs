@@ -113,7 +113,7 @@ impl DiseaseModel {
     pub fn covid() -> DiseaseModel {
         DiseaseModel {
             reproduction_rate: 2.5,
-            exposure_chance: 0.4,
+            exposure_chance: 0.04,
             death_rate: 0.2,
             exposed_time: 4 * 24,
             infected_time: 14 * 24,
@@ -123,11 +123,11 @@ impl DiseaseModel {
         }
     }
     // TODO Redo this function
-    pub fn get_exposure_chance(&self, is_vaccinated: bool, mask_status: &MaskStatus) -> f64 {
+    pub fn get_exposure_chance(&self, is_vaccinated: bool, global_mask_status: &MaskStatus, is_on_public_transport_and_mask_compliant: bool) -> f64 {
         let mut chance = self.exposure_chance
-            - match mask_status {
+            - match global_mask_status {
             MaskStatus::None(_) => 0.0,
-            MaskStatus::PublicTransport(_) => 0.2,
+            MaskStatus::PublicTransport(_) => if is_on_public_transport_and_mask_compliant { 0.2 } else { 0.0 },
             MaskStatus::Everywhere(_) => 0.4,
         }
             - if is_vaccinated { 1.0 } else { 0.0 };
