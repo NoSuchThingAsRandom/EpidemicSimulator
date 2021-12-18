@@ -28,7 +28,7 @@ use std::time::Instant;
 use anyhow::Context;
 use geo::prelude::{BoundingRect, Contains};
 use geo_types::{Coordinate, LineString, Point, point, Polygon};
-use log::info;
+use log::{debug, info};
 use serde::Serialize;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
@@ -36,6 +36,7 @@ use shapefile::Shape;
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
 
+use crate::config::get_memory_usage;
 use crate::models::building::BuildingID;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;
@@ -90,6 +91,9 @@ impl PointLookup {
         for row_offset in 0..(bounds.height() as usize / self.box_size) {
             // Extend rows to match new index
             let row_index = bounds.min().y as usize + row_offset;
+            if self.boxes.len() < row_index + 1 {
+                debug!("Creating {} rows", row_index + 1-self.boxes.len());
+            }
             while self.boxes.len() < row_index + 1 {
                 self.boxes.push(Vec::new());
             }
@@ -98,6 +102,9 @@ impl PointLookup {
                 let row_count = self.boxes.len();
                 let current_row = self.boxes.get_mut(row_index).unwrap_or_else(|| panic!("Extending the rows failed in adding area. Row Size: {}, Index: {}", row_count, row_index));
                 // Extend cols to match new index
+                if current_row.len() < row_index + 1 {
+                    debug!("Creating {} cols", row_index + 1-current_row.len());
+                }
                 while current_row.len() < col_index + 1 {
                     current_row.push(Vec::new());
                 }
@@ -128,11 +135,11 @@ pub fn build_polygons_for_output_areas(
         shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
         })?;
-    let start_time = Instant::now();
+    let mut start_time = Instant::now();
     let mut data = HashMap::new();
     let mut lookup = PointLookup::default();
     info!("Loading map data from file...");
-    for (_, shape_record) in reader.iter_shapes_and_records().enumerate() {
+    for (index, shape_record) in reader.iter_shapes_and_records().enumerate() {
         let (shape, record) = shape_record.map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
         })?;
@@ -194,6 +201,11 @@ pub fn build_polygons_for_output_areas(
             }
             lookup.add_area(code.to_string(), &new_poly);
             data.insert(OutputAreaID::from_code(code), new_poly);
+            if index % 10000 == 0 {
+                debug!("Built {} polygons in time: {}",index*10000,start_time.elapsed().as_secs_f64());
+                start_time = Instant::now();
+                debug!("Current memory usage: {}", get_memory_usage().expect("Failed to retrieve memory usage"));
+            }
         } else {
             return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::InvalidDataType {
