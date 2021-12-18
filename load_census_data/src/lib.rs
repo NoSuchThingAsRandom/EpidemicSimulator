@@ -152,7 +152,7 @@ impl CensusData {
         census_directory: &str,
         region_code: &str,
         table_name: CensusTableNames,
-    ) -> Result<HashMap<String, T>, CensusError> {
+    ) -> Result<HashMap<String, T>, DataLoadingError> {
         let filename =
             String::new() + census_directory + region_code + "/" + table_name.get_filename();
         CensusData::read_generic_table_from_disk::<T, U>(&filename)
@@ -256,7 +256,7 @@ impl CensusData {
         census_directory: String,
         region_code: String,
         _should_download: bool,
-    ) -> Result<CensusData, CensusError> {
+    ) -> Result<CensusData, DataLoadingError> {
         // Build population table
         let mut population_counts = CensusData::read_table_and_generate_filename::<
             PreProcessingPopulationDensityRecord,
@@ -316,6 +316,7 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
+            osm_buildings: Default::default()
         })
     }
     pub async fn resume_download(

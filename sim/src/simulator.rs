@@ -31,6 +31,7 @@ use rand::thread_rng;
 
 use load_census_data::CensusData;
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
+use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
@@ -40,9 +41,9 @@ use crate::config::{
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
+use crate::models::{build_polygons_for_output_areas, ID};
 use crate::models::building::{Building, BuildingID, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
-use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::statistics::Statistics;
@@ -80,22 +81,23 @@ impl Simulator {
         let mut citizens = HashMap::new();
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
+            let output_id = OutputAreaID::from_code(entry.output_area_code.to_string());
             let polygon = output_areas_polygons
-                .remove(&entry.output_area_code)
+                .remove(&output_id)
                 .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Building output areas map".to_string(),
-                        key: entry.output_area_code.to_string(),
+                        key: output_id.to_string(),
                     },
                 })
                 .context(format!(
                     "Loading polygon shape for area: {}",
-                    entry.output_area_code.to_string()
+                    output_id
                 ))?;
             starting_population += entry.total_population_size() as u32;
             let mut new_area = OutputArea::new(
-                OutputAreaID::from_code(entry.output_area_code.clone()),
-                None,
+                output_id,
+                polygon,
                 disease_model.mask_percentage,
             )
                 .context("Failed to create Output Area")?;
@@ -189,7 +191,7 @@ impl Simulator {
                     },
                 })?;
             let household_census_data = census_data
-                .for_output_area_code(household_output_area_code.code())
+                .for_output_area_code(household_output_area_code.code().to_string())
                 .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Cannot retrieve Census Data for output area ".to_string(),

@@ -23,7 +23,6 @@ use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
 use enum_map::EnumMap;
-use enum_map::EnumMap;
 use geo_types::Point;
 use rand::{Rng, RngCore};
 use rand::distributions::{Bernoulli, Distribution};

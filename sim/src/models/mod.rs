@@ -71,7 +71,7 @@ impl Display for ID {
 
 pub struct PointLookup {
     // Row -> Column -> Code
-    boxes: Vec<Vec<Vec<String>>>,
+    boxes: Vec<Vec<Vec<OutputAreaID>>>,
     box_size: usize,
 }
 
@@ -100,11 +100,11 @@ impl PointLookup {
                     current_row.push(Vec::new());
                 }
                 let cell = current_row.get_mut(col_index).expect("Extending the columns failed, in adding area");
-                cell.push(code.to_string());
+                cell.push(OutputAreaID::from_code(code.to_string()));
             }
         }
     }
-    pub fn get_possible_area_codes(&self, point: &geo_types::Point<isize>) -> Option<&Vec<String>> {
+    pub fn get_possible_area_codes(&self, point: &geo_types::Point<isize>) -> Option<&Vec<OutputAreaID>> {
         if point.x() < 0 || point.y() < 0 {
             panic!("Don't support negative Coordinates!");
         }
@@ -120,7 +120,7 @@ impl PointLookup {
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,
-) -> Result<(HashMap<String, geo_types::Polygon<isize>>, PointLookup), DataLoadingError> {
+) -> Result<(HashMap<OutputAreaID, geo_types::Polygon<isize>>, PointLookup), DataLoadingError> {
     let mut reader =
         shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
@@ -190,7 +190,7 @@ pub fn build_polygons_for_output_areas(
                 });
             }
             lookup.add_area(code.to_string(), &new_poly);
-            data.insert(code, new_poly);
+            data.insert(OutputAreaID::from_code(code), new_poly);
         } else {
             return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::InvalidDataType {
@@ -207,7 +207,7 @@ pub fn build_polygons_for_output_areas(
     Ok((data, lookup))
 }
 
-pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<String, Polygon<isize>>, point_lookup: &PointLookup) -> anyhow::Result<String> {
+pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<OutputAreaID, Polygon<isize>>, point_lookup: &PointLookup) -> anyhow::Result<OutputAreaID> {
     let areas = point_lookup.get_possible_area_codes(&point).unwrap();
     for poss_area in areas {
         let poly = polygons.get(poss_area).ok_or_else(|| DataLoadingError::ValueParsingError {
@@ -218,7 +218,7 @@ pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap
         }).context(format!("Area: {}, does not exist", poss_area))?;
 
         if poly.contains(point) {
-            return Ok(poss_area.to_string());
+            return Ok(poss_area.clone());
         }
     }
     Err(DataLoadingError::Misc { source: "No matching area for point".to_string() }).context("Doens;'t esit")
