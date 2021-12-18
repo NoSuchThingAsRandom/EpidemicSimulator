@@ -26,9 +26,8 @@ use std::hash::Hash;
 use std::time::Instant;
 
 use anyhow::Context;
-use geo::orient::Direction::Default;
 use geo::prelude::{BoundingRect, Contains};
-use geo_types::{Coordinate, line_string, LineString, Point, point, Polygon};
+use geo_types::{Coordinate, LineString, Point, point, Polygon};
 use log::info;
 use serde::Serialize;
 use shapefile::dbase::FieldValue;
@@ -75,12 +74,14 @@ pub struct PointLookup {
     box_size: usize,
 }
 
+impl std::default::Default for PointLookup {
+    fn default() -> Self {
+        // TODO Find a better box size?
+        PointLookup { boxes: Vec::with_capacity(2000), box_size: 2000 }
+    }
+}
 
 impl PointLookup {
-    pub fn new() -> PointLookup {
-        // TODO Find a better box size?
-        PointLookup { boxes: Vec::with_capacity(2000), box_size: 200 }
-    }
     pub fn add_area(&mut self, code: String, polygon: &geo_types::Polygon<isize>) {
         let bounds = polygon.bounding_rect().expect("Failed to obtain bounding rect for polygon!");
         if bounds.min().x < 0 || bounds.min().y < 0 {
@@ -89,17 +90,19 @@ impl PointLookup {
         for row_offset in 0..(bounds.height() as usize / self.box_size) {
             // Extend rows to match new index
             let row_index = bounds.min().y as usize + row_offset;
-            while self.boxes.len() < row_index {
+            while self.boxes.len() < row_index + 1 {
                 self.boxes.push(Vec::new());
             }
             for col_offset in 0..(bounds.width() as usize / self.box_size) {
                 let col_index = bounds.min().x as usize + col_offset;
-                let current_row = self.boxes.get_mut(col_index).expect("Extending the rows failed in adding area");
+                let row_count = self.boxes.len();
+                let current_row = self.boxes.get_mut(row_index).unwrap_or_else(|| panic!("Extending the rows failed in adding area. Row Size: {}, Index: {}", row_count, row_index));
                 // Extend cols to match new index
-                while current_row.len() < (col_index) as usize {
+                while current_row.len() < col_index + 1 {
                     current_row.push(Vec::new());
                 }
-                let cell = current_row.get_mut(col_index).expect("Extending the columns failed, in adding area");
+                let column_size = current_row.len();
+                let cell = current_row.get_mut(col_index).unwrap_or_else(|| panic!("Extending the columns failed, in adding area. Col Size: {}, Index: {}", column_size, col_index));
                 cell.push(OutputAreaID::from_code(code.to_string()));
             }
         }
@@ -113,7 +116,7 @@ impl PointLookup {
                 return Some(cell);
             }
         }
-        return None;
+        None
     }
 }
 
@@ -127,7 +130,7 @@ pub fn build_polygons_for_output_areas(
         })?;
     let start_time = Instant::now();
     let mut data = HashMap::new();
-    let mut lookup = PointLookup::new();
+    let mut lookup = PointLookup::default();
     info!("Loading map data from file...");
     for (_, shape_record) in reader.iter_shapes_and_records().enumerate() {
         let (shape, record) = shape_record.map_err(|e| DataLoadingError::IOError {
@@ -208,7 +211,7 @@ pub fn build_polygons_for_output_areas(
 }
 
 pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<OutputAreaID, Polygon<isize>>, point_lookup: &PointLookup) -> anyhow::Result<OutputAreaID> {
-    let areas = point_lookup.get_possible_area_codes(&point).unwrap();
+    let areas = point_lookup.get_possible_area_codes(point).unwrap();
     for poss_area in areas {
         let poly = polygons.get(poss_area).ok_or_else(|| DataLoadingError::ValueParsingError {
             source: ParseErrorType::MissingKey {
@@ -221,5 +224,5 @@ pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap
             return Ok(poss_area.clone());
         }
     }
-    Err(DataLoadingError::Misc { source: "No matching area for point".to_string() }).context("Doens;'t esit")
+    Err(DataLoadingError::Misc { source: "No matching area for point".to_string() }).context("Retrieving Output Area for point")
 }
