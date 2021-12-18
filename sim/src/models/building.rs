@@ -30,6 +30,8 @@ use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::error::Error;
+use crate::models::citizen::CitizenID;
+use crate::models::output_area::OutputAreaID;
 
 /// This is used to represent a building location
 ///
@@ -38,13 +40,13 @@ use crate::error::Error;
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
 #[derive(Clone, Debug, Serialize)]
-pub struct BuildingCode {
-    output_area_code: String,
+pub struct BuildingID {
+    output_area_id: OutputAreaID,
     area_type: AreaClassification,
     building_id: uuid::Uuid,
 }
 
-impl BuildingCode {
+impl BuildingID {
     /// Generates a new `BuildingCode` in the given position, with a new random building ID (`Uuid`)
     ///
     /// # Example
@@ -61,25 +63,25 @@ impl BuildingCode {
     /// assert_eq!(building_code.area_type(), area_type);
     ///
     /// ```
-    pub fn new(output_code: String, area_type: AreaClassification) -> BuildingCode {
-        BuildingCode {
-            output_area_code: output_code,
+    pub fn new(output_area_id: OutputAreaID, area_type: AreaClassification) -> BuildingID {
+        BuildingID {
+            output_area_id,
             area_type,
             building_id: Uuid::new_v4(),
         }
     }
 
     /// Creates a new Building Code, but in the same Output Area and Area Type as the given BuildingCode
-    pub(crate) fn new_from(other: BuildingCode) -> Self {
-        BuildingCode {
-            output_area_code: other.output_area_code.to_string(),
+    pub(crate) fn new_from(other: BuildingID) -> Self {
+        BuildingID {
+            output_area_id: other.output_area_id.clone(),
             area_type: other.area_type,
             building_id: Default::default(),
         }
     }
     /// Returns the `OutputArea` code
-    pub fn output_area_code(&self) -> String {
-        String::from(&self.output_area_code)
+    pub fn output_area_code(&self) -> OutputAreaID {
+        self.output_area_id.clone()
     }
     /// Returns the type of area this building is located in
     pub fn area_type(&self) -> AreaClassification {
@@ -91,30 +93,30 @@ impl BuildingCode {
     }
 }
 
-impl Display for BuildingCode {
+impl Display for BuildingID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "Output Area: {}, Area Type: {:?}, Building ID: {}",
-            self.output_area_code, self.area_type, self.building_id
+            self.output_area_id, self.area_type, self.building_id
         )
     }
 }
 
-impl Hash for BuildingCode {
+impl Hash for BuildingID {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.building_id.hash(state);
-        self.output_area_code.hash(state)
+        self.output_area_id.hash(state)
     }
 }
 
-impl PartialEq<Self> for BuildingCode {
+impl PartialEq<Self> for BuildingID {
     fn eq(&self, other: &Self) -> bool {
-        self.output_area_code == other.output_area_code && self.building_id.eq(&other.building_id)
+        self.output_area_id == other.output_area_id && self.building_id.eq(&other.building_id)
     }
 }
 
-impl Eq for BuildingCode {}
+impl Eq for BuildingID {}
 
 /// This represents a home for Citizens
 ///
@@ -124,11 +126,11 @@ pub trait Building: Display + Debug {
     //fn new(building_code: BuildingCode) -> Self;
 
     /// Adds the new citizen to this building
-    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), Error>;
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error>;
     /// Returns the AreaCode where this building is located
-    fn building_code(&self) -> &BuildingCode;
+    fn id(&self) -> &BuildingID;
     /// Returns a list of ids of occupants that are here
-    fn occupants(&self) -> &Vec<Uuid>;
+    fn occupants(&self) -> &Vec<CitizenID>;
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -148,16 +150,16 @@ impl Serialize for dyn Building {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Household {
     /// This is unique to the specific output area - ~250 households
-    building_code: BuildingCode,
+    building_code: BuildingID,
     /// A list of all the ID's of citizens who are at this building
-    occupants: Vec<Uuid>,
+    occupants: Vec<CitizenID>,
 }
 
 impl Household {
-    pub(crate) fn new(building_code: BuildingCode) -> Self {
+    pub(crate) fn new(building_code: BuildingID) -> Self {
         Household {
             building_code,
             occupants: Vec::new(),
@@ -166,16 +168,16 @@ impl Household {
 }
 
 impl Building for Household {
-    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), Error> {
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error> {
         self.occupants.push(citizen_id);
         Ok(())
     }
 
-    fn building_code(&self) -> &BuildingCode {
+    fn id(&self) -> &BuildingID {
         &self.building_code
     }
 
-    fn occupants(&self) -> &Vec<Uuid> {
+    fn occupants(&self) -> &Vec<CitizenID> {
         &self.occupants
     }
 
@@ -196,19 +198,19 @@ impl Display for Household {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Workplace {
     /// This is unique to the specific output area - ~250 households
-    building_code: BuildingCode,
+    building_code: BuildingID,
     /// A list of all the ID's of citizens who are at this building
-    occupants: Vec<Uuid>,
+    occupants: Vec<CitizenID>,
     floor_space: u16,
     workplace_occupation_type: OccupationType,
 }
 
 impl Workplace {
     pub fn new(
-        building_code: BuildingCode,
+        building_code: BuildingID,
         floor_space: u16,
         occupation_type: OccupationType,
     ) -> Self {
@@ -228,7 +230,7 @@ impl Workplace {
 }
 
 impl Building for Workplace {
-    fn add_citizen(&mut self, citizen_id: Uuid) -> Result<(), Error> {
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error> {
         if self.is_at_capacity() {
             return Err(Error::Default {
                 message: "Workplace has full occupancy, so cannot add new occupant".to_string(),
@@ -238,11 +240,11 @@ impl Building for Workplace {
         Ok(())
     }
 
-    fn building_code(&self) -> &BuildingCode {
+    fn id(&self) -> &BuildingID {
         &self.building_code
     }
 
-    fn occupants(&self) -> &Vec<Uuid> {
+    fn occupants(&self) -> &Vec<CitizenID> {
         &self.occupants
     }
     fn as_any(&self) -> &dyn Any {

@@ -104,7 +104,7 @@ impl PreProcessingTable for PreProcessingPopulationDensityRecord {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct PopulationRecord {
     //pub geography_code: String,
     //pub geography_type: String,

@@ -106,7 +106,7 @@ impl PreProcessingTable for PreProcessingOccupationCountRecord {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct OccupationCountRecord {
     pub occupation_count: EnumMap<OccupationType, u32>,
     /// This is the sum of the values per occupation, so can be used for random generation

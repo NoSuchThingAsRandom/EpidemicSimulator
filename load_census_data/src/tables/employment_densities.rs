@@ -24,6 +24,7 @@ use crate::tables::occupation_count::OccupationType;
 ///
 /// Page 9 of Employment Densities Guide: 2nd Edition: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/378203/employ-den.pdf
 /// https://www.gov.uk/government/publications/employment-densities-guide
+#[derive(Copy, Clone)]
 pub struct EmploymentDensities {}
 
 impl EmploymentDensities {

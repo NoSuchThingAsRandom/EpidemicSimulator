@@ -5,6 +5,13 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dev-dependencies]
+criterion = "0.3"
+cpuprofiler = "0.0.4"
+[[bench]]
+name = "bench"
+harness = false
+
 [dependencies]
 load_census_data = { path = "../load_census_data" }
 sim = { path = "../sim" }

@@ -42,7 +42,7 @@ impl PreProcessingTable for PreProcessingWorkplaceResidentialRecord {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WorkplaceResidentalRecord {
     pub workplace_count: HashMap<String, u32>,
     pub total_workplace_count: u32,

@@ -19,11 +19,15 @@
  */
 
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
 use enum_map::EnumMap;
+use enum_map::EnumMap;
 use geo_types::Point;
 use rand::{Rng, RngCore};
+use rand::distributions::{Bernoulli, Distribution};
+use serde::Serialize;
 use uuid::Uuid;
 
 use load_census_data::CensusDataEntry;
@@ -33,8 +37,28 @@ use load_census_data::tables::population_and_density_per_output_area::{
 };
 
 use crate::config::HOUSEHOLD_SIZE;
-use crate::models::building::{Building, BuildingCode, Household, Workplace};
-use crate::models::citizen::Citizen;
+use crate::models::building::{Building, BuildingID, Household, Workplace};
+use crate::models::citizen::{Citizen, CitizenID};
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
+pub struct OutputAreaID {
+    code: String,
+}
+
+impl OutputAreaID {
+    pub fn from_code(code: String) -> OutputAreaID {
+        OutputAreaID { code }
+    }
+    pub fn code(&self) -> &String {
+        &self.code
+    }
+}
+
+impl Display for OutputAreaID {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ID: {}", self.code)
+    }
+}
 
 /// This is a container for a Census Output Area
 ///
@@ -44,13 +68,16 @@ use crate::models::citizen::Citizen;
 #[derive(Debug)]
 pub struct OutputArea {
     /// The Census Data Output Area Code
-    pub output_area_code: String,
+    pub output_area_id: OutputAreaID,
 
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
-    pub buildings: EnumMap<AreaClassification, HashMap<Uuid, Box<dyn Building>>>,
+    pub buildings: EnumMap<AreaClassification, HashMap<BuildingID, Box<dyn Building>>>,
     /// A polygon for drawing this output area
     pub polygon: geo_types::Polygon<isize>,
     pub total_residents: u32,
+    /// The distribution to use to determine whether a Citizen is wearing a mask\
+    /// Is stored as a distribution to increase speed
+    mask_distribution: Bernoulli,
 }
 
 impl OutputArea {
@@ -58,14 +85,17 @@ impl OutputArea {
     ///
     /// Builds the citizens and households for this area
     pub fn new(
-        output_area_code: String,
+        output_area_id: OutputAreaID,
         polygon: geo_types::Polygon<isize>,
+        mask_compliance_ratio: f64,
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {
-            output_area_code,
+            output_area_id,
             buildings: EnumMap::default(),
             polygon,
             total_residents: 0,
+            mask_distribution: Bernoulli::new(mask_compliance_ratio)
+                .context("Failed to initialise the mask distribution")?,
         })
     }
     pub fn add_building(&mut self, location: Point<isize>, raw_building_type: RawBuildingTypes) {
@@ -74,10 +104,8 @@ impl OutputArea {
     pub fn generate_citizens(
         &mut self,
         census_data: CensusDataEntry,
-        // TODO Check if data on mask compliance ratio
-        mask_compliance_ratio: f64,
         rng: &mut dyn RngCore,
-    ) -> anyhow::Result<HashMap<Uuid, Citizen>> {
+    ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
         // TODO Fix this
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
         let area = AreaClassification::Total;
@@ -87,23 +115,24 @@ impl OutputArea {
         // Should use census data instead
         let household_number = pop_count[PersonType::All] / HOUSEHOLD_SIZE;
         let mut generated_population = 0;
-        let mut households_for_area: HashMap<Uuid, Box<dyn Building>> =
+        let mut households_for_area: HashMap<BuildingID, Box<dyn Building>> =
             HashMap::with_capacity(household_number as usize);
 
         // Build households
         for _ in 0..household_number {
-            let household_building_code = BuildingCode::new(self.output_area_code.clone(), area);
-            let mut household = Household::new(household_building_code.clone());
+            let household_building_id = BuildingID::new(self.output_area_id.clone(), area);
+            let mut household = Household::new(household_building_id.clone());
             for _ in 0..HOUSEHOLD_SIZE {
                 let occupation = census_data
                     .occupation_count
                     .get_random_occupation(rng)
                     .context("Cannot generate a random occupation for new Citizen!")?;
                 let citizen = Citizen::new(
-                    household_building_code.clone(),
-                    household_building_code.clone(),
+                    household_building_id.clone(),
+                    household_building_id.clone(),
                     occupation,
-                    rng.gen_bool(mask_compliance_ratio),
+                    self.mask_distribution.sample(rng),
+                    rng,
                 );
                 household
                     .add_citizen(citizen.id())
@@ -112,7 +141,7 @@ impl OutputArea {
                 self.total_residents += 1;
                 generated_population += 1;
             }
-            households_for_area.insert(household_building_code.building_id(), Box::new(household));
+            households_for_area.insert(household_building_id, Box::new(household));
             if generated_population >= pop_count[PersonType::All] {
                 break;
             }
@@ -120,7 +149,7 @@ impl OutputArea {
         self.buildings[area] = households_for_area;
         Ok(citizens)
     }
-    fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<Uuid> {
+    fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<CitizenID> {
         let mut citizens = Vec::new();
         for (_, data) in self.buildings.iter() {
             for building in data.values() {
@@ -132,10 +161,38 @@ impl OutputArea {
         }
         citizens
     }
-    pub fn get_residents(&self) -> Vec<Uuid> {
+    pub fn get_residents(&self) -> Vec<CitizenID> {
         self.extract_occupants_for_building_type::<Household>()
     }
-    pub fn get_workers(&self) -> Vec<Uuid> {
+    pub fn get_workers(&self) -> Vec<CitizenID> {
         self.extract_occupants_for_building_type::<Workplace>()
+    }
+}
+
+impl Clone for OutputArea {
+    fn clone(&self) -> Self {
+        let mut buildings_copy = EnumMap::default();
+        for (area, buildings_old) in self.buildings.iter() {
+            let mut new: HashMap<BuildingID, Box<dyn Building>> =
+                HashMap::with_capacity(buildings_old.len());
+            for (code, current_building) in buildings_old {
+                let current_building = current_building.as_any();
+                if let Some(household) = current_building.downcast_ref::<Household>() {
+                    new.insert(code.clone(), Box::new(household.clone()));
+                } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
+                    new.insert(code.clone(), Box::new(workplace.clone()));
+                } else {
+                    unimplemented!()
+                }
+            }
+            buildings_copy[area] = new;
+        }
+        OutputArea {
+            output_area_id: self.output_area_id.clone(),
+            buildings: buildings_copy,
+            polygon: self.polygon.clone(),
+            total_residents: self.total_residents,
+            mask_distribution: self.mask_distribution,
+        }
     }
 }

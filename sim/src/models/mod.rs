@@ -21,6 +21,8 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 use std::time::Instant;
 
 use anyhow::Context;
@@ -28,15 +30,44 @@ use geo::orient::Direction::Default;
 use geo::prelude::{BoundingRect, Contains};
 use geo_types::{Coordinate, line_string, LineString, Point, point, Polygon};
 use log::info;
+use serde::Serialize;
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
 
+use crate::models::building::BuildingID;
+use crate::models::output_area::OutputAreaID;
+use crate::models::public_transport_route::PublicTransportID;
+
 pub mod building;
 pub mod citizen;
 pub mod output_area;
+pub mod public_transport_route;
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize)]
+pub enum ID {
+    Building(BuildingID),
+    OutputArea(OutputAreaID),
+    PublicTransport(PublicTransportID),
+}
+
+impl Display for ID {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ID::Building(id) => {
+                write!(f, "{}", id)
+            }
+            ID::OutputArea(id) => {
+                write!(f, "{}", id)
+            }
+            ID::PublicTransport(id) => {
+                write!(f, "{}", id)
+            }
+        }
+    }
+}
 
 pub struct PointLookup {
     // Row -> Column -> Code
