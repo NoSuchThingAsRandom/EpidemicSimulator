@@ -1,5 +1,5 @@
 [workspace]
 
-members = ["load_census_data", "sim", "run"]
+members = ["load_census_data", "sim", "run", "trapezium_map"]
 
 resolver = "2"

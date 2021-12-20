@@ -110,12 +110,16 @@ impl Simulator {
         }
         info!("Built residential population in {:?}", start.elapsed());
         debug!("Current memory usage: {}", get_memory_usage()?);
+
+
         use crate::models::get_output_area_containing_point;
         // Assign buildings
-        for (location, building_type) in &census_data.osm_buildings {
-            if let Ok(area_code) = get_output_area_containing_point(&location, &output_areas_polygons, &point_lookup) {
-                if let Some(area) = output_areas.get_mut(&area_code) {
-                    area.add_building(*location, *building_type);
+        for (building_type, buildings) in &census_data.osm_buildings.building_locations {
+            for building in buildings {
+                if let Ok(area_code) = get_output_area_containing_point(building, &output_areas_polygons, &point_lookup) {
+                    if let Some(area) = output_areas.get_mut(&area_code) {
+                        area.add_building(*building, *building_type);
+                    }
                 }
             }
         }

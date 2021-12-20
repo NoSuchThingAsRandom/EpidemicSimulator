@@ -31,7 +31,7 @@ use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
-use crate::osm_parsing::{RawBuildingTypes, read_osm_data};
+use crate::osm_parsing::{OSMRawBuildings, RawBuildingTypes};
 use crate::parsing_error::DataLoadingError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::employment_densities::EmploymentDensities;
@@ -96,7 +96,7 @@ pub struct CensusData {
     pub workplace_density: EmploymentDensities,
     /// Residential Area -> Workplace Area -> Count
     pub residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
-    pub osm_buildings: HashMap<Point<isize>, RawBuildingTypes>,
+    pub osm_buildings: OSMRawBuildings,
 }
 
 /// Initialization
@@ -248,7 +248,7 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: read_osm_data(OSM_FILENAME.to_string())?,
+            osm_buildings: OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string())?,
         })
     }
     /// Attempts to load all the Census Tables stored on disk into memory
@@ -316,7 +316,7 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: Default::default()
+            osm_buildings: OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string())?
         })
     }
     pub async fn resume_download(

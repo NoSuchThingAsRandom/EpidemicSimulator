@@ -27,7 +27,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use geo::prelude::{BoundingRect, Contains};
-use geo_types::{Coordinate, LineString, Point, point, Polygon};
+use geo_types::{Coordinate, LineString, Point, Polygon};
 use log::{debug, info};
 use serde::Serialize;
 use shapefile::dbase::FieldValue;
@@ -84,6 +84,7 @@ impl std::default::Default for PointLookup {
 
 impl PointLookup {
     pub fn add_area(&mut self, code: String, polygon: &geo_types::Polygon<isize>) {
+        return;
         let bounds = polygon.bounding_rect().expect("Failed to obtain bounding rect for polygon!");
         if bounds.min().x < 0 || bounds.min().y < 0 {
             panic!("Don't support negative Coordinates!");

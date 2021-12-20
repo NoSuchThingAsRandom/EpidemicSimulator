@@ -18,8 +18,16 @@
  *
  */
 //! This is used to convert latitude and longitude to grid coordinates (National Grid Ordnance Survey - OGB36)
-pub fn decimal_latitude_and_longitude_to_coordinates(latitude: f64, longitude: f64) -> (f64, f64) {
-    wgs84_to_osbg36(lat_lon_to_cartesian(latitude, longitude))
+pub fn decimal_latitude_and_longitude_to_coordinates(latitude: f64, longitude: f64) -> (isize, isize) {
+    transform(wgs84_to_osbg36(lat_lon_to_cartesian(latitude, longitude)))
+}
+
+fn transform(position: (f64, f64)) -> (isize, isize) {
+    // TODO Do we need to keep decimal precision?
+    (
+        (position.0 * 10.0).round() as isize / 100,
+        (position.0 * 10.0).round() as isize / 100,
+    )
 }
 
 pub fn main() {
