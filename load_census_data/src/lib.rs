@@ -87,7 +87,7 @@ impl<'a> CensusDataEntry<'a> {
 }
 
 /// This is a container for all the Census Data Tables
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct CensusData {
     /// The list of output area codes that are valid and complete (records exist for each table)
     pub valid_areas: HashSet<String>,

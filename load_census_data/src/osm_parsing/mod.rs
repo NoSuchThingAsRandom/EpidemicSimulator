@@ -20,25 +20,35 @@
 //! Used to load in building types and locations from an OSM file
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs::File;
+use std::io::{Read, Write};
 
 use geo_types::Point;
 use log::{debug, info};
 use osmpbf::DenseTagIter;
+use rand::prelude::{IteratorRandom, SliceRandom};
+use rand::thread_rng;
+use serde::{Deserialize, Serialize};
+use voronoi::{DCEL, make_polygons, voronoi};
 
 use crate::DataLoadingError;
+use crate::osm_parsing::draw_vorinni::draw;
 use crate::osm_parsing::vorini_generator::Vorinni;
 
-mod convert;
+pub mod convert;
 mod vorini_generator;
+mod draw_vorinni;
 
+// From guesstimating on: https://maps.nls.uk/geo/explore/#zoom=19&lat=53.94849&lon=-1.03067&layers=170&b=1&marker=53.948300,-1.030701
 pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (470338, 519763);
 pub const YORKSHIRE_AND_HUMBER_BOTTOM_LEFT: (u32, u32) = (363749, 383066);
 pub const TOP_RIGHT_BOUNDARY: (isize, isize) = (YORKSHIRE_AND_HUMBER_TOP_RIGHT.0 as isize, YORKSHIRE_AND_HUMBER_TOP_RIGHT.1 as isize);
 pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.0 as isize, YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.1 as isize);
 //pub const GRID_SIZE: (usize, usize) = ((TOP_RIGHT_BOUNDARY.0 - BOTTOM_LEFT_BOUNDARY.0) as usize, (TOP_RIGHT_BOUNDARY.1 - BOTTOM_LEFT_BOUNDARY.1) as usize);
-pub const GRID_SIZE: usize = 15000;
+pub const GRID_SIZE: usize = 20000;
+const DUMP_TO_FILE: bool = false;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum RawBuildingTypes {
     Shop,
     School,
@@ -82,10 +92,9 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
     }
 }
 
-#[derive(Clone)]
 pub struct OSMRawBuildings {
     pub building_locations: HashMap<RawBuildingTypes, Vec<Point<isize>>>,
-    pub school_lookup: Vorinni,
+    pub building_vorinnis: HashMap<RawBuildingTypes, Vorinni>,
 }
 
 impl OSMRawBuildings {
@@ -93,12 +102,34 @@ impl OSMRawBuildings {
     pub fn build_osm_data(filename: String) -> Result<OSMRawBuildings, DataLoadingError> {
         info!("Building OSM Data...");
         debug!("Starting to read data from file");
-        let building_locations = OSMRawBuildings::read_buildings_from_osm(filename)?;
-        debug!("Starting to generate school vorinni map");
-        let schools = building_locations.get(&RawBuildingTypes::School).expect("No school buildings exist in the OSM File!");
-        let school_lookup = Vorinni::new(GRID_SIZE, schools.iter().map(|p| (p.0.x as usize / 10, p.0.y as usize / 10)).collect());
+        let building_locations = if DUMP_TO_FILE {
+            let building_locations = OSMRawBuildings::read_buildings_from_osm(filename)?;
+            let mut file = File::create("osm_dump.json").unwrap();
+
+            file.write_all(&serde_json::to_vec(&building_locations).unwrap()).unwrap();
+            file.flush().unwrap();
+            building_locations
+        } else {
+            let mut file = File::open("osm_dump.json").unwrap();
+            let mut data = String::with_capacity(1000);
+            file.read_to_string(&mut data).unwrap();
+            serde_json::from_str(&data).unwrap()
+        };
+        debug!("Dumped to file");
+        /*        let building_vorinnis = building_locations.iter().map(|(building_type, locations)| {
+                    info!("Building vorinni for {:?} with {} buildings",building_type,locations.len());
+                    (*building_type, Vorinni::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize / 10, p.0.y as usize / 10)).collect()))
+                }).collect();*/
+        let mut building_vorinnis = HashMap::new();
+        let locations = building_locations.get(&RawBuildingTypes::Household).unwrap();
+        building_vorinnis.insert(RawBuildingTypes::Household, Vorinni::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect()));
         debug!("Finished building OSM data");
-        Ok(OSMRawBuildings { building_locations, school_lookup })
+        let x = OSMRawBuildings { building_locations, building_vorinnis };
+        x.building_vorinnis.keys().clone().for_each(|k| {
+            draw(format!("images/{:?}Vorinni.png", k), &x, *k)
+        });
+        debug!("Finished building OSM data");
+        Ok(x)
     }
     fn read_buildings_from_osm(filename: String) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
         use osmpbf::{Element, ElementReader};
@@ -125,7 +156,7 @@ impl OSMRawBuildings {
                                 node.lat(),
                                 node.lon(),
                             );
-                            if BOTTOM_LEFT_BOUNDARY.0 < position.0 && position.1 < TOP_RIGHT_BOUNDARY.1 {
+                            if let Some(position) = position {//3000000 < position.0 && position.0 < 6000000 && 3000000 < position.1 && position.1 < 6000000 {//BOTTOM_LEFT_BOUNDARY.0 < position.0 && position.1 < TOP_RIGHT_BOUNDARY.1 {
                                 let position = geo_types::Coordinate::from(position);
                                 let position = geo_types::Point::from(position);
                                 if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
@@ -153,6 +184,9 @@ impl OSMRawBuildings {
         "Total Number of nodes: {} Ways: {}, Relations: {}",
         nodes, ways, relations
     );
+        for b in buildings.get(&RawBuildingTypes::Household).unwrap().choose_multiple(&mut thread_rng(), 40) {
+            println!("{:?}", b);
+        }
         info!("Loaded {} buildings from {} nodes", buildings.iter().map(|(_,b)|b.len()).sum::<usize>(), nodes);
         Ok(buildings)
     }

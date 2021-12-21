@@ -48,7 +48,7 @@ use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::statistics::Statistics;
 
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct Simulator {
     /// The total size of the population
     current_population: u32,

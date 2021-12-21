@@ -3,3 +3,6 @@
 members = ["load_census_data", "sim", "run", "trapezium_map"]
 
 resolver = "2"
+
+[profile.release]
+debug = true

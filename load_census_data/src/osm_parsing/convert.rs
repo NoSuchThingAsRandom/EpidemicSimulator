@@ -18,15 +18,21 @@
  *
  */
 //! This is used to convert latitude and longitude to grid coordinates (National Grid Ordnance Survey - OGB36)
-pub fn decimal_latitude_and_longitude_to_coordinates(latitude: f64, longitude: f64) -> (isize, isize) {
-    transform(wgs84_to_osbg36(lat_lon_to_cartesian(latitude, longitude)))
+pub fn decimal_latitude_and_longitude_to_coordinates(latitude: f64, longitude: f64) -> Option<(isize, isize)> {
+    let (latitude, longitude, height) = lat_lon_to_cartesian(latitude, longitude);
+    // TODO Change these limits
+    if 53.5 < latitude && latitude < 54.598 && -3.0 < longitude && longitude < 0.0 {
+        None
+    } else {
+        Some(transform(wgs84_to_osbg36((latitude, longitude, height))))
+    }
 }
 
 fn transform(position: (f64, f64)) -> (isize, isize) {
     // TODO Do we need to keep decimal precision?
     (
-        (position.0 * 10.0).round() as isize / 100,
-        (position.0 * 10.0).round() as isize / 100,
+        (position.0 * 10.0).round() as isize / 10,
+        (position.1 * 10.0).round() as isize / 10,
     )
 }
 
@@ -40,8 +46,8 @@ pub fn main() {
     // Degrees: 53 36 43.1653 N, 001 39 51.9920 W =  53.61199,-1.664442
     // Degrees: 52 39 27.2531 N, 001 43 04.5177 E = 52.65757,1.717922
     //let f=lat_lon_to_cartesian();
-    let lat = 53.61199;
-    let lon = -1.664442;
+    let lat = 53.961199;
+    let lon = -1.39;//664442;
     println!("Lat: {}, Lon: {}", lat, lon);
     println!("---------------");
     let (x, y, z) = lat_lon_to_cartesian(lat, lon);
@@ -108,4 +114,18 @@ fn wgs84_to_osbg36(point: (f64, f64, f64)) -> (f64, f64) {
     let output = ndarray::arr2(&T) + r.dot(&p);
     let output = (output[[0, 0]], output[[1, 0]]);
     (output.0 + NORTH_OFFSET, output.1 + EAST_OFFSET)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::osm_parsing::convert::{EAST_OFFSET, NORTH_OFFSET, wgs84_to_osbg36};
+
+    #[test]
+    pub fn test_wgs84_to_osbg36() {
+        let point = (3790644.900, -110149.210, 5111482.970);
+        let new_point = wgs84_to_osbg36(point);
+        let target = (3790269.549, -110038.064, 5111050.261);
+        assert!(new_point.0 - target.0 - NORTH_OFFSET < 0.1);
+        assert!(new_point.1 - target.1 - EAST_OFFSET < 0.1);
+    }
 }

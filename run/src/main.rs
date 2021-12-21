@@ -48,6 +48,7 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init_timed();
+
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
@@ -153,6 +154,7 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
+        return Ok(());
         let mut sim = Simulator::new(census_data)
             .context("Failed to initialise sim")
             .unwrap();
