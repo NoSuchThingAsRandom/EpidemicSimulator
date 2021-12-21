@@ -92,6 +92,7 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
     }
 }
 
+
 pub struct OSMRawBuildings {
     pub building_locations: HashMap<RawBuildingTypes, Vec<Point<isize>>>,
     pub building_vorinnis: HashMap<RawBuildingTypes, Vorinni>,
@@ -121,8 +122,9 @@ impl OSMRawBuildings {
                     (*building_type, Vorinni::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize / 10, p.0.y as usize / 10)).collect()))
                 }).collect();*/
         let mut building_vorinnis = HashMap::new();
-        let locations = building_locations.get(&RawBuildingTypes::Household).unwrap();
-        building_vorinnis.insert(RawBuildingTypes::Household, Vorinni::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect()));
+        // (ID, (X,Y))
+        let seeds = building_locations.get(&RawBuildingTypes::Household).unwrap().iter().enumerate().map(|(id, p)| (id as u32, (p.0.x as usize, p.0.y as usize))).collect();
+        building_vorinnis.insert(RawBuildingTypes::Household, Vorinni::new(GRID_SIZE, seeds)?);
         debug!("Finished building OSM data");
         let x = OSMRawBuildings { building_locations, building_vorinnis };
         x.building_vorinnis.keys().clone().for_each(|k| {

@@ -18,17 +18,21 @@
  *
  */
 
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::iter::FromIterator;
-use std::time::Instant;
+use std::collections::{HashSet, VecDeque};
+use std::fmt::Display;
 
+use geo::centroid::Centroid;
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
-use geo_types::{Coordinate, LineString, point, Point};
+use geo_types::{CoordNum, LineString, Point};
 use log::{debug, info, trace};
-use ndarray::s;
+use num_traits::PrimInt;
+use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use rand::{Rng, thread_rng};
 use rand::prelude::IteratorRandom;
+
+use crate::DataLoadingError;
+use crate::parsing_error::ParseErrorType::MathError;
 
 const X_OFFSET: f64 = 3500000.0;
 const X_SCALE: f64 = 50.0;
@@ -36,184 +40,104 @@ const Y_OFFSET: f64 = 10000.0;
 const Y_SCALE: f64 = 25.0;
 
 /// Utilises Jump Fill to build a Vorinni Diagram
-#[derive(Clone)]
 pub struct Vorinni {
     pub size: usize,
-    pub grid: Vec<Vec<u32>>,
+    pub lookup: Quadtree<isize, (usize, usize)>,
     pub seeds: Vec<(usize, usize)>,
     //, u32>,
     pub polygons: Vec<geo_types::Polygon<isize>>,
 }
 
+/// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
+#[inline]
+fn geo_polygon_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default>(polygon: &geo_types::Polygon<T>) -> Result<quadtree_rs::area::Area<T>, DataLoadingError> {
+    let bounds = polygon.bounding_rect().ok_or_else(|| DataLoadingError::ValueParsingError { source: MathError { context: "Failed to generate bounding box for polygon".to_string() } })?;
+    let anchor = bounds.min();
+    let anchor = (anchor.x, anchor.y);
+    let mut height = bounds.height();
+    if height <= T::zero() {
+        height = T::one();
+    }
+    let mut width = bounds.width();
+    if width <= T::zero() {
+        width = T::one();
+    }
+    assert!(bounds.height() >= T::zero(), "Rect has a height less than zero {:?}", bounds);
+    assert!(bounds.width() >= T::zero(), "Rect has a width less than zero {:?}", bounds);
+    let area = AreaBuilder::default().anchor(QuadPoint::from(anchor)).dimensions((width, height)).build().unwrap();
+    Ok(area)
+}
+
+/// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
+#[inline]
+fn geo_point_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default>(point: &geo_types::Point<T>) -> Result<quadtree_rs::area::Area<T>, DataLoadingError> {
+    let anchor = (point.x(), point.y());
+    let area = AreaBuilder::default().anchor(QuadPoint::from(anchor)).build().unwrap();
+    Ok(area)
+}
+
+fn get_random_point_inside_polygon(polygon: &geo_types::Polygon<isize>) -> Option<geo_types::Point<isize>> {
+    let mut start = Point::default();
+    let mut rng = thread_rng();
+    let mut try_count = 0;
+    let bounds = polygon.bounding_rect().unwrap();
+    if bounds.min().x == bounds.max().x || bounds.min().y == bounds.max().y {
+        return None;
+    }
+    while !polygon.contains(&start) {
+        let x: isize = rng.gen_range(bounds.min().x..=bounds.max().x);
+        let y: isize = rng.gen_range(bounds.min().y..=bounds.max().y);
+        start = Point::new(x, y);
+        try_count += 1;
+        if try_count == 5 {
+            return None;
+        }
+    }
+    Some(start)
+}
+
 impl Vorinni {
-    pub fn new(size: usize, seeds: Vec<(usize, usize)>) -> Vorinni {
+    pub fn new(size: usize, seeds: Vec<(u32, (usize, usize))>) -> Result<Vorinni, DataLoadingError> {
         info!("Building Vorinni Grid of {} x {} with {} seeds",size,size,seeds.len());
-        let seeds: Vec<(usize, usize)> = seeds.iter().choose_multiple(&mut thread_rng(), 500).iter().map(|p| **p).collect();
-        let seeds: Vec<voronoi::Point> = seeds.iter().map(|p| {
+        let seeds: Vec<(usize, usize)> = seeds.iter().choose_multiple(&mut thread_rng(), 500).iter().map(|(id, p)| *p).collect();
+        let processed_seeds: Vec<voronoi::Point> = seeds.iter().map(|p| {
             let x = (p.0 as f64 - X_OFFSET) / X_SCALE;
             assert!(x > 0.0, "X Value: {}  is less than zero", x);
             let y = (p.1 as f64 - Y_OFFSET) / Y_SCALE;
             assert!(y > 0.0, "Y Value: {}  is less than zero", y);
             voronoi::Point::new(x, y)
         }).collect();
-        trace!("Processed Seeds: {:?}", seeds);
-        let output_seeds = seeds.iter().map(|p| (p.x.round() as usize, p.y.round() as usize)).collect();
-        let mut polygons = voronoi::make_polygons(&voronoi::voronoi(seeds, size as f64));
+        trace!("Processed Seeds: {:?}", processed_seeds);
+        let output_seeds = processed_seeds.iter().map(|p| (p.x.round() as usize, p.y.round() as usize)).collect();
+        let mut polygons = voronoi::make_polygons(&voronoi::voronoi(processed_seeds, size as f64));
         // These polygons don't connect up, so add the final connection
         polygons.iter_mut().for_each(|poly| poly.push(*poly.first().unwrap()));
         debug!("Built {} polygons",polygons.len());
         let polygons: Vec<geo_types::Polygon<isize>> = polygons.iter().map(|points| geo_types::Polygon::new(LineString::from(points.iter().map(|point| geo_types::Point::new(point.x.round() as isize, point.y.round() as isize)).collect::<Vec<geo_types::Point<isize>>>()), Vec::new())).collect();
-        let grid = Vorinni::span_flood_fill(size, &polygons);
+        //let grid = Vorinni::span_flood_fill(size, &polygons);
+        let mut lookup: Quadtree<isize, (usize, usize)> = Quadtree::new((size as f64).log2().ceil() as usize);
+        for (index, p) in polygons.iter().enumerate() {
+            let seed = seeds.get(index).unwrap();
+            lookup.insert(geo_polygon_to_quad_area(p)?, *seed);
+        }
+        let index = (0..polygons.len()).choose(&mut thread_rng()).unwrap();
+        let seed = seeds.get(index).unwrap();
+        let polygon = polygons.get(index).unwrap();
+        let point = get_random_point_inside_polygon(polygon).unwrap();
+        let results = lookup.query(geo_point_to_quad_area(&point)?);
+        println!("Chose: {:?}, got: ", seed);
+        for entry in results {
+            println!("{:?}", entry.value_ref());
+        }
         //Vorinni::print_grid(&grid);
         let mut vorinni = Vorinni {
             size,
-            grid,
+            lookup,
             seeds: output_seeds,
             polygons,
         };
         info!("Starting generation process");
 
-        vorinni
-    }
-
-    fn flood_fill(size: usize, polygons: &Vec<geo_types::Polygon<isize>>) -> Vec<Vec<u32>> {
-        let mut grid = vec![vec![0_u32; size]; size];
-        for (id, polygon) in polygons.iter().enumerate() {
-            let mut stack = VecDeque::new();
-            let bounds = polygon.bounding_rect().expect("Failed to get boundary for polygon");
-            let mut start = Point::default();
-            let mut rng = thread_rng();
-            let mut try_count = 0;
-            if bounds.min().x == bounds.max().x || bounds.min().y == bounds.max().y {
-                continue
-            }
-            while !polygon.contains(&start) {
-                let x: isize = rng.gen_range(bounds.min().x..=bounds.max().x);
-                let y: isize = rng.gen_range(bounds.min().y..=bounds.max().y);
-                start = Point::new(x, y);
-                try_count += 1;
-                if try_count == 5 {
-                    trace!("Fail");
-                    break;
-                }
-            }
-            let mut index = 0;
-            trace!("Starting at pos: {:?}",start);
-            stack.push_back((start.x(), start.y()));
-            while let Some((x, y)) = stack.pop_front() {
-                if polygon.contains(&Point::new(x, y)) && grid[y as usize][x as usize] != id as u32 {
-                    grid[y as usize][x as usize] = id as u32;
-                    stack.push_back((x + 1, y));
-                    stack.push_back((x - 1, y));
-                    stack.push_back((x, y + 1));
-                    stack.push_back((x, y - 1));
-                }
-            }
-            if id % 5 == 0 {
-                debug!("Flood filled {} polygon",id);
-                //Vorinni::print_grid(&grid);
-            }
-        }
-        grid
-    }
-    /// Very slow - don't know if works
-    fn span_flood_fill(size: usize, polygons: &Vec<geo_types::Polygon<isize>>) -> Vec<Vec<u32>> {
-        let mut grid = vec![vec![0_u32; size]; size];
-        let mut filled_count = 0;
-        for (id, polygon) in polygons.iter().enumerate() {
-            let mut stack = VecDeque::new();
-            let bounds = polygon.bounding_rect().expect("Failed to get boundary for polygon");
-            let mut start = Point::default();
-            let mut rng = thread_rng();
-            let mut try_count = 0;
-            if bounds.min().x == bounds.max().x || bounds.min().y == bounds.max().y {
-                continue
-            }
-            while !polygon.contains(&start) {
-                let x: isize = rng.gen_range(bounds.min().x..=bounds.max().x);
-                let y: isize = rng.gen_range(bounds.min().y..=bounds.max().y);
-                start = Point::new(x, y);
-                try_count += 1;
-                if try_count == 5 {
-                    trace!("Fail");
-                    break;
-                }
-            }
-            let mut index = 0;
-            trace!("Starting at pos: {:?}",start);
-            stack.push_back((start.x(), start.y()));
-
-            while let Some((x, y)) = stack.pop_front() {
-                let mut lx = x;
-                let mut added_next_up_row = false;
-                let mut added_next_down_row = false;
-                while polygon.contains(&Point::new(lx, y)) {
-                    //println!("LX At {} {} stack size: {}",lx,y,stack.len());
-                    grid[y as usize][lx as usize] = id as u32;
-                    filled_count += 1;
-                    if polygon.contains(&Point::new(lx, y + 1)) {
-                        if !added_next_up_row && grid[y as usize + 1][lx as usize] == 0 {
-                            stack.push_back((lx, y + 1));
-                            added_next_up_row = true;
-                        }
-                    } else {
-                        added_next_up_row = false;
-                    }
-                    if polygon.contains(&Point::new(lx, y - 1)) {
-                        if !added_next_down_row && grid[y as usize - 1][lx as usize] == 0 {
-                            stack.push_back((lx, y - 1));
-                            added_next_down_row = true;
-                        }
-                    } else {
-                        added_next_down_row = false;
-                    }
-
-                    lx -= 1;
-                }
-                let mut rx = x;
-                while polygon.contains(&Point::new(rx, y)) {
-                    //println!("RX At {} {} stack size: {}",rx,y,stack.len());
-                    grid[y as usize][rx as usize] = id as u32;
-                    filled_count += 1;
-                    if polygon.contains(&Point::new(rx, y + 1)) {
-                        if !added_next_up_row && grid[y as usize + 1][rx as usize] == 0 {
-                            stack.push_back((rx, y + 1));
-                            added_next_up_row = true;
-                        }
-                    } else {
-                        added_next_up_row = false;
-                    }
-                    if polygon.contains(&Point::new(rx, y - 1)) {
-                        if !added_next_down_row && grid[y as usize - 1][rx as usize] == 0 {
-                            stack.push_back((rx, y - 1));
-                            added_next_down_row = true;
-                        }
-                    } else {
-                        added_next_down_row = false;
-                    }
-                    rx += 1;
-                }
-                if filled_count % 100000 == 0 {
-                    debug!("Filled {} pixels",filled_count);
-                }
-            }
-            if id % 5 == 0 {
-                debug!("Flood filled {} polygon",id);
-                //Vorinni::print_grid(&grid);
-            }
-        }
-        grid
-    }
-    fn print_grid(grid: &[Vec<u32>]) {
-        println!("Grid\n-----------\n-----------\n-----------");
-        for row in grid {
-            for col in row {
-                if *col != 0 {
-                    print!("{:>4} ", *col);
-                }
-            }
-            println!();
-        }
-        println!("\n-----------\n-----------\n-----------");
+        Ok(vorinni)
     }
 }

@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, write};
 use std::num::{ParseFloatError, ParseIntError};
 
 use osmpbf::Error;
@@ -50,6 +50,7 @@ pub enum ParseErrorType {
     },
     /// This occurs when the value corresponding to a key in a map is not there
     MissingKey { context: String, key: String },
+    MathError { context: String },
 }
 
 impl Display for ParseErrorType {
@@ -87,6 +88,9 @@ impl Display for ParseErrorType {
             }
             ParseErrorType::MissingKey { context, key } => {
                 write!(f, "Missing Key! Context: {}. Key: {}", context, key)
+            }
+            ParseErrorType::MathError { context } => {
+                write!(f, "Math error! Context: {}", context)
             }
         }
     }
