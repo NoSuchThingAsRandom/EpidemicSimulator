@@ -24,10 +24,9 @@ use std::fmt::{Display, Formatter};
 use anyhow::Context;
 use enum_map::EnumMap;
 use geo_types::Point;
-use rand::{Rng, RngCore};
 use rand::distributions::{Bernoulli, Distribution};
+use rand::RngCore;
 use serde::Serialize;
-use uuid::Uuid;
 
 use load_census_data::CensusDataEntry;
 use load_census_data::osm_parsing::RawBuildingTypes;
@@ -97,7 +96,7 @@ impl OutputArea {
                 .context("Failed to initialise the mask distribution")?,
         })
     }
-    pub fn add_building(&mut self, location: Point<isize>, raw_building_type: RawBuildingTypes) {
+    pub fn add_building(&mut self, _location: Point<isize>, _raw_building_type: RawBuildingTypes) {
         todo!()
     }
     pub fn generate_citizens(

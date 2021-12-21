@@ -68,7 +68,7 @@ impl Display for ID {
         }
     }
 }
-
+/*
 pub struct PointLookup {
     // Row -> Column -> Code
     boxes: Vec<Vec<Vec<OutputAreaID>>>,
@@ -127,18 +127,18 @@ impl PointLookup {
         None
     }
 }
-
+*/
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,
-) -> Result<(HashMap<OutputAreaID, geo_types::Polygon<isize>>, PointLookup), DataLoadingError> {
+) -> Result<(HashMap<OutputAreaID, geo_types::Polygon<isize>>, Voronoi), DataLoadingError> {
     let mut reader =
         shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
         })?;
     let mut start_time = Instant::now();
     let mut data = HashMap::new();
-    let mut lookup = PointLookup::default();
+    let lookup = Voronoi::new();
     info!("Loading map data from file...");
     for (index, shape_record) in reader.iter_shapes_and_records().enumerate() {
         let (shape, record) = shape_record.map_err(|e| DataLoadingError::IOError {

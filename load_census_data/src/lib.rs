@@ -26,7 +26,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::string::String;
 
-use geo_types::Point;
 use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 
@@ -48,6 +47,7 @@ pub mod osm_parsing;
 pub mod parse_table;
 pub mod parsing_error;
 pub mod tables;
+mod voronoi_generator;
 
 const OSM_FILENAME: &str = "data/england-latest.osm.pbf";
 

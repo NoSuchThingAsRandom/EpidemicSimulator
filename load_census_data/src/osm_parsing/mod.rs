@@ -26,17 +26,15 @@ use std::io::{Read, Write};
 use geo_types::Point;
 use log::{debug, info};
 use osmpbf::DenseTagIter;
-use rand::prelude::{IteratorRandom, SliceRandom};
+use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
-use voronoi::{DCEL, make_polygons, voronoi};
 
 use crate::DataLoadingError;
 use crate::osm_parsing::draw_vorinni::draw;
-use crate::osm_parsing::vorini_generator::Vorinni;
+use crate::voronoi_generator::Voronoi;
 
 pub mod convert;
-mod vorini_generator;
 mod draw_vorinni;
 
 // From guesstimating on: https://maps.nls.uk/geo/explore/#zoom=19&lat=53.94849&lon=-1.03067&layers=170&b=1&marker=53.948300,-1.030701
@@ -95,7 +93,7 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
 
 pub struct OSMRawBuildings {
     pub building_locations: HashMap<RawBuildingTypes, Vec<Point<isize>>>,
-    pub building_vorinnis: HashMap<RawBuildingTypes, Vorinni>,
+    pub building_vorinnis: HashMap<RawBuildingTypes, Voronoi>,
 }
 
 impl OSMRawBuildings {
@@ -117,14 +115,18 @@ impl OSMRawBuildings {
             serde_json::from_str(&data).unwrap()
         };
         debug!("Dumped to file");
-        /*        let building_vorinnis = building_locations.iter().map(|(building_type, locations)| {
-                    info!("Building vorinni for {:?} with {} buildings",building_type,locations.len());
-                    (*building_type, Vorinni::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize / 10, p.0.y as usize / 10)).collect()))
-                }).collect();*/
+
+
         let mut building_vorinnis = HashMap::new();
+        for (building_type, locations) in &building_locations {
+            info!("Building vorinni for {:?} with {} buildings",building_type,locations.len());
+            let lookup = Voronoi::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect())?;
+            building_vorinnis.insert(*building_type, lookup);
+        }
+
         // (ID, (X,Y))
-        let seeds = building_locations.get(&RawBuildingTypes::Household).unwrap().iter().enumerate().map(|(id, p)| (id as u32, (p.0.x as usize, p.0.y as usize))).collect();
-        building_vorinnis.insert(RawBuildingTypes::Household, Vorinni::new(GRID_SIZE, seeds)?);
+        /*        let seeds = building_locations.get(&RawBuildingTypes::Household).unwrap().iter().map(| p| (p.0.x as usize, p.0.y as usize)).collect();
+                building_vorinnis.insert(RawBuildingTypes::Household, Voronoi::new(GRID_SIZE, seeds)?);*/
         debug!("Finished building OSM data");
         let x = OSMRawBuildings { building_locations, building_vorinnis };
         x.building_vorinnis.keys().clone().for_each(|k| {

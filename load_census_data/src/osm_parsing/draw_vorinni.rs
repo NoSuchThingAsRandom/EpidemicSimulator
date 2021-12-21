@@ -18,15 +18,11 @@
  *
  */
 
-use geo_types::{Coordinate, LineString};
-use geo_types::Geometry::{Point, Rect};
-use log::debug;
+use geo_types::LineString;
 use plotters::chart::{ChartBuilder, ChartContext};
 use plotters::coord::types::RangedCoordi32;
-use plotters::prelude::{BitMapBackend, Cartesian2d, Color, IntoDrawingArea, Palette, Palette99, RED};
-use plotters::style::{BLACK, RGBAColor, RGBColor, WHITE};
-use rand::prelude::IteratorRandom;
-use rand::thread_rng;
+use plotters::prelude::{BitMapBackend, Cartesian2d, Color, IntoDrawingArea, Palette, Palette99};
+use plotters::style::{BLACK, RGBColor, WHITE};
 
 use crate::{OSMRawBuildings, RawBuildingTypes};
 use crate::osm_parsing::GRID_SIZE;
@@ -48,42 +44,22 @@ fn draw_polygon_ring(
         .unwrap();
 }
 
-const use_fill: bool = true;
-
 pub fn draw(filename: String, data: &OSMRawBuildings, building_type: RawBuildingTypes) {
     println!("Drawing at: {}", filename);
     let draw_backend = BitMapBackend::new(&filename, (GRID_SIZE as u32, GRID_SIZE as u32)).into_drawing_area();
     draw_backend.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&draw_backend)
         .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32)).unwrap();
-    let mut index = 0;
     let chosen_vorinni = &data.building_vorinnis[&building_type];
-    if use_fill {
-        for (y, row) in chosen_vorinni.grid.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                //let c = Palette99::COLORS[*cell as usize];
-                let c = ((*cell / 20) as u8, (*cell / 20) as u8, (*cell / 20) as u8);
-                let x = x as i32;
-                let y = y as i32;
-
-
-                if index % 100000 == 0 {
-                    debug!("Drawing pixel at {} {} with colour {:?}, cell: {}",x,y,c,cell);
-                }
-                draw_backend.draw_pixel((x, y), &RGBColor(c.0, c.1, c.2)).unwrap();
-                index += 1;
-            }
+    for (p, index) in &chosen_vorinni.polygons.polygons {
+        let c = &Palette99::COLORS[index % 20];
+        let c = &RGBColor(c.0, c.1, c.2);
+        for p in &p.exterior().0 {
+            draw_backend.draw_pixel((p.x as i32, p.y as i32), c).unwrap();
         }
-    } else {
-        for (index, p) in chosen_vorinni.polygons.iter().enumerate() {
-            let c = &Palette99::COLORS[index % 20];
-            let c = &RGBColor(c.0, c.1, c.2);
-            for p in &p.exterior().0 {
-                draw_backend.draw_pixel((p.x as i32, p.y as i32), c).unwrap();
-            }
-            draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
-        }
+        draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
     }
+
     for (x, y) in &chosen_vorinni.seeds {
         draw_backend.draw_pixel((*x as i32, *y as i32), &BLACK).unwrap();
     }

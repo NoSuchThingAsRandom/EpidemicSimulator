@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter, write};
+use std::fmt::{Debug, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
 use osmpbf::Error;
@@ -197,6 +197,12 @@ impl From<ParseFloatError> for DataLoadingError {
         DataLoadingError::ValueParsingError {
             source: ParseErrorType::Float { source: err },
         }
+    }
+}
+
+impl From<String> for DataLoadingError {
+    fn from(err: String) -> Self {
+        DataLoadingError::Misc { source: err }
     }
 }
 
