@@ -48,6 +48,8 @@ fn draw_polygon_ring(
         .unwrap();
 }
 
+const use_fill: bool = true;
+
 pub fn draw(filename: String, data: &OSMRawBuildings, building_type: RawBuildingTypes) {
     println!("Drawing at: {}", filename);
     let draw_backend = BitMapBackend::new(&filename, (GRID_SIZE as u32, GRID_SIZE as u32)).into_drawing_area();
@@ -56,11 +58,11 @@ pub fn draw(filename: String, data: &OSMRawBuildings, building_type: RawBuilding
         .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32)).unwrap();
     let mut index = 0;
     let chosen_vorinni = &data.building_vorinnis[&building_type];
-    /*
+    if use_fill {
         for (y, row) in chosen_vorinni.grid.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 //let c = Palette99::COLORS[*cell as usize];
-                let c=((*cell/20) as u8 ,(*cell/20) as u8,(*cell/20) as u8);
+                let c = ((*cell / 20) as u8, (*cell / 20) as u8, (*cell / 20) as u8);
                 let x = x as i32;
                 let y = y as i32;
 
@@ -69,17 +71,18 @@ pub fn draw(filename: String, data: &OSMRawBuildings, building_type: RawBuilding
                     debug!("Drawing pixel at {} {} with colour {:?}, cell: {}",x,y,c,cell);
                 }
                 draw_backend.draw_pixel((x, y), &RGBColor(c.0, c.1, c.2)).unwrap();
-                index+=1;
+                index += 1;
             }
-        }*/
-
-    for (index, p) in chosen_vorinni.polygons.iter().enumerate() {
-        let c = &Palette99::COLORS[index % 20];
-        let c = &RGBColor(c.0, c.1, c.2);
-        for p in &p.exterior().0 {
-            draw_backend.draw_pixel((p.x as i32, p.y as i32), c).unwrap();
         }
-        draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
+    } else {
+        for (index, p) in chosen_vorinni.polygons.iter().enumerate() {
+            let c = &Palette99::COLORS[index % 20];
+            let c = &RGBColor(c.0, c.1, c.2);
+            for p in &p.exterior().0 {
+                draw_backend.draw_pixel((p.x as i32, p.y as i32), c).unwrap();
+            }
+            draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
+        }
     }
     for (x, y) in &chosen_vorinni.seeds {
         draw_backend.draw_pixel((*x as i32, *y as i32), &BLACK).unwrap();
