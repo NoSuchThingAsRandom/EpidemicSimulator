@@ -63,7 +63,7 @@ impl Vorinni {
         polygons.iter_mut().for_each(|poly| poly.push(*poly.first().unwrap()));
         debug!("Built {} polygons",polygons.len());
         let polygons: Vec<geo_types::Polygon<isize>> = polygons.iter().map(|points| geo_types::Polygon::new(LineString::from(points.iter().map(|point| geo_types::Point::new(point.x.round() as isize, point.y.round() as isize)).collect::<Vec<geo_types::Point<isize>>>()), Vec::new())).collect();
-        let grid = Vorinni::flood_fill(size, &polygons);
+        let grid = Vorinni::span_flood_fill(size, &polygons);
         //Vorinni::print_grid(&grid);
         let mut vorinni = Vorinni {
             size,
@@ -116,141 +116,93 @@ impl Vorinni {
         }
         grid
     }
-    /// Uses Span Filling Algorithm to generate a fast lookup of closest locations
-    ///
-    /// https://en.wikipedia.org/wiki/Flood_fill
-    pub fn flood_fill_broke(size: usize, polygons: &Vec<geo_types::Polygon<isize>>) -> Vec<Vec<u32>> {
+    /// Very slow - don't know if works
+    fn span_flood_fill(size: usize, polygons: &Vec<geo_types::Polygon<isize>>) -> Vec<Vec<u32>> {
         let mut grid = vec![vec![0_u32; size]; size];
+        let mut filled_count = 0;
         for (id, polygon) in polygons.iter().enumerate() {
             let mut stack = VecDeque::new();
             let bounds = polygon.bounding_rect().expect("Failed to get boundary for polygon");
             let mut start = Point::default();
             let mut rng = thread_rng();
-            while !polygon.contains(&start) {
-                let x: isize = rng.gen_range(bounds.min().x..bounds.max().x);
-                let y: isize = rng.gen_range(bounds.min().y..bounds.max().y);
-                start = Point::new(x, y);
+            let mut try_count = 0;
+            if bounds.min().x == bounds.max().x || bounds.min().y == bounds.max().y {
+                continue
             }
-
-            stack.push_back((start.x(), start.x(), start.y(), 1));
-            stack.push_back((start.x(), start.x(), start.y() - 1, -1));
+            while !polygon.contains(&start) {
+                let x: isize = rng.gen_range(bounds.min().x..=bounds.max().x);
+                let y: isize = rng.gen_range(bounds.min().y..=bounds.max().y);
+                start = Point::new(x, y);
+                try_count += 1;
+                if try_count == 5 {
+                    trace!("Fail");
+                    break;
+                }
+            }
             let mut index = 0;
-            while let Some((mut x1, x2, y, dy)) = stack.pop_front() {
-                index += 1;
-                if index % 100 == 0 {
-                    let a = stack.iter();
-                    let mut h = HashSet::with_capacity(a.len());
-                    for p in a { h.insert(p); }
-                    debug!("{}/{} Unique",h.len(),stack.len());
-                }
-                if y < 0 {
-                    continue;
-                }
-                let row = &mut grid[y as usize];
-
-                let mut x = x1;
-                if polygon.contains(&Point::new(x, y)) {
-                    while polygon.contains(&Point::new(x - 1, y)) {
-                        if 0 <= x {
-                            row[x as usize] = id as u32;
-                        }
-                        x -= 1;
-                    }
-                }
-                if x < x1 {
-                    stack.push_back((x, x1 - 1, y - dy, -dy));
-                }
-                while x1 < x2 {
-                    while polygon.contains(&Point::new(x1, y)) {
-                        if 0 <= x1 {
-                            row[x1 as usize] = id as u32;
-                        }
-                        x1 += 1;
-                    }
-                    stack.push_back((x, x1 - 1, y + dy, dy));
-                    if x1 - 1 > x2 {
-                        stack.push_back((x2 + 1, x1 - 1, y - dy, -dy));
-                    }
-                    while x1 < x2 && !polygon.contains(&Point::new(x1, y)) {
-                        x1 += 1;
-                    }
-                    x = x1;
-                }
-            }
-            if id % 5 == 0 {
-                debug!("Flood filled {} polygon",id);
-                //Vorinni::print_grid(&grid);
-            }
-        }
-        grid
-    }
-    pub fn flood_fill_simplified(size: usize, polygons: &Vec<geo_types::Polygon<isize>>) -> Vec<Vec<u32>> {
-        let mut grid = vec![vec![0_u32; size]; size];
-
-        for (id, polygon) in polygons.iter().enumerate() {
-            let mut stack = VecDeque::new();
-            let bounds = polygon.bounding_rect().expect("Failed to get boundary for polygon");
-            let mut start = Point::default();
-            let mut rng = thread_rng();
-            while !polygon.contains(&start) {
-                let x: isize = rng.gen_range(bounds.min().x..bounds.max().x);
-                let y: isize = rng.gen_range(bounds.min().y..bounds.max().y);
-                start = Point::new(x, y);
-            }
-            debug!("Starting with point: {:?}",start);
+            trace!("Starting at pos: {:?}",start);
             stack.push_back((start.x(), start.y()));
 
-            let mut index = 0;
-            while let Some((mut x, y)) = stack.pop_front() {
-                index += 1;
-                if index % 100 == 0 {
-                    let a = stack.iter();
-                    let mut h = HashSet::with_capacity(a.len());
-                    for p in a { h.insert(p); }
-                    debug!("{}/{} Unique",h.len(),stack.len());
-                }
-                if y < 0 {
-                    continue;
-                }
-                let row = &mut grid[y as usize];
-
-                let mut lx = x - 1;
+            while let Some((x, y)) = stack.pop_front() {
+                let mut lx = x;
+                let mut added_next_up_row = false;
+                let mut added_next_down_row = false;
                 while polygon.contains(&Point::new(lx, y)) {
-                    if 0 <= (lx) {
-                        row[(lx) as usize] = id as u32;
+                    //println!("LX At {} {} stack size: {}",lx,y,stack.len());
+                    grid[y as usize][lx as usize] = id as u32;
+                    filled_count += 1;
+                    if polygon.contains(&Point::new(lx, y + 1)) {
+                        if !added_next_up_row && grid[y as usize + 1][lx as usize] == 0 {
+                            stack.push_back((lx, y + 1));
+                            added_next_up_row = true;
+                        }
+                    } else {
+                        added_next_up_row = false;
                     }
+                    if polygon.contains(&Point::new(lx, y - 1)) {
+                        if !added_next_down_row && grid[y as usize - 1][lx as usize] == 0 {
+                            stack.push_back((lx, y - 1));
+                            added_next_down_row = true;
+                        }
+                    } else {
+                        added_next_down_row = false;
+                    }
+
                     lx -= 1;
                 }
-                let lx = x;
-
-                while polygon.contains(&Point::new(x, y)) {
-                    if 0 <= x {
-                        row[x as usize] = id as u32;
+                let mut rx = x;
+                while polygon.contains(&Point::new(rx, y)) {
+                    //println!("RX At {} {} stack size: {}",rx,y,stack.len());
+                    grid[y as usize][rx as usize] = id as u32;
+                    filled_count += 1;
+                    if polygon.contains(&Point::new(rx, y + 1)) {
+                        if !added_next_up_row && grid[y as usize + 1][rx as usize] == 0 {
+                            stack.push_back((rx, y + 1));
+                            added_next_up_row = true;
+                        }
+                    } else {
+                        added_next_up_row = false;
                     }
-                    x += 1;
-                    ;
+                    if polygon.contains(&Point::new(rx, y - 1)) {
+                        if !added_next_down_row && grid[y as usize - 1][rx as usize] == 0 {
+                            stack.push_back((rx, y - 1));
+                            added_next_down_row = true;
+                        }
+                    } else {
+                        added_next_down_row = false;
+                    }
+                    rx += 1;
                 }
-                Vorinni::scan(polygon, lx, x - 1, y + 1, &mut stack);
-                Vorinni::scan(polygon, lx, x - 1, y - 1, &mut stack);
+                if filled_count % 100000 == 0 {
+                    debug!("Filled {} pixels",filled_count);
+                }
             }
             if id % 5 == 0 {
                 debug!("Flood filled {} polygon",id);
                 //Vorinni::print_grid(&grid);
             }
         }
-        let mut grid = vec![vec![0_u32; size]; size];
         grid
-    }
-    fn scan(polygon: &geo_types::Polygon<isize>, lx: isize, rx: isize, y: isize, stack: &mut VecDeque<(isize, isize)>) {
-        let mut added = false;
-        for x in lx..rx {
-            if !polygon.contains(&Point::new(x, y)) {
-                added = false;
-            } else if !added {
-                stack.push_back((x, y));
-                added = true;
-            }
-        }
     }
     fn print_grid(grid: &[Vec<u32>]) {
         println!("Grid\n-----------\n-----------\n-----------");
