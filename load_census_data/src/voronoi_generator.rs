@@ -20,24 +20,80 @@
 
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use std::ops::{Add, Mul};
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{CoordNum, LineString, Point, Polygon};
-use log::{debug, info};
-use num_traits::PrimInt;
+use log::{debug, info, trace};
+use num_traits::{One, PrimInt, Zero};
 use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use rand::{Rng, thread_rng};
 use rand::prelude::IteratorRandom;
+use voronoi::DCEL;
 
 use crate::DataLoadingError;
+use crate::osm_parsing::GRID_SIZE;
 use crate::parsing_error::ParseErrorType;
 use crate::parsing_error::ParseErrorType::MathError;
 
-const X_OFFSET: usize = 3500000;
-const X_SCALE: usize = 50;
-const Y_OFFSET: usize = 10000;
-const Y_SCALE: usize = 25;
+pub struct Scaling {
+    x_offset: isize,
+    x_scale: isize,
+    y_offset: isize,
+    y_scale: isize,
+}
+
+impl Scaling {
+    pub fn yorkshire_national_grid() -> Scaling {
+        Scaling {
+            x_offset: 3500000,
+            x_scale: 5,
+            y_offset: 0,
+            y_scale: 4,
+        }
+    }
+    /// Converts a coordinate to fit on the grid
+    ///
+    /// Used to represent a smaller grid, reducing RAM size
+    #[inline]
+    fn scale_point(&self, point: (usize, usize), grid_size: isize) -> (isize, isize) {
+        assert!(0 <= point.1 as isize, " Y conversion for {} is broken", point.1);
+        let x = ((point.0 as isize - self.x_offset) / self.x_scale);
+        let y = ((point.1 as isize - self.y_offset) / self.y_scale);
+        assert!(0 <= x, "X Coord {} is less than zero", x);
+        assert!(x < grid_size, "X Coord {} is greater than the grid size", x);
+        assert!(0 <= y, "Y Coord {} is less than zero", y);
+        assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
+        (x, y)
+    }
+
+    /// Converts a coordinate to fit on the grid
+    ///
+    /// Used to represent a smaller grid, reducing RAM size
+    #[inline]
+    fn scale_geo_point(&self, point: geo_types::Point<isize>, grid_size: isize) -> (isize, isize) {
+        let x = ((point.x() as isize - self.x_offset) / self.x_scale);
+        let y = ((point.y() as isize - self.y_offset) / self.y_scale);
+        assert!(0 <= x, "X Coord {} is less than zero", x);
+        assert!(x < grid_size, "X Coord {} is greater than the grid size", x);
+        assert!(0 <= y, "Y Coord {} is less than zero", y);
+        assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
+        (x, y)
+    }
+}
+
+
+impl Default for Scaling {
+    fn default() -> Self {
+        Scaling {
+            x_offset: 0,
+            x_scale: 1,
+            y_offset: 0,
+            y_scale: 1,
+        }
+    }
+}
 
 
 /// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
@@ -95,82 +151,101 @@ fn voronoi_points_to_polygon(points: &mut Vec<voronoi::Point>) -> geo_types::Pol
     geo_types::Polygon::new(LineString::from(points), Vec::new())
 }
 
-#[inline]
-fn scale_point(point: (usize, usize)) -> (isize, isize) {
-    (((point.0 - X_OFFSET) / X_SCALE) as isize, ((point.1 - Y_OFFSET) / Y_SCALE) as isize)
-}
-
-#[inline]
-fn scale_geo_point(point: geo_types::Point<isize>) -> (isize, isize) {
-    ((point.x() as usize - X_OFFSET / X_SCALE) as isize, ((point.y() as usize - Y_OFFSET) / Y_SCALE) as isize)
-}
-
-/// Utilises Jump Fill to build a Vorinni Diagram
 pub struct Voronoi {
-    pub size: usize,
-    pub seeds: Vec<(isize, isize)>,
+    pub grid_size: usize,
+    pub seeds: Vec<(usize, usize)>,
     pub polygons: PolygonContainer<(usize)>,
 
+    pub scaling: Scaling,
+}
+
+/// Returns the minimum and maximum grid size required for the seeds
+fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
+    let mut min_x = T::max_value();
+    let mut max_x = T::zero();
+    let mut min_y = T::max_value();
+    let mut max_y = T::zero();
+    for seed in seeds {
+        if seed.0 < min_x {
+            min_x = seed.0;
+        }
+        if max_x < seed.0 {
+            max_x = seed.0;
+        }
+
+        if seed.1 < min_y {
+            min_y = seed.1;
+        }
+        if max_y < seed.1 {
+            max_y = seed.1
+        }
+    }
+    ((min_x, min_y), (max_x, max_y))
 }
 
 impl Voronoi {
-    pub fn new(size: usize, seeds: Vec<(usize, usize)>) -> Result<Voronoi, DataLoadingError> {
+    /// Create a new Voronoi diagram to find the closest seed to a point
+    ///
+    /// Size represents the grid size to represent
+    pub fn new(size: usize, seeds: Vec<(usize, usize)>, scaling: Scaling) -> Result<Voronoi, DataLoadingError> {
         info!("Building Voronoi Grid of {} x {} with {} seeds",size,size,seeds.len());
-        // TODO Increase seed size to all
-        let seeds: Vec<(usize, usize)> = seeds.iter().choose_multiple(&mut thread_rng(), 500).iter().map(|p| **p).collect();
-        let seeds: Vec<(isize, isize)> = seeds.iter().map(|p| scale_point(*p)).collect();
-
-        let voronoi_seeds = seeds.iter().map(|p| voronoi::Point::new(p.0 as f64, p.1 as f64)).collect();
-
+        let voronoi_seeds: Vec<voronoi::Point> = seeds.iter().map(|p| scaling.scale_point(*p, size as isize)).map(|p| voronoi::Point::new(p.0 as f64, p.1 as f64)).collect();
+        // TODO Can remove this later, when optimum size found
+        trace!("Voronoi Boundary: {:?}",find_seed_bounds(&voronoi_seeds.iter().map(|p|(p.x() as isize,p.y() as isize)).collect::<Vec<(isize,isize)>>()));
         // Build the Voronoi polygons
         let mut polygons = voronoi::make_polygons(&voronoi::voronoi(voronoi_seeds, size as f64));
         debug!("Built Voronoi map, with {} polygons",polygons.len());
 
         // Convert to a lazy iterator of geo polygons
         let polygons: Vec<(geo_types::Polygon<isize>, usize)> = polygons.iter_mut().enumerate().map(|(index, p)| (voronoi_points_to_polygon(p), index)).collect();
-        debug!("Converted polygons to geo polygons");
+        trace!("Converted polygons to geo polygons");
         let container = PolygonContainer::new(polygons, size as f64)?;
-
-
         debug!("Built quad tree");
-        let vorinni = Voronoi {
-            size,
+        Ok(Voronoi {
+            grid_size: size,
             seeds,
             polygons: container,
-        };
-        Ok(vorinni)
+            scaling,
+        })
     }
-    pub fn find_seed_for_point(&self, point: geo_types::Point<isize>) -> Result<(isize, isize), DataLoadingError> {
+    /// Attempts to find the closest seed to the given point
+    pub fn find_seed_for_point(&self, point: geo_types::Point<isize>) -> Result<(usize, usize), DataLoadingError> {
+        let point = self.scaling.scale_geo_point(point, self.grid_size as isize);
+        let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(point)?;
-        Ok(*self.seeds.get(seed_index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot seed that contains polygon".to_string(), key: seed_index.to_string() } })?)
+        Ok(*self.seeds.get(*seed_index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot seed that contains polygon".to_string(), key: seed_index.to_string() } })?)
     }
 }
 
-pub struct PolygonContainer<T: Display + Debug + Copy + Clone + Eq + Ord> {
+pub struct PolygonContainer<T: Display + Debug + Clone + Eq + Ord> {
     pub lookup: Quadtree<isize, usize>,
     /// The polygon and it's ID
     pub polygons: Vec<(geo_types::Polygon<isize>, T)>,
 }
 
-impl<T: Display + Debug + Copy + Clone + Eq + Ord> PolygonContainer<T> {
+impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
     pub fn new(polygons: Vec<(geo_types::Polygon<isize>, T)>, grid_size: f64) -> Result<PolygonContainer<T>, DataLoadingError> {
         // Build Quadtree, with Coords of isize and values of seed points
-        let mut lookup: Quadtree<isize, usize> = Quadtree::new(grid_size.log2().ceil() as usize);
+        let mut lookup: Quadtree<isize, usize> = Quadtree::new((grid_size).log2().ceil() as usize);
         for (index, (polygon, id)) in polygons.iter().enumerate() {
             //let seed = *seeds.get(index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve seed for polygon".to_string(), key: index.to_string() } })?;
-            lookup.insert(geo_polygon_to_quad_area(&polygon)?, index);
+            lookup.insert(geo_polygon_to_quad_area(polygon)?, index);
         }
         Ok(PolygonContainer { lookup, polygons })
     }
 
-    pub fn find_polygon_for_point(&self, point: geo_types::Point<isize>) -> Result<T, DataLoadingError> {
-        let point = scale_geo_point(point);
-        let point = geo_types::Point::new(point.0, point.1);
-        for entry in self.lookup.query(geo_point_to_quad_area(&point)?) {
+    /// Finds the polygon that contains the given point
+    pub fn find_polygon_for_point(&self, point: geo_types::Point<isize>) -> Result<&T, DataLoadingError> {
+        debug!("Finding polygon for point: {:?}",point);
+        let res = self.lookup.query(geo_point_to_quad_area(&point)?);
+        trace!("Results: {:?}",res.clone().count());
+        for entry in res {
+            trace!("Got possible: {:?}",entry);
             let index = entry.value_ref();
             let (poly, id) = self.polygons.get(*index).unwrap();
+            println!("Testing index {}, with poly{:?}", id, poly);
             if poly.contains(&point) {
-                return Ok(*id);
+                return Ok(id);
             }
         }
         Err(DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Can't find nearest seed for point".to_string(), key: format!("{:?}", point) } })
@@ -179,7 +254,6 @@ impl<T: Display + Debug + Copy + Clone + Eq + Ord> PolygonContainer<T> {
 
 #[cfg(test)]
 mod tests {
-    use log::debug;
     use rand::{Rng, thread_rng};
 
     use crate::voronoi_generator::Voronoi;
@@ -188,15 +262,15 @@ mod tests {
     pub fn test() {
         let mut rng = thread_rng();
         let seeds: Vec<(usize, usize)> = (0..10).map(|_| (rng.gen_range(3600000..3700000), rng.gen_range(20000..30000))).collect();
-        println!("Point: {:?}", seeds);
-        let diagram = Voronoi::new(20000, seeds.clone());
+        println!("Seeds: {:?}", seeds);
+        let diagram = Voronoi::new(100000, seeds.clone());
         assert!(diagram.is_ok(), "Failed to build Voronoi: {:?}", diagram.err());
         let diagram = diagram.unwrap();
         println!("{:?}", diagram.polygons.polygons);
         for seed in seeds {
             let gen = diagram.find_seed_for_point(geo_types::Point::new(seed.0 as isize, seed.1 as isize));
             assert!(gen.is_ok(), "{:?}", gen);
-            assert_eq!(gen.unwrap(), (seed.0 as isize, seed.1 as isize))
+            assert_eq!(gen.unwrap(), (seed.0, seed.1))
         }
     }
 }

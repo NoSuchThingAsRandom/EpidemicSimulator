@@ -37,14 +37,14 @@ fn draw_polygon_ring(
         .draw_series(std::iter::once(plotters::prelude::Polygon::new(
             points, plotters::style::ShapeStyle {
                 color: colour,
-                filled: false,
+                filled: true,
                 stroke_width: 1,
             },
         )))
         .unwrap();
 }
 
-pub fn draw(filename: String, data: &OSMRawBuildings, building_type: RawBuildingTypes) {
+pub fn draw_osm_buildings_polygons(filename: String, data: &OSMRawBuildings, building_type: RawBuildingTypes) {
     println!("Drawing at: {}", filename);
     let draw_backend = BitMapBackend::new(&filename, (GRID_SIZE as u32, GRID_SIZE as u32)).into_drawing_area();
     draw_backend.fill(&WHITE).unwrap();
@@ -54,14 +54,22 @@ pub fn draw(filename: String, data: &OSMRawBuildings, building_type: RawBuilding
     for (p, index) in &chosen_vorinni.polygons.polygons {
         let c = &Palette99::COLORS[index % 20];
         let c = &RGBColor(c.0, c.1, c.2);
-        for p in &p.exterior().0 {
-            draw_backend.draw_pixel((p.x as i32, p.y as i32), c).unwrap();
-        }
         draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
-    }
-
-    for (x, y) in &chosen_vorinni.seeds {
-        draw_backend.draw_pixel((*x as i32, *y as i32), &BLACK).unwrap();
     }
     draw_backend.present().unwrap();
 }
+
+pub fn draw_voronoi_polygons(filename: String, polygons: &Vec<geo_types::Polygon<isize>>, grid_size: u32) {
+    println!("Drawing at: {}", filename);
+    let draw_backend = BitMapBackend::new(&filename, (grid_size, grid_size)).into_drawing_area();
+    draw_backend.fill(&WHITE).unwrap();
+    let mut chart = ChartBuilder::on(&draw_backend)
+        .build_cartesian_2d(0..(grid_size as i32), 0..(grid_size as i32)).unwrap();
+    for (index, p) in polygons.iter().enumerate() {
+        let c = &Palette99::COLORS[index % 20];
+        let c = &RGBColor(c.0, c.1, c.2);
+        draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
+    }
+    draw_backend.present().unwrap();
+}
+

@@ -25,26 +25,30 @@ use std::io::{Read, Write};
 
 use geo_types::Point;
 use log::{debug, info};
-use osmpbf::DenseTagIter;
+use osmpbf::{DenseNode, DenseTagIter};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use crate::DataLoadingError;
-use crate::osm_parsing::draw_vorinni::draw;
-use crate::voronoi_generator::Voronoi;
+use crate::osm_parsing::draw_vorinni::draw_osm_buildings_polygons;
+use crate::voronoi_generator::{Scaling, Voronoi};
 
 pub mod convert;
-mod draw_vorinni;
+pub mod draw_vorinni;
 
 // From guesstimating on: https://maps.nls.uk/geo/explore/#zoom=19&lat=53.94849&lon=-1.03067&layers=170&b=1&marker=53.948300,-1.030701
-pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (470338, 519763);
-pub const YORKSHIRE_AND_HUMBER_BOTTOM_LEFT: (u32, u32) = (363749, 383066);
+pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (4500000, 400000);
+pub const YORKSHIRE_AND_HUMBER_BOTTOM_LEFT: (u32, u32) = (3500000, 100000);
 pub const TOP_RIGHT_BOUNDARY: (isize, isize) = (YORKSHIRE_AND_HUMBER_TOP_RIGHT.0 as isize, YORKSHIRE_AND_HUMBER_TOP_RIGHT.1 as isize);
 pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.0 as isize, YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.1 as isize);
 //pub const GRID_SIZE: (usize, usize) = ((TOP_RIGHT_BOUNDARY.0 - BOTTOM_LEFT_BOUNDARY.0) as usize, (TOP_RIGHT_BOUNDARY.1 - BOTTOM_LEFT_BOUNDARY.1) as usize);
-pub const GRID_SIZE: usize = 20000;
+
+
+// Use 200 units per building
+pub const GRID_SIZE: usize = 100000;
 const DUMP_TO_FILE: bool = false;
+const DRAW_VORONOI_DIAGRAMS: bool = false;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum RawBuildingTypes {
@@ -102,96 +106,99 @@ impl OSMRawBuildings {
         info!("Building OSM Data...");
         debug!("Starting to read data from file");
         let building_locations = if DUMP_TO_FILE {
+            debug!("Parsing data from raw OSM file");
             let building_locations = OSMRawBuildings::read_buildings_from_osm(filename)?;
             let mut file = File::create("osm_dump.json").unwrap();
 
             file.write_all(&serde_json::to_vec(&building_locations).unwrap()).unwrap();
             file.flush().unwrap();
+            debug!("Completed and saved parsing data");
             building_locations
         } else {
+            debug!("Reading cached parsing data");
             let mut file = File::open("osm_dump.json").unwrap();
             let mut data = String::with_capacity(1000);
             file.read_to_string(&mut data).unwrap();
             serde_json::from_str(&data).unwrap()
         };
-        debug!("Dumped to file");
+        debug!("Loaded OSM data");
 
 
         let mut building_vorinnis = HashMap::new();
         for (building_type, locations) in &building_locations {
-            info!("Building vorinni for {:?} with {} buildings",building_type,locations.len());
-            let lookup = Voronoi::new(GRID_SIZE, locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect())?;
+            info!("Building voronoi diagram for {:?} with {} buildings",building_type,locations.len());
+            let lookup = Voronoi::new(GRID_SIZE * locations.len(), locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect(), Scaling::yorkshire_national_grid())?;
             building_vorinnis.insert(*building_type, lookup);
         }
-
-        // (ID, (X,Y))
-        /*        let seeds = building_locations.get(&RawBuildingTypes::Household).unwrap().iter().map(| p| (p.0.x as usize, p.0.y as usize)).collect();
-                building_vorinnis.insert(RawBuildingTypes::Household, Voronoi::new(GRID_SIZE, seeds)?);*/
+        let data = OSMRawBuildings { building_locations, building_vorinnis };
+        if DRAW_VORONOI_DIAGRAMS {
+            debug!("Starting drawing");
+            data.building_vorinnis.keys().clone().for_each(|k| {
+                draw_osm_buildings_polygons(format!("images/{:?}Vorinni.png", k), &data, *k)
+            });
+        }
         debug!("Finished building OSM data");
-        let x = OSMRawBuildings { building_locations, building_vorinnis };
-        x.building_vorinnis.keys().clone().for_each(|k| {
-            draw(format!("images/{:?}Vorinni.png", k), &x, *k)
-        });
-        debug!("Finished building OSM data");
-        Ok(x)
+        Ok(data)
+    }
+    /// Extract the building type, and it's location from an OSM Node
+    ///
+    /// Returns None, if outside the boundary, not visible or unsupported node type
+    fn parse_node(node: DenseNode) -> Option<(RawBuildingTypes, geo_types::Point<isize>)> {
+        let visible = node.info().map(|info| info.visible()).unwrap_or(true);
+        if visible {
+            let position = convert::decimal_latitude_and_longitude_to_coordinates(
+                node.lat(),
+                node.lon(),
+            );
+            if let Some(position) = position {
+                //println!("{} {}",position.0,position.1);
+                if BOTTOM_LEFT_BOUNDARY.0 < position.0 && position.0 < TOP_RIGHT_BOUNDARY.0 && BOTTOM_LEFT_BOUNDARY.1 < position.1 && position.1 < TOP_RIGHT_BOUNDARY.1 {//3000000 < position.0 && position.0 < 6000000 && 3000000 < position.1 && position.1 < 6000000 {
+                    let position = geo_types::Coordinate::from(position);
+                    let position = geo_types::Point::from(position);
+                    if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
+                        return Some((building, position));
+                    }
+                }
+            }
+        }
+        None
     }
     fn read_buildings_from_osm(filename: String) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
         use osmpbf::{Element, ElementReader};
         info!("Reading OSM data from file: {}", filename);
         let reader = ElementReader::from_path(filename)?;
-        let mut nodes = 0_u64;
-        let mut ways = 0_u64;
-        let mut relations = 0_u64;
-        // Increment the counter by one for each way.
-        let mut buildings: HashMap<RawBuildingTypes, Vec<Point<isize>>> = HashMap::with_capacity(20000);
-        let mut count = 0;
+        // Read the OSM data, only select buildings, and build a hashmap of building types, with a list of locations
         debug!("Built reader, now loading Nodes...");
-        reader
-            .for_each(|element| {
-                match element {
-                    Element::Node(node) => {
-                        // TODO Maybe implement this?
-                        panic!("Got a Node! ({:?})", node);
-                    }
-                    Element::DenseNode(node) => {
-                        let visible = node.info().map(|info| info.visible()).unwrap_or(true);
-                        if visible {
-                            let position = convert::decimal_latitude_and_longitude_to_coordinates(
-                                node.lat(),
-                                node.lon(),
-                            );
-                            if let Some(position) = position {//3000000 < position.0 && position.0 < 6000000 && 3000000 < position.1 && position.1 < 6000000 {//BOTTOM_LEFT_BOUNDARY.0 < position.0 && position.1 < TOP_RIGHT_BOUNDARY.1 {
-                                let position = geo_types::Coordinate::from(position);
-                                let position = geo_types::Point::from(position);
-                                if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
-                                    let record = buildings.entry(building).or_default();
-                                    record.push(position);
-                                }
-                            }
-                        }
-                        nodes += 1;
-                    }
-                    Element::Way(_) => {
-                        ways += 1;
-                    }
-                    Element::Relation(_) => {
-                        relations += 1;
-                    }
+        let buildings: HashMap<RawBuildingTypes, Vec<Point<isize>>> = reader.par_map_reduce(|element| {
+            match element {
+                Element::DenseNode(node) => {
+                    // Extract the building type and location from the node
+                    // Then if a valid building time,instantiate a new Hashmap to be merged
+                    OSMRawBuildings::parse_node(node).map(|data| HashMap::from([(data.0, vec![data.1])]))
                 }
-                count += 1;
-                if count % 10000000 == 0 {
-                    debug!("At node count: {} million", count / 10000000);
+                //Discard all other OSM elements (Like roads)
+                _ => None
+            }
+        }, || None, |a, b| {
+            // Fold the multiple hashmaps into a singular hashmap
+            match (a, b) {
+                (Some(mut a), Some(mut b)) => {
+                    b.drain().for_each(|(k, v)| {
+                        let entry = a.entry(k).or_insert_with(|| Vec::with_capacity(v.len()));
+                        entry.extend(v);
+                    });
+                    a.extend(b);
+                    Some(a)
                 }
-            })?;
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None
+            }
+        })?.expect("No buildings loaded from osm data");
 
-        debug!(
-        "Total Number of nodes: {} Ways: {}, Relations: {}",
-        nodes, ways, relations
-    );
-        for b in buildings.get(&RawBuildingTypes::Household).unwrap().choose_multiple(&mut thread_rng(), 40) {
-            println!("{:?}", b);
-        }
-        info!("Loaded {} buildings from {} nodes", buildings.iter().map(|(_,b)|b.len()).sum::<usize>(), nodes);
+        // Count the number of unique buildings
+        info!("Loaded {} buildings from OSM data", buildings.iter().map(|(_,b)|b.len()).sum::<usize>());
+
         Ok(buildings)
     }
 }

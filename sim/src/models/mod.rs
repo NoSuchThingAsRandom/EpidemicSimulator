@@ -35,9 +35,11 @@ use shapefile::Shape;
 
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::parsing_error::ParseErrorType::MissingKey;
+use load_census_data::voronoi_generator::PolygonContainer;
 
 use crate::config::get_memory_usage;
 use crate::models::building::BuildingID;
+use crate::models::ID::OutputArea;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;
 
@@ -131,14 +133,14 @@ impl PointLookup {
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,
-) -> Result<(HashMap<OutputAreaID, geo_types::Polygon<isize>>, Voronoi), DataLoadingError> {
+) -> Result<(HashMap<OutputAreaID, geo_types::Polygon<isize>>, PolygonContainer<String>), DataLoadingError> {
     let mut reader =
         shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
         })?;
     let mut start_time = Instant::now();
     let mut data = HashMap::new();
-    let lookup = Voronoi::new();
+    let mut polygons = Vec::new();
     info!("Loading map data from file...");
     for (index, shape_record) in reader.iter_shapes_and_records().enumerate() {
         let (shape, record) = shape_record.map_err(|e| DataLoadingError::IOError {
@@ -200,7 +202,8 @@ pub fn build_polygons_for_output_areas(
                     },
                 });
             }
-            lookup.add_area(code.to_string(), &new_poly);
+
+            polygons.push((new_poly.clone(), code.to_string()));
             data.insert(OutputAreaID::from_code(code), new_poly);
             if index % 10000 == 0 {
                 debug!("Built {} polygons in time: {}",index*10000,start_time.elapsed().as_secs_f64());
@@ -220,22 +223,10 @@ pub fn build_polygons_for_output_areas(
         }*/
     }
     info!("Finished loading map data in {:?}", start_time.elapsed());
-    Ok((data, lookup))
+    Ok((data, PolygonContainer::new(polygons, 20000.0)?))
 }
 
-pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<OutputAreaID, Polygon<isize>>, point_lookup: &PointLookup) -> anyhow::Result<OutputAreaID> {
-    let areas = point_lookup.get_possible_area_codes(point).unwrap();
-    for poss_area in areas {
-        let poly = polygons.get(poss_area).ok_or_else(|| DataLoadingError::ValueParsingError {
-            source: ParseErrorType::MissingKey {
-                context: "Finding Output Area for Point".to_string(),
-                key: poss_area.to_string(),
-            }
-        }).context(format!("Area: {}, does not exist", poss_area))?;
-
-        if poly.contains(point) {
-            return Ok(poss_area.clone());
-        }
-    }
-    Err(DataLoadingError::Misc { source: "No matching area for point".to_string() }).context("Retrieving Output Area for point")
+pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<OutputAreaID, Polygon<isize>>, point_lookup: &PolygonContainer<String>) -> anyhow::Result<OutputAreaID> {
+    let areas = point_lookup.find_polygon_for_point(*point).context("Finding output area containing point")?;
+    Ok(OutputAreaID::from_code(areas.to_string()))
 }

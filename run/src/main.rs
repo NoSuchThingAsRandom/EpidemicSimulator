@@ -18,15 +18,19 @@
  *
  */
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::time::Instant;
 
 use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
+use rand::{Rng, thread_rng};
 
-use load_census_data::CensusData;
+use load_census_data::{CensusData, OSM_FILENAME};
+use load_census_data::osm_parsing::draw_vorinni::{draw_osm_buildings_polygons, draw_voronoi_polygons};
 use load_census_data::tables::CensusTableNames;
+use load_census_data::voronoi_generator::{Scaling, Voronoi};
 use sim::simulator::Simulator;
 
 //use visualisation::citizen_connections::{connected_groups, draw_graph};
@@ -48,7 +52,32 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init_timed();
+    let mut rng = thread_rng();
+    //load_census_data::osm_parsing::OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string()).unwrap();
+    let grid_size: usize = 10000;
+    let seeds: Vec<(usize, usize)> = (0..10).map(|_| (rng.gen_range(0..grid_size), rng.gen_range(0..grid_size))).collect();
+    println!("Point: {:?}", seeds);
+    let diagram = Voronoi::new(grid_size, seeds.clone(), Scaling::default());
+    assert!(diagram.is_ok(), "Failed to build Voronoi: {:?}", diagram.err());
+    let diagram = diagram.unwrap();
+    for p in &diagram.polygons.polygons {
+        print!("polygon([");
+        for c in p.0.exterior().0.iter() {
+            print!("({}, {}),", c.x, c.y);
+        }
+        println!("])\n");
+    }
+    draw_voronoi_polygons("test.png".to_string(), &diagram.polygons.polygons.iter().map(|(p, i)| p.clone()).collect(), grid_size as u32);
 
+    println!("{:?}", diagram.polygons.polygons);
+    println!("Built voroni");
+    for seed in seeds {
+        println!("Testing {:?}", seed);
+        let gen = diagram.find_seed_for_point(geo_types::Point::new(seed.0 as isize, seed.1 as isize));
+        assert!(gen.is_ok(), "{:?}", gen);
+        assert_eq!(gen.unwrap(), (seed.0, seed.1))
+    }
+    return Ok(());
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")

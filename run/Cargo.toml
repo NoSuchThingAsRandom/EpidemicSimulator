@@ -19,6 +19,8 @@ sim = { path = "../sim" }
 anyhow = "1.0"
 clap = "2.34.0"
 dotenv = "0.15"
+geo-types = "0.7.2"
 log = "0.4"
 pretty_env_logger = "0.4"
+rand = "0.8.4"
 tokio = { version = "1", features = ["full"] }

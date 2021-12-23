@@ -47,9 +47,9 @@ pub mod osm_parsing;
 pub mod parse_table;
 pub mod parsing_error;
 pub mod tables;
-mod voronoi_generator;
+pub mod voronoi_generator;
 
-const OSM_FILENAME: &str = "data/england-latest.osm.pbf";
+pub const OSM_FILENAME: &str = "data/england-latest.osm.pbf";
 
 /// This is a container for all the Records relating to one Output Area for All Census Tables
 pub struct CensusDataEntry<'a> {

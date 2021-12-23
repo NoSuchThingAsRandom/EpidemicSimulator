@@ -35,7 +35,7 @@ impl<T: geo_types::CoordNum> TrapeziumMap<T> {
         TrapeziumMap { bounding_box }
     }
     pub fn construct(&mut self, segments: Vec<geo_types::Line<T>>) {
-        for seg in segments {}
+        for _seg in segments {}
     }
 }
 
