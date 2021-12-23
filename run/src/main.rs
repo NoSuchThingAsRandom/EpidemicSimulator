@@ -53,30 +53,7 @@ async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init_timed();
     let mut rng = thread_rng();
-    //load_census_data::osm_parsing::OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string()).unwrap();
-    let grid_size: usize = 10000;
-    let seeds: Vec<(usize, usize)> = (0..10).map(|_| (rng.gen_range(0..grid_size), rng.gen_range(0..grid_size))).collect();
-    println!("Point: {:?}", seeds);
-    let diagram = Voronoi::new(grid_size, seeds.clone(), Scaling::default());
-    assert!(diagram.is_ok(), "Failed to build Voronoi: {:?}", diagram.err());
-    let diagram = diagram.unwrap();
-    for p in &diagram.polygons.polygons {
-        print!("polygon([");
-        for c in p.0.exterior().0.iter() {
-            print!("({}, {}),", c.x, c.y);
-        }
-        println!("])\n");
-    }
-    draw_voronoi_polygons("test.png".to_string(), &diagram.polygons.polygons.iter().map(|(p, i)| p.clone()).collect(), grid_size as u32);
-
-    println!("{:?}", diagram.polygons.polygons);
-    println!("Built voroni");
-    for seed in seeds {
-        println!("Testing {:?}", seed);
-        let gen = diagram.find_seed_for_point(geo_types::Point::new(seed.0 as isize, seed.1 as isize));
-        assert!(gen.is_ok(), "{:?}", gen);
-        assert_eq!(gen.unwrap(), (seed.0, seed.1))
-    }
+    load_census_data::osm_parsing::OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string()).unwrap();
     return Ok(());
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")

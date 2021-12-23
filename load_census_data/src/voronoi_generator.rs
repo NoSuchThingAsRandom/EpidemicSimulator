@@ -18,22 +18,19 @@
  *
  */
 
-use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::ops::{Add, Mul};
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{CoordNum, LineString, Point, Polygon};
 use log::{debug, info, trace};
-use num_traits::{One, PrimInt, Zero};
+use num_traits::PrimInt;
 use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use rand::{Rng, thread_rng};
 use rand::prelude::IteratorRandom;
-use voronoi::DCEL;
+use voronoice::{ClipBehavior, VoronoiBuilder};
 
 use crate::DataLoadingError;
-use crate::osm_parsing::GRID_SIZE;
 use crate::parsing_error::ParseErrorType;
 use crate::parsing_error::ParseErrorType::MathError;
 
@@ -48,9 +45,9 @@ impl Scaling {
     pub fn yorkshire_national_grid() -> Scaling {
         Scaling {
             x_offset: 3500000,
-            x_scale: 5,
+            x_scale: 1,
             y_offset: 0,
-            y_scale: 4,
+            y_scale: 1,
         }
     }
     /// Converts a coordinate to fit on the grid
@@ -65,6 +62,7 @@ impl Scaling {
         assert!(x < grid_size, "X Coord {} is greater than the grid size", x);
         assert!(0 <= y, "Y Coord {} is less than zero", y);
         assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
+        let p = voronoice::Point { x: x as f64, y: y as f64 };
         (x, y)
     }
 
@@ -144,10 +142,10 @@ fn get_random_point_inside_polygon(polygon: &geo_types::Polygon<isize>) -> Optio
     Some(start)
 }
 
-fn voronoi_points_to_polygon(points: &mut Vec<voronoi::Point>) -> geo_types::Polygon<isize> {
-    points.push(*points.first().expect("Polygon has too many points, Vec is out of space!"));
+fn voronoi_cell_to_polygon(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<isize> {
+    //points.push(points.first().expect("Polygon has too many points, Vec is out of space!"));
     // Convert to ints and build the exterior line
-    let points = points.iter().map(|point| geo_types::Point::new(point.x.round() as isize, point.y.round() as isize)).collect::<Vec<geo_types::Point<isize>>>();
+    let points = cell.iter_vertices().map(|point| geo_types::Point::new(point.x.round() as isize, point.y.round() as isize)).collect::<Vec<geo_types::Point<isize>>>();
     geo_types::Polygon::new(LineString::from(points), Vec::new())
 }
 
@@ -189,18 +187,32 @@ impl Voronoi {
     /// Size represents the grid size to represent
     pub fn new(size: usize, seeds: Vec<(usize, usize)>, scaling: Scaling) -> Result<Voronoi, DataLoadingError> {
         info!("Building Voronoi Grid of {} x {} with {} seeds",size,size,seeds.len());
-        let voronoi_seeds: Vec<voronoi::Point> = seeds.iter().map(|p| scaling.scale_point(*p, size as isize)).map(|p| voronoi::Point::new(p.0 as f64, p.1 as f64)).collect();
-        // TODO Can remove this later, when optimum size found
-        trace!("Voronoi Boundary: {:?}",find_seed_bounds(&voronoi_seeds.iter().map(|p|(p.x() as isize,p.y() as isize)).collect::<Vec<(isize,isize)>>()));
-        // Build the Voronoi polygons
-        let mut polygons = voronoi::make_polygons(&voronoi::voronoi(voronoi_seeds, size as f64));
-        debug!("Built Voronoi map, with {} polygons",polygons.len());
+        //let seeds: Vec<(usize, usize)> = seeds.iter().choose_multiple(&mut thread_rng(), 500).iter().map(|p| **p).collect();
+        let voronoi_seeds: Vec<voronoice::Point> = seeds.iter().map(|p| {
+            let (x, y) = scaling.scale_point(*p, size as isize);
+            voronoice::Point { x: x as f64, y: y as f64 }
+        }).collect();
 
-        // Convert to a lazy iterator of geo polygons
-        let polygons: Vec<(geo_types::Polygon<isize>, usize)> = polygons.iter_mut().enumerate().map(|(index, p)| (voronoi_points_to_polygon(p), index)).collect();
-        trace!("Converted polygons to geo polygons");
+        // TODO Can remove this later, when optimum size found
+        //debug!("Seeds: {:?}",voronoi_seeds);
+        trace!("Voronoi Boundary: {:?}",find_seed_bounds(&voronoi_seeds.iter().map(|p|(p.x as isize,p.y as isize)).collect::<Vec<(isize,isize)>>()));
+        // Build the Voronoi polygons
+        let bounding_box = voronoice::BoundingBox::new(voronoice::Point { x: (size / 2) as f64, y: (size / 2) as f64 }, size as f64, size as f64);
+
+        let mut polygons = VoronoiBuilder::default().set_sites(voronoi_seeds).set_bounding_box(bounding_box).set_clip_behavior(ClipBehavior::Clip).set_lloyd_relaxation_iterations(0).build();
+        let polygons = if let Some(polygons) = polygons {
+            debug!("Built Voronoi map, with {} polygons",polygons.cells().len());
+            // Convert to a lazy iterator of geo polygons
+            let polygons: Vec<(geo_types::Polygon<isize>, usize)> = polygons.iter_cells().enumerate().map(|(index, p)| (voronoi_cell_to_polygon(&p), index)).collect();
+            trace!("Converted polygons to geo polygons");
+            polygons
+        } else {
+            Vec::new()
+        };
+
         let container = PolygonContainer::new(polygons, size as f64)?;
         debug!("Built quad tree");
+
         Ok(Voronoi {
             grid_size: size,
             seeds,
@@ -238,12 +250,9 @@ impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
     pub fn find_polygon_for_point(&self, point: geo_types::Point<isize>) -> Result<&T, DataLoadingError> {
         debug!("Finding polygon for point: {:?}",point);
         let res = self.lookup.query(geo_point_to_quad_area(&point)?);
-        trace!("Results: {:?}",res.clone().count());
         for entry in res {
-            trace!("Got possible: {:?}",entry);
             let index = entry.value_ref();
             let (poly, id) = self.polygons.get(*index).unwrap();
-            println!("Testing index {}, with poly{:?}", id, poly);
             if poly.contains(&point) {
                 return Ok(id);
             }
@@ -256,21 +265,20 @@ impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
 mod tests {
     use rand::{Rng, thread_rng};
 
-    use crate::voronoi_generator::Voronoi;
+    use crate::voronoi_generator::{Scaling, Voronoi};
 
     #[test]
     pub fn test() {
         let mut rng = thread_rng();
-        let seeds: Vec<(usize, usize)> = (0..10).map(|_| (rng.gen_range(3600000..3700000), rng.gen_range(20000..30000))).collect();
-        println!("Seeds: {:?}", seeds);
-        let diagram = Voronoi::new(100000, seeds.clone());
+        let grid_size: usize = 10000;
+        let seeds: Vec<(usize, usize)> = (0..100).map(|_| (rng.gen_range(0..grid_size), rng.gen_range(0..grid_size))).collect();
+        let diagram = Voronoi::new(grid_size, seeds.clone(), Scaling::default());
         assert!(diagram.is_ok(), "Failed to build Voronoi: {:?}", diagram.err());
         let diagram = diagram.unwrap();
-        println!("{:?}", diagram.polygons.polygons);
         for seed in seeds {
-            let gen = diagram.find_seed_for_point(geo_types::Point::new(seed.0 as isize, seed.1 as isize));
-            assert!(gen.is_ok(), "{:?}", gen);
-            assert_eq!(gen.unwrap(), (seed.0, seed.1))
+            let result = diagram.find_seed_for_point(geo_types::Point::new(seed.0 as isize, seed.1 as isize));
+            assert!(result.is_ok(), "{:?}", result);
+            assert_eq!(result.unwrap(), (seed.0, seed.1))
         }
     }
 }

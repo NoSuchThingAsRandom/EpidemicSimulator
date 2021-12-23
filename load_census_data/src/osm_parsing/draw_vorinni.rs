@@ -32,7 +32,7 @@ fn draw_polygon_ring(
     points: &LineString<isize>,
     colour: plotters::style::RGBAColor,
 ) {
-    let points: Vec<(i32, i32)> = points.0.iter().map(|p| (p.x as i32, p.y as i32)).collect();
+    let points: Vec<(i32, i32)> = points.0.iter().map(|p| (p.x as i32 / 25, p.y as i32 / 25)).collect();
     chart
         .draw_series(std::iter::once(plotters::prelude::Polygon::new(
             points, plotters::style::ShapeStyle {
