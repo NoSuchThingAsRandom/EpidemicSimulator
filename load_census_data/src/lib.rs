@@ -48,6 +48,7 @@ pub mod parse_table;
 pub mod parsing_error;
 pub mod tables;
 pub mod voronoi_generator;
+pub mod polygon_lookup;
 
 pub const OSM_FILENAME: &str = "data/england-latest.osm.pbf";
 

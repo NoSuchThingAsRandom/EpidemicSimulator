@@ -47,9 +47,9 @@ impl Error {
 
     pub fn from_option<T: Display, U>(value: Option<U>, key: T, message: String) -> Result<U, Error> {
         if let Some(value) = value {
-            value
+            Ok(value)
         } else {
-            Error::OptionRetrievalFailure { message, key: key.to_string() }
+            Err(Error::OptionRetrievalFailure { message, key: key.to_string() })
         }
     }
 }

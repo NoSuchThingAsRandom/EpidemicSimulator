@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter, write};
+use std::fmt::{Debug, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
 use osmpbf::Error;

@@ -134,7 +134,7 @@ impl OSMRawBuildings {
                 locations.len()
             );
             match Voronoi::new(
-                GRID_SIZE,
+                500000,
                 locations
                     .iter()
                     .map(|p| (p.0.x as usize, p.0.y as usize))

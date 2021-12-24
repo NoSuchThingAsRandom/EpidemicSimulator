@@ -31,6 +31,7 @@ use rand::thread_rng;
 
 use load_census_data::CensusData;
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
+use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
@@ -41,7 +42,7 @@ use crate::config::{
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::{ID, OutputAreaPolygons};
+use crate::models::ID;
 use crate::models::building::{Building, BuildingID, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::output_area::{OutputArea, OutputAreaID};
@@ -72,7 +73,7 @@ impl Simulator {
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<OutputAreaID, OutputArea> = HashMap::new();
         debug!("Current memory usage: {}", get_memory_usage()?);
-        let mut output_areas_polygons = OutputAreaPolygons::load_polygons_from_file(CensusTableNames::OutputAreaMap.get_filename())
+        let output_areas_polygons: PolygonContainer<String> = PolygonContainer::load_polygons_from_file(CensusTableNames::OutputAreaMap.get_filename())
             .context("Loading polygons for output areas")?;
         info!("Loaded map data in {:?}", start.elapsed());
         let mut starting_population = 0;
@@ -81,17 +82,18 @@ impl Simulator {
         // Build the initial Output Areas and Households
         for entry in census_data.values() {
             let output_id = OutputAreaID::from_code(entry.output_area_code.to_string());
-            let polygon = output_areas_polygons
-                .remove(&output_id)
-                .ok_or_else(|| DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::MissingKey {
-                        context: "Building output areas map".to_string(),
-                        key: output_id.to_string(),
-                    },
-                })
-                .context(format!("Loading polygon shape for area: {}", output_id))?;
+            // TODO Remove polygons from grid
+            /*            let polygon = output_areas_polygons
+                            .remove(&output_id)
+                            .ok_or_else(|| DataLoadingError::ValueParsingError {
+                                source: ParseErrorType::MissingKey {
+                                    context: "Building output areas map".to_string(),
+                                    key: output_id.to_string(),
+                                },
+                            })
+                            .context(format!("Loading polygon shape for area: {}", output_id))?;*/
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(output_id, polygon, disease_model.mask_percentage)
+            let mut new_area = OutputArea::new(output_id, disease_model.mask_percentage)
                 .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
@@ -106,12 +108,8 @@ impl Simulator {
         // Assign buildings
         for (building_type, buildings) in &census_data.osm_buildings.building_locations {
             for building in buildings {
-                if let Ok(area_code) = get_output_area_containing_point(
-                    building,
-                    &output_areas_polygons,
-                    &point_lookup,
-                ) {
-                    if let Some(area) = output_areas.get_mut(&area_code) {
+                if let Ok(area_code) = output_areas_polygons.find_polygon_for_point(building) {
+                    if let Some(area) = output_areas.get_mut(&OutputAreaID::from_code(area_code.to_string())) {
                         area.add_building(*building, *building_type);
                     }
                 }
