@@ -41,7 +41,7 @@ use crate::config::{
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::{build_polygons_for_output_areas, ID};
+use crate::models::{ID, OutputAreaPolygons};
 use crate::models::building::{Building, BuildingID, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::output_area::{OutputArea, OutputAreaID};
@@ -72,9 +72,8 @@ impl Simulator {
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<OutputAreaID, OutputArea> = HashMap::new();
         debug!("Current memory usage: {}", get_memory_usage()?);
-        let (mut output_areas_polygons, point_lookup) =
-            build_polygons_for_output_areas(CensusTableNames::OutputAreaMap.get_filename())
-                .context("Loading polygons for output areas")?;
+        let mut output_areas_polygons = OutputAreaPolygons::load_polygons_from_file(CensusTableNames::OutputAreaMap.get_filename())
+            .context("Loading polygons for output areas")?;
         info!("Loaded map data in {:?}", start.elapsed());
         let mut starting_population = 0;
 
@@ -104,7 +103,6 @@ impl Simulator {
         info!("Built residential population in {:?}", start.elapsed());
         debug!("Current memory usage: {}", get_memory_usage()?);
 
-        use crate::models::get_output_area_containing_point;
         // Assign buildings
         for (building_type, buildings) in &census_data.osm_buildings.building_locations {
             for building in buildings {

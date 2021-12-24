@@ -158,7 +158,7 @@ impl OSMRawBuildings {
             for (k, p) in data.building_voronois.iter() {
                 //keys().clone().for_each(|k| {:
                 let polygons: Vec<&geo_types::Polygon<isize>> =
-                    p.polygons.polygons.iter().map(|(p, _)| p).collect();
+                    p.polygons.polygons.iter().map(|(_, p)| p).collect();
                 draw_voronoi_polygons(format!("images/{:?}Vorinni.png", k), &polygons, 20000);
                 //   });
             }

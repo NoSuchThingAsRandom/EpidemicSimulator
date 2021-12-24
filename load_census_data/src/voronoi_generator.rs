@@ -18,8 +18,11 @@
  *
  */
 
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display};
+use std::hash::Hash;
+use std::iter::Map;
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
@@ -42,7 +45,15 @@ pub struct Scaling {
 }
 
 impl Scaling {
-    pub fn yorkshire_national_grid() -> Scaling {
+    pub const fn output_areas() -> Scaling {
+        Scaling {
+            x_offset: 0,
+            x_scale: 16,
+            y_offset: 0,
+            y_scale: 16,
+        }
+    }
+    pub const fn yorkshire_national_grid() -> Scaling {
         Scaling {
             x_offset: 3500000,
             x_scale: 10,
@@ -54,7 +65,7 @@ impl Scaling {
     ///
     /// Used to represent a smaller grid, reducing RAM size
     #[inline]
-    fn scale_point(&self, point: (usize, usize), grid_size: isize) -> (isize, isize) {
+    pub fn scale_point(&self, point: (usize, usize), grid_size: isize) -> (isize, isize) {
         assert!(
             0 <= point.1 as isize,
             " Y conversion for {} is broken",
@@ -67,6 +78,15 @@ impl Scaling {
         assert!(0 <= y, "Y Coord {} is less than zero", y);
         assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
         (x, y)
+    }
+    pub fn scale_polygon(&self, polygon: &geo_types::Polygon<isize>, grid_size: isize) -> geo_types::Polygon<isize> {
+        geo_types::Polygon::new(polygon.exterior().0.iter().map(|p| {
+            assert!(0 <= p.x, "X Coord ({}) is less than zero!", p.x);
+            assert!(0 <= p.y, "Y Coord ({}) is less than zero!", p.y);
+            let x = self.scale_point((p.x as usize, p.y as usize), grid_size);
+            let p: geo_types::Coordinate<isize> = x.into();
+            return p;
+        }).collect(), vec![])
     }
 }
 
@@ -256,10 +276,10 @@ impl Voronoi {
                 polygons.cells().len()
             );
             // Convert to a lazy iterator of geo polygons
-            let polygons: Vec<(geo_types::Polygon<isize>, usize)> = polygons
+            let polygons: HashMap<usize, geo_types::Polygon<isize>> = polygons
                 .iter_cells()
                 .enumerate()
-                .map(|(index, p)| (voronoi_cell_to_polygon(&p), index))
+                .map(|(index, p)| (index, voronoi_cell_to_polygon(&p)))
                 .collect();
             trace!("Converted polygons to geo polygons");
             polygons
@@ -302,47 +322,102 @@ impl Voronoi {
     }
 }
 
-pub struct PolygonContainer<T: Display + Debug + Clone + Eq + Ord> {
-    pub lookup: Quadtree<isize, usize>,
+pub struct PolygonContainer<T: Display + Debug + Clone + Eq + Ord + Hash> {
+    pub lookup: Quadtree<isize, T>,
     /// The polygon and it's ID
-    pub polygons: Vec<(geo_types::Polygon<isize>, T)>,
+    pub polygons: HashMap<T, geo_types::Polygon<isize>>,
+    pub grid_size: f64,
 }
 
-impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
+impl<T: Display + Debug + Clone + Copy + Eq + Ord + Hash> PolygonContainer<T> {
+    ///
     pub fn new(
-        polygons: Vec<(geo_types::Polygon<isize>, T)>,
+        polygons: HashMap<T, geo_types::Polygon<isize>>,
         grid_size: f64,
     ) -> Result<PolygonContainer<T>, DataLoadingError> {
         // Build Quadtree, with Coords of isize and values of seed points
-        let mut lookup: Quadtree<isize, usize> = Quadtree::new((grid_size).log2().ceil() as usize);
-        for (index, (polygon, _id)) in polygons.iter().enumerate() {
+        let mut lookup: Quadtree<isize, T> = Quadtree::new((grid_size).log2().ceil() as usize);
+        for (id, polygon) in &polygons {
+            let bounds = polygon.bounding_rect().ok_or_else(|| DataLoadingError::ValueParsingError {
+                source: MathError {
+                    context: "Failed to generate bounding box for polygon".to_string(),
+                }
+            })?;
+            if (grid_size as isize) < bounds.max().x {
+                return Err(DataLoadingError::ValueParsingError {
+                    source: ParseErrorType::OutOfBounds {
+                        context: "Max X Coordinate is outside bounding rect".to_string(),
+                        max_size: grid_size.to_string(),
+                        actual_size: bounds.max().x.to_string(),
+                    }
+                });
+            }
+            if (grid_size as isize) < bounds.max().y {
+                return Err(DataLoadingError::ValueParsingError {
+                    source: ParseErrorType::OutOfBounds {
+                        context: "Max Y Coordinate is outside bounding rect".to_string(),
+                        max_size: grid_size.to_string(),
+                        actual_size: bounds.max().y.to_string(),
+                    }
+                });
+            }
+            if bounds.min().x < 0 {
+                return Err(DataLoadingError::ValueParsingError {
+                    source: ParseErrorType::OutOfBounds {
+                        context: "Min X Coordinate is outside bounding rect".to_string(),
+                        max_size: "0".to_string(),
+                        actual_size: bounds.min().x.to_string(),
+                    }
+                });
+            }
+            if bounds.min().y < 0 {
+                return Err(DataLoadingError::ValueParsingError {
+                    source: ParseErrorType::OutOfBounds {
+                        context: "Min Y Coordinate is outside bounding rect".to_string(),
+                        max_size: "0".to_string(),
+                        actual_size: bounds.min().y.to_string(),
+                    }
+                });
+            }
+            let area = AreaBuilder::default()
+                .anchor(QuadPoint::from(bounds.min().x_y()))
+                .dimensions((bounds.width(), bounds.height()))
+                .build();
             //let seed = *seeds.get(index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve seed for polygon".to_string(), key: index.to_string() } })?;
-            match geo_polygon_to_quad_area(polygon) {
+            match area {
                 Ok(polygon) => {
                     lookup
-                        .insert(polygon, index)
-                        .expect("Polygon insertion failed!");
+                        .insert(polygon, *id)
+                        .expect(format!("Polygon insertion failed!: {:?}", polygon).as_str());
                 }
                 Err(e) => {
-                    warn!("Failed to build polygon! {:?}", e.source());
+                    warn!("Failed to insert polygon! {:?}", e);
                 }
             }
         }
-        Ok(PolygonContainer { lookup, polygons })
+        Ok(PolygonContainer {
+            lookup,
+            polygons,
+            grid_size,
+        })
     }
 
     /// Finds the polygon that contains the given point
+    ///
+    /// Note the point needs to be scaled
     pub fn find_polygon_for_point(
         &self,
         point: geo_types::Point<isize>,
     ) -> Result<&T, DataLoadingError> {
         debug!("Finding polygon for point: {:?}", point);
+        assert!(point.x() < self.grid_size as isize, "X Coordinate is out of range!");
+        assert!(point.y() < self.grid_size as isize, "Y Coordinate is out of range!");
         let res = self.lookup.query(geo_point_to_quad_area(&point)?);
         for entry in res {
             let index = entry.value_ref();
-            let (poly, id) = self.polygons.get(*index).unwrap();
+            let poly = self.polygons.get(index).unwrap();
             if poly.contains(&point) {
-                return Ok(id);
+                return Ok(index);
             }
         }
         Err(DataLoadingError::ValueParsingError {
@@ -358,10 +433,11 @@ impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
 mod tests {
     use rand::{Rng, thread_rng};
 
-    use crate::voronoi_generator::{Scaling, Voronoi};
+    use crate::DataLoadingError;
+    use crate::voronoi_generator::{PolygonContainer, Scaling, Voronoi};
 
     #[test]
-    pub fn test() {
+    fn voronoi_seed_generation_and_retrieval() {
         let mut rng = thread_rng();
         let grid_size: usize = 10000;
         let seeds: Vec<(usize, usize)> = (0..100)
@@ -380,5 +456,20 @@ mod tests {
             assert!(result.is_ok(), "{:?}", result);
             assert_eq!(result.unwrap(), (seed.0, seed.1))
         }
+    }
+
+    fn line_string_to_polygon_container(points: geo_types::LineString<isize>) -> Result<PolygonContainer<i32>, DataLoadingError> {
+        let polygon = geo_types::Polygon::new(points, vec![]);
+        PolygonContainer::new(vec![(polygon, 0)], 100.0)
+    }
+
+    #[test]
+    fn quadtree_boundary() {
+        let size = 100;
+        assert!(line_string_to_polygon_container((vec![(0, 0), (0, size), (size, size), (size, 0), (0, 0)]).into()).is_ok(), "Max Boundaries fail");
+        assert!(line_string_to_polygon_container((vec![(0, 0), (0, size), (size + 1, size), (size + 1, 0), (0, 0)]).into()).is_err(), "Exceeding max X isn't detected");
+        assert!(line_string_to_polygon_container((vec![(0, 0), (0, size + 1), (size, size + 1), (size, 0), (0, 0)]).into()).is_err(), "Exceeding max Y isn't detected");
+        assert!(line_string_to_polygon_container((vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()).is_err(), "Negative X isn't detected");
+        assert!(line_string_to_polygon_container((vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()).is_err(), "Negative Y isn't detected");
     }
 }

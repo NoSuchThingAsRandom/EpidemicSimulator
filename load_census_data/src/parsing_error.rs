@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, write};
 use std::num::{ParseFloatError, ParseIntError};
 
 use osmpbf::Error;
@@ -62,6 +62,11 @@ pub enum ParseErrorType {
     MathError {
         context: String,
     },
+    OutOfBounds {
+        context: String,
+        max_size: String,
+        actual_size: String,
+    },
 }
 
 impl Display for ParseErrorType {
@@ -102,6 +107,9 @@ impl Display for ParseErrorType {
             }
             ParseErrorType::MathError { context } => {
                 write!(f, "Math error! Context: {}", context)
+            }
+            ParseErrorType::OutOfBounds { context, max_size, actual_size } => {
+                write!(f, "Out Of Bounds Error: {}, Max Size: {}, Actual Size: {}", context, max_size, actual_size)
             }
         }
     }

@@ -31,11 +31,26 @@ pub enum Error {
         source: Box<dyn std::error::Error + Send + Sync>,
         context: String,
     },
+    InitializationError {
+        message: String
+    },
+    OptionRetrievalFailure {
+        message: String,
+        key: String,
+    },
 }
 
 impl Error {
     pub fn new_simulation_error(message: String) -> Error {
         Error::Simulation { message }
+    }
+
+    pub fn from_option<T: Display, U>(value: Option<U>, key: T, message: String) -> Result<U, Error> {
+        if let Some(value) = value {
+            value
+        } else {
+            Error::OptionRetrievalFailure { message, key: key.to_string() }
+        }
     }
 }
 
@@ -57,7 +72,13 @@ impl Debug for Error {
                 write!(f, "Error: {}\n{}", context, source)
             }
             Error::Simulation { message } => {
-                write!(f, "Simulation Error Occured: {}", message)
+                write!(f, "Simulation Error Occurred: {}", message)
+            }
+            Error::OptionRetrievalFailure { message, key } => {
+                write!(f, "Failed to retrieve value with key ({}), context: {}", key, message)
+            }
+            Error::InitializationError { message } => {
+                write!(f, "{} has not been Initialized", message)
             }
         }
     }
@@ -70,3 +91,4 @@ impl Display for Error {
 }
 
 impl std::error::Error for Error {}
+

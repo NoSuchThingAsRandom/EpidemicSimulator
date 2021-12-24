@@ -62,7 +62,7 @@ pub fn draw_osm_buildings_polygons(
         .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))
         .unwrap();
     let chosen_vorinni = &data.building_voronois[&building_type];
-    for (p, index) in &chosen_vorinni.polygons.polygons {
+    for (index, p) in &chosen_vorinni.polygons.polygons {
         let c = &Palette99::COLORS[index % 20];
         let c = &RGBColor(c.0, c.1, c.2);
         draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());
