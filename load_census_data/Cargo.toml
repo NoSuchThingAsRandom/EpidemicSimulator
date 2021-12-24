@@ -28,4 +28,4 @@ serde_json = "1.0.68"
 serde_plain = "1.0.0"
 strum = "0.23"
 strum_macros = "0.23"
-voronoice = "0.1.1"
+voronoice = { git = "https://github.com/NoSuchThingAsRandom/voronoice" }

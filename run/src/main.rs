@@ -53,7 +53,8 @@ async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init_timed();
     let mut rng = thread_rng();
-    load_census_data::osm_parsing::OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string()).unwrap();
+    let data = load_census_data::osm_parsing::OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string()).unwrap();
+    println!("{}", sim::config::get_memory_usage().unwrap());
     return Ok(());
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")

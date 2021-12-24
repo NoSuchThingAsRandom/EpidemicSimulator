@@ -106,7 +106,6 @@ pub enum DataLoadingError {
     NetworkError {
         source: reqwest::Error,
     },
-    //,details:String
     /// An error occurs parsing data with Serde
     SerdeParseError {
         source: SerdeErrors,

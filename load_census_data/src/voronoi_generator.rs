@@ -18,16 +18,16 @@
  *
  */
 
+use std::error::Error;
 use std::fmt::{Debug, Display};
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{CoordNum, LineString, Point, Polygon};
-use log::{debug, info, trace};
+use log::{debug, error, info, trace, warn};
 use num_traits::PrimInt;
 use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use rand::{Rng, thread_rng};
-use rand::prelude::IteratorRandom;
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
 use crate::DataLoadingError;
@@ -45,9 +45,9 @@ impl Scaling {
     pub fn yorkshire_national_grid() -> Scaling {
         Scaling {
             x_offset: 3500000,
-            x_scale: 1,
+            x_scale: 10,
             y_offset: 0,
-            y_scale: 1,
+            y_scale: 8,
         }
     }
     /// Converts a coordinate to fit on the grid
@@ -207,7 +207,7 @@ impl Voronoi {
             trace!("Converted polygons to geo polygons");
             polygons
         } else {
-            Vec::new()
+            return Err(DataLoadingError::Misc { source: "Failed to build Voronoi diagram!".to_string() });
         };
 
         let container = PolygonContainer::new(polygons, size as f64)?;
@@ -241,7 +241,10 @@ impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
         let mut lookup: Quadtree<isize, usize> = Quadtree::new((grid_size).log2().ceil() as usize);
         for (index, (polygon, id)) in polygons.iter().enumerate() {
             //let seed = *seeds.get(index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve seed for polygon".to_string(), key: index.to_string() } })?;
-            lookup.insert(geo_polygon_to_quad_area(polygon)?, index);
+            match geo_polygon_to_quad_area(polygon) {
+                Ok(polygon) => { lookup.insert(polygon, index).expect("Polygon insertion failed!"); },
+                Err(e) => { warn!("Failed to build polygon! {:?}",e.source()); },
+            }
         }
         Ok(PolygonContainer { lookup, polygons })
     }

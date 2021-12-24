@@ -24,7 +24,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 
 use geo_types::Point;
-use log::{debug, info};
+use log::{debug, error, info};
 use osmpbf::{DenseNode, DenseTagIter};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -128,11 +128,12 @@ impl OSMRawBuildings {
         for (building_type, locations) in &building_locations {
             info!("Building voronoi diagram for {:?} with {} buildings",building_type,locations.len());
             //GRID_SIZE * locations.len()
-            let lookup = Voronoi::new(500000, locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect(), Scaling::yorkshire_national_grid())?;
-            let f = lookup.polygons.polygons.iter().map(|(p, i)| p.clone()).collect();
-            draw_voronoi_polygons(format!("images/{:?}Vorinni.png", building_type), &f, 20000);
-            // TODO Add to hashmap when memory isn't an issue
-            building_vorinnis.insert(*building_type, lookup);
+            match Voronoi::new(50000, locations.iter().map(|p| (p.0.x as usize, p.0.y as usize)).collect(), Scaling::yorkshire_national_grid()) {
+                Ok(voronoi) => {
+                    building_vorinnis.insert(*building_type, voronoi);
+                }
+                Err(e) => { error!("{}",e) }
+            }
         }
         let data = OSMRawBuildings { building_locations, building_vorinnis };
         if DRAW_VORONOI_DIAGRAMS {

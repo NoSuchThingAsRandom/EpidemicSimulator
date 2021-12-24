@@ -22,7 +22,7 @@
 extern crate log;
 extern crate pretty_env_logger;
 
-mod config;
+pub mod config;
 mod disease;
 mod error;
 mod interventions;
