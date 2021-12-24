@@ -81,20 +81,38 @@ impl Scaling {
         assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
         (x, y)
     }
-    pub fn scale_polygon(&self, polygon: &geo_types::Polygon<isize>, grid_size: isize) -> geo_types::Polygon<isize> {
-        geo_types::Polygon::new(polygon.exterior().0.iter().map(|p| {
-            assert!(0 <= p.x, "X Coord ({}) is less than zero!", p.x);
-            assert!(0 <= p.y, "Y Coord ({}) is less than zero!", p.y);
-            let x = self.scale_point((p.x, p.y), grid_size);
-            let p: geo_types::Coordinate<isize> = x.into();
-            return p;
-        }).collect(), vec![])
+    pub fn scale_polygon(
+        &self,
+        polygon: &geo_types::Polygon<isize>,
+        grid_size: isize,
+    ) -> geo_types::Polygon<isize> {
+        geo_types::Polygon::new(
+            polygon
+                .exterior()
+                .0
+                .iter()
+                .map(|p| {
+                    assert!(0 <= p.x, "X Coord ({}) is less than zero!", p.x);
+                    assert!(0 <= p.y, "Y Coord ({}) is less than zero!", p.y);
+                    let x = self.scale_point((p.x, p.y), grid_size);
+                    let p: geo_types::Coordinate<isize> = x.into();
+                    return p;
+                })
+                .collect(),
+            vec![],
+        )
     }
-    pub fn scale_rect(&self, rect: geo_types::Rect<isize>, grid_size: isize) -> geo_types::Rect<isize> {
-        geo_types::Rect::new(self.scale_point(rect.min().x_y(), grid_size), self.scale_point(rect.max().x_y(), grid_size))
+    pub fn scale_rect(
+        &self,
+        rect: geo_types::Rect<isize>,
+        grid_size: isize,
+    ) -> geo_types::Rect<isize> {
+        geo_types::Rect::new(
+            self.scale_point(rect.min().x_y(), grid_size),
+            self.scale_point(rect.max().x_y(), grid_size),
+        )
     }
 }
-
 
 impl Default for Scaling {
     fn default() -> Self {
@@ -106,7 +124,6 @@ impl Default for Scaling {
         }
     }
 }
-
 
 fn get_random_point_inside_polygon(
     polygon: &geo_types::Polygon<isize>,
@@ -139,7 +156,6 @@ fn voronoi_cell_to_polygon(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<
         .collect::<Vec<geo_types::Point<isize>>>();
     geo_types::Polygon::new(LineString::from(points), Vec::new())
 }
-
 
 /// Returns the minimum and maximum grid size required for the seeds
 fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
@@ -206,12 +222,9 @@ impl Voronoi {
             &voronoi_seeds
                 .iter()
                 .map(|p| (p.x as isize, p.y as isize))
-                .collect::<Vec<(isize, isize)>>()
+                .collect::<Vec<(isize, isize)>>(),
         );
-        trace!(
-            "Voronoi Boundary: {:?}",boundary
-
-        );
+        trace!("Voronoi Boundary: {:?}", boundary);
         // The size must be even, otherwise we get a negative bounding box
         let mut size = boundary.1.0.max(boundary.1.1) as usize;
         if size % 2 != 0 {
@@ -226,7 +239,7 @@ impl Voronoi {
             size as f64,
             size as f64,
         );
-        debug!("Voronoi boundary box size: {} -> {:?}",size,bounding_box);
+        debug!("Voronoi boundary box size: {} -> {:?}", size, bounding_box);
         let polygons = VoronoiBuilder::default()
             .set_sites(voronoi_seeds)
             .set_bounding_box(bounding_box)
@@ -270,10 +283,9 @@ impl Voronoi {
         &self,
         point: geo_types::Point<isize>,
     ) -> Result<(usize, usize), DataLoadingError> {
-        let point = self.scaling.scale_point(
-            point.x_y(),
-            self.grid_size as isize,
-        );
+        let point = self
+            .scaling
+            .scale_point(point.x_y(), self.grid_size as isize);
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(&point)?;
         Ok(*self
@@ -287,7 +299,6 @@ impl Voronoi {
             })?)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -318,7 +329,9 @@ mod tests {
         }
     }
 
-    fn line_string_to_polygon_container(points: geo_types::LineString<isize>) -> Result<PolygonContainer<i32>, DataLoadingError> {
+    fn line_string_to_polygon_container(
+        points: geo_types::LineString<isize>,
+    ) -> Result<PolygonContainer<i32>, DataLoadingError> {
         let polygon = geo_types::Polygon::new(points, vec![]);
         PolygonContainer::new([(0, polygon)].iter().collect(), Scaling::default(), 100.0)
     }
@@ -326,11 +339,41 @@ mod tests {
     #[test]
     fn quadtree_boundary() {
         let size = 100;
-        assert!(line_string_to_polygon_container((vec![(0, 0), (0, size), (size, size), (size, 0), (0, 0)]).into()).is_ok(), "Max Boundaries fail");
-        assert!(line_string_to_polygon_container((vec![(0, 0), (0, size), (size + 1, size), (size + 1, 0), (0, 0)]).into()).is_err(), "Exceeding max X isn't detected");
-        assert!(line_string_to_polygon_container((vec![(0, 0), (0, size + 1), (size, size + 1), (size, 0), (0, 0)]).into()).is_err(), "Exceeding max Y isn't detected");
-        assert!(line_string_to_polygon_container((vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()).is_err(), "Negative X isn't detected");
-        assert!(line_string_to_polygon_container((vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()).is_err(), "Negative Y isn't detected");
+        assert!(
+            line_string_to_polygon_container(
+                (vec![(0, 0), (0, size), (size, size), (size, 0), (0, 0)]).into()
+            )
+                .is_ok(),
+            "Max Boundaries fail"
+        );
+        assert!(
+            line_string_to_polygon_container(
+                (vec![(0, 0), (0, size), (size + 1, size), (size + 1, 0), (0, 0)]).into()
+            )
+                .is_err(),
+            "Exceeding max X isn't detected"
+        );
+        assert!(
+            line_string_to_polygon_container(
+                (vec![(0, 0), (0, size + 1), (size, size + 1), (size, 0), (0, 0)]).into()
+            )
+                .is_err(),
+            "Exceeding max Y isn't detected"
+        );
+        assert!(
+            line_string_to_polygon_container(
+                (vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()
+            )
+                .is_err(),
+            "Negative X isn't detected"
+        );
+        assert!(
+            line_string_to_polygon_container(
+                (vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()
+            )
+                .is_err(),
+            "Negative Y isn't detected"
+        );
     }
 
     #[test]

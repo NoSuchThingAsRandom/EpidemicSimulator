@@ -108,8 +108,16 @@ impl Display for ParseErrorType {
             ParseErrorType::MathError { context } => {
                 write!(f, "Math error! Context: {}", context)
             }
-            ParseErrorType::OutOfBounds { context, max_size, actual_size } => {
-                write!(f, "Out Of Bounds Error: {}, Max Size: {}, Actual Size: {}", context, max_size, actual_size)
+            ParseErrorType::OutOfBounds {
+                context,
+                max_size,
+                actual_size,
+            } => {
+                write!(
+                    f,
+                    "Out Of Bounds Error: {}, Max Size: {}, Actual Size: {}",
+                    context, max_size, actual_size
+                )
             }
         }
     }

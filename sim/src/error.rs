@@ -32,7 +32,7 @@ pub enum Error {
         context: String,
     },
     InitializationError {
-        message: String
+        message: String,
     },
     OptionRetrievalFailure {
         message: String,
@@ -45,11 +45,18 @@ impl Error {
         Error::Simulation { message }
     }
 
-    pub fn from_option<T: Display, U>(value: Option<U>, key: T, message: String) -> Result<U, Error> {
+    pub fn from_option<T: Display, U>(
+        value: Option<U>,
+        key: T,
+        message: String,
+    ) -> Result<U, Error> {
         if let Some(value) = value {
             Ok(value)
         } else {
-            Err(Error::OptionRetrievalFailure { message, key: key.to_string() })
+            Err(Error::OptionRetrievalFailure {
+                message,
+                key: key.to_string(),
+            })
         }
     }
 }
@@ -75,7 +82,11 @@ impl Debug for Error {
                 write!(f, "Simulation Error Occurred: {}", message)
             }
             Error::OptionRetrievalFailure { message, key } => {
-                write!(f, "Failed to retrieve value with key ({}), context: {}", key, message)
+                write!(
+                    f,
+                    "Failed to retrieve value with key ({}), context: {}",
+                    key, message
+                )
             }
             Error::InitializationError { message } => {
                 write!(f, "{} has not been Initialized", message)
@@ -91,4 +102,3 @@ impl Display for Error {
 }
 
 impl std::error::Error for Error {}
-

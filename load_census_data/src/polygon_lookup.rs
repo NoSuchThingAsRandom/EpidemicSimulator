@@ -108,7 +108,6 @@ fn geo_point_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default
     Ok(area)
 }
 
-
 pub struct PolygonContainer<T: Debug + Clone + Eq + Ord + Hash> {
     pub lookup: Quadtree<isize, T>,
     /// The polygon and it's ID
@@ -127,11 +126,14 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         // Build Quadtree, with Coords of isize and values of seed points
         let mut lookup: Quadtree<isize, T> = Quadtree::new((grid_size).log2().ceil() as usize);
         for (id, polygon) in &polygons {
-            let bounds = polygon.bounding_rect().ok_or_else(|| DataLoadingError::ValueParsingError {
-                source: MathError {
-                    context: "Failed to generate bounding box for polygon".to_string(),
-                }
-            })?;
+            let bounds =
+                polygon
+                    .bounding_rect()
+                    .ok_or_else(|| DataLoadingError::ValueParsingError {
+                        source: MathError {
+                            context: "Failed to generate bounding box for polygon".to_string(),
+                        },
+                    })?;
             let mut bounds = scaling.scale_rect(bounds, grid_size as isize);
             if bounds.width() == 0 {
                 bounds.set_max((bounds.max().x + 1, bounds.max().y));
@@ -145,7 +147,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                         context: "Max X Coordinate is outside bounding rect".to_string(),
                         max_size: grid_size.to_string(),
                         actual_size: bounds.max().x.to_string(),
-                    }
+                    },
                 });
             }
             if (grid_size as isize) < bounds.max().y {
@@ -154,7 +156,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                         context: "Max Y Coordinate is outside bounding rect".to_string(),
                         max_size: grid_size.to_string(),
                         actual_size: bounds.max().y.to_string(),
-                    }
+                    },
                 });
             }
             if bounds.min().x < 0 {
@@ -163,7 +165,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                         context: "Min X Coordinate is outside bounding rect".to_string(),
                         max_size: "0".to_string(),
                         actual_size: bounds.min().x.to_string(),
-                    }
+                    },
                 });
             }
             if bounds.min().y < 0 {
@@ -172,7 +174,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                         context: "Min Y Coordinate is outside bounding rect".to_string(),
                         max_size: "0".to_string(),
                         actual_size: bounds.min().y.to_string(),
-                    }
+                    },
                 });
             }
             let region = AreaBuilder::default()
@@ -187,7 +189,10 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                         .unwrap_or_else(|| panic!("Polygon insertion failed!: {:?}", polygon));
                 }
                 Err(e) => {
-                    warn!("Failed to build region for polygon with boundary ({:?})! {:?}",bounds, e);
+                    warn!(
+                        "Failed to build region for polygon with boundary ({:?})! {:?}",
+                        bounds, e
+                    );
                 }
             }
         }
@@ -208,18 +213,30 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
     ) -> Result<&T, DataLoadingError> {
         trace!("Finding polygon for point: {:?}", point);
         // TODO Move this scaling
-        let scaled_point: geo_types::Point<isize> = self.scaling.scale_point((point.x() - 3500000, point.y()), self.grid_size as isize).into();
-        assert!(scaled_point.x() < self.grid_size as isize, "X Coordinate is out of range!");
-        assert!(scaled_point.y() < self.grid_size as isize, "Y Coordinate is out of range!");
+        let scaled_point: geo_types::Point<isize> = self
+            .scaling
+            .scale_point((point.x() - 3500000, point.y()), self.grid_size as isize)
+            .into();
+        assert!(
+            scaled_point.x() < self.grid_size as isize,
+            "X Coordinate is out of range!"
+        );
+        assert!(
+            scaled_point.y() < self.grid_size as isize,
+            "Y Coordinate is out of range!"
+        );
         let res = self.lookup.query(geo_point_to_quad_area(&scaled_point)?);
         for entry in res {
             let id = entry.value_ref();
-            let poly = self.polygons.get(id).ok_or_else(|| DataLoadingError::ValueParsingError {
-                source: ParseErrorType::MissingKey {
-                    context: "Can't find polygon with id".to_string(),
-                    key: format!("{:?}", point),
-                },
-            })?;
+            let poly =
+                self.polygons
+                    .get(id)
+                    .ok_or_else(|| DataLoadingError::ValueParsingError {
+                        source: ParseErrorType::MissingKey {
+                            context: "Can't find polygon with id".to_string(),
+                            key: format!("{:?}", point),
+                        },
+                    })?;
             if poly.contains(point) {
                 return Ok(id);
             }
@@ -238,10 +255,7 @@ impl PolygonContainer<String> {
     /// Generates the polygons for each output area contained in the given file
     pub fn load_polygons_from_file(
         filename: &str,
-    ) -> Result<
-        PolygonContainer<String>,
-        DataLoadingError,
-    > {
+    ) -> Result<PolygonContainer<String>, DataLoadingError> {
         let mut reader =
             shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
@@ -262,7 +276,10 @@ impl PolygonContainer<String> {
                         .points()
                         .iter()
                         .map(|p| {
-                            geo_types::Coordinate::from((p.x.round() as isize, p.y.round() as isize))
+                            geo_types::Coordinate::from((
+                                p.x.round() as isize,
+                                p.y.round() as isize,
+                            ))
                         })
                         .collect();
                     interior_ring = Vec::new();
@@ -319,7 +336,7 @@ impl PolygonContainer<String> {
                     code = value.ok_or_else(|| DataLoadingError::ValueParsingError {
                         source: ParseErrorType::IsEmpty {
                             message: "The code for an Output Area is empty".to_string(),
-                        }
+                        },
                     })?;
                 }
                 _ => {
@@ -347,8 +364,8 @@ impl PolygonContainer<String> {
         PolygonContainer::new(data, scaling, GRID_SIZE as f64)
     }
     /*    pub fn remove_polygon(&mut self, output_area_id: T) {
-            let poly=self.polygons.remove(&output_area_id).unwrap();
-            //let poly = Error::from_option(self.polygons.remove(output_area_id), output_area_id, "Cannot delete polygon!".to_string())?;
-            self.lookup.delete(geo_polygon_to_quad_area(&poly).unwrap())
-        }*/
+        let poly=self.polygons.remove(&output_area_id).unwrap();
+        //let poly = Error::from_option(self.polygons.remove(output_area_id), output_area_id, "Cannot delete polygon!".to_string())?;
+        self.lookup.delete(geo_polygon_to_quad_area(&poly).unwrap())
+    }*/
 }

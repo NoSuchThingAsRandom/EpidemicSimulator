@@ -46,9 +46,9 @@ mod nomis_download;
 pub mod osm_parsing;
 pub mod parse_table;
 pub mod parsing_error;
+pub mod polygon_lookup;
 pub mod tables;
 pub mod voronoi_generator;
-pub mod polygon_lookup;
 
 pub const OSM_FILENAME: &str = "data/england-latest.osm.pbf";
 
