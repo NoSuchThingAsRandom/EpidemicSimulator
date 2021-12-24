@@ -23,8 +23,8 @@ use std::fmt::{Debug, Display};
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
-use geo_types::{CoordNum, LineString, Point, Polygon};
-use log::{debug, error, info, trace, warn};
+use geo_types::{CoordNum, LineString, Point};
+use log::{debug, info, trace, warn};
 use num_traits::PrimInt;
 use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use rand::{Rng, thread_rng};
@@ -60,26 +60,8 @@ impl Scaling {
             " Y conversion for {} is broken",
             point.1
         );
-        let x = ((point.0 as isize - self.x_offset) / self.x_scale);
-        let y = ((point.1 as isize - self.y_offset) / self.y_scale);
-        assert!(0 <= x, "X Coord {} is less than zero", x);
-        assert!(x < grid_size, "X Coord {} is greater than the grid size", x);
-        assert!(0 <= y, "Y Coord {} is less than zero", y);
-        assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
-        let p = voronoice::Point {
-            x: x as f64,
-            y: y as f64,
-        };
-        (x, y)
-    }
-
-    /// Converts a coordinate to fit on the grid
-    ///
-    /// Used to represent a smaller grid, reducing RAM size
-    #[inline]
-    fn scale_geo_point(&self, point: geo_types::Point<isize>, grid_size: isize) -> (isize, isize) {
-        let x = ((point.x() as isize - self.x_offset) / self.x_scale);
-        let y = ((point.y() as isize - self.y_offset) / self.y_scale);
+        let x = (point.0 as isize - self.x_offset) / self.x_scale;
+        let y = (point.1 as isize - self.y_offset) / self.y_scale;
         assert!(0 <= x, "X Coord {} is less than zero", x);
         assert!(x < grid_size, "X Coord {} is greater than the grid size", x);
         assert!(0 <= y, "Y Coord {} is less than zero", y);
@@ -185,7 +167,7 @@ fn voronoi_cell_to_polygon(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<
 pub struct Voronoi {
     pub grid_size: usize,
     pub seeds: Vec<(usize, usize)>,
-    pub polygons: PolygonContainer<(usize)>,
+    pub polygons: PolygonContainer<usize>,
 
     pub scaling: Scaling,
 }
@@ -262,7 +244,7 @@ impl Voronoi {
             size as f64,
         );
 
-        let mut polygons = VoronoiBuilder::default()
+        let polygons = VoronoiBuilder::default()
             .set_sites(voronoi_seeds)
             .set_bounding_box(bounding_box)
             .set_clip_behavior(ClipBehavior::Clip)
@@ -302,7 +284,10 @@ impl Voronoi {
         &self,
         point: geo_types::Point<isize>,
     ) -> Result<(usize, usize), DataLoadingError> {
-        let point = self.scaling.scale_geo_point(point, self.grid_size as isize);
+        let point = self.scaling.scale_point(
+            (point.x() as usize, point.y() as usize),
+            self.grid_size as isize,
+        );
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(point)?;
         Ok(*self
@@ -330,7 +315,7 @@ impl<T: Display + Debug + Clone + Eq + Ord> PolygonContainer<T> {
     ) -> Result<PolygonContainer<T>, DataLoadingError> {
         // Build Quadtree, with Coords of isize and values of seed points
         let mut lookup: Quadtree<isize, usize> = Quadtree::new((grid_size).log2().ceil() as usize);
-        for (index, (polygon, id)) in polygons.iter().enumerate() {
+        for (index, (polygon, _id)) in polygons.iter().enumerate() {
             //let seed = *seeds.get(index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve seed for polygon".to_string(), key: index.to_string() } })?;
             match geo_polygon_to_quad_area(polygon) {
                 Ok(polygon) => {

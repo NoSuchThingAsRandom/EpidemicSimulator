@@ -17,22 +17,15 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::time::Instant;
 
 use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
-use rand::{Rng, thread_rng};
 
-use load_census_data::{CensusData, OSM_FILENAME};
-use load_census_data::osm_parsing::draw_vorinni::{
-    draw_osm_buildings_polygons, draw_voronoi_polygons,
-};
+use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
-use load_census_data::voronoi_generator::{Scaling, Voronoi};
 use sim::simulator::Simulator;
 
 //use visualisation::citizen_connections::{connected_groups, draw_graph};
@@ -54,12 +47,6 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init_timed();
-    let mut rng = thread_rng();
-    let data =
-        load_census_data::osm_parsing::OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string())
-            .unwrap();
-    println!("{}", sim::config::get_memory_usage().unwrap());
-    return Ok(());
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
@@ -165,7 +152,6 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
-        return Ok(());
         let mut sim = Simulator::new(census_data)
             .context("Failed to initialise sim")
             .unwrap();

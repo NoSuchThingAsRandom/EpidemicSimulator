@@ -26,7 +26,6 @@ use std::hash::Hash;
 use std::time::Instant;
 
 use anyhow::Context;
-use geo::prelude::{BoundingRect, Contains};
 use geo_types::{Coordinate, LineString, Point, Polygon};
 use log::{debug, info};
 use serde::Serialize;
@@ -39,7 +38,6 @@ use load_census_data::voronoi_generator::PolygonContainer;
 
 use crate::config::get_memory_usage;
 use crate::models::building::BuildingID;
-use crate::models::ID::OutputArea;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;
 
@@ -248,7 +246,7 @@ pub fn build_polygons_for_output_areas(
 
 pub fn get_output_area_containing_point(
     point: &Point<isize>,
-    polygons: &HashMap<OutputAreaID, Polygon<isize>>,
+    _polygons: &HashMap<OutputAreaID, Polygon<isize>>,
     point_lookup: &PolygonContainer<String>,
 ) -> anyhow::Result<OutputAreaID> {
     let areas = point_lookup

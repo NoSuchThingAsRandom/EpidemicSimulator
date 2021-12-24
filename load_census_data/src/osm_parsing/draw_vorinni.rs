@@ -22,7 +22,7 @@ use geo_types::LineString;
 use plotters::chart::{ChartBuilder, ChartContext};
 use plotters::coord::types::RangedCoordi32;
 use plotters::prelude::{BitMapBackend, Cartesian2d, Color, IntoDrawingArea, Palette, Palette99};
-use plotters::style::{BLACK, RGBColor, WHITE};
+use plotters::style::{RGBColor, WHITE};
 
 use crate::{OSMRawBuildings, RawBuildingTypes};
 use crate::osm_parsing::GRID_SIZE;
@@ -61,7 +61,7 @@ pub fn draw_osm_buildings_polygons(
     let mut chart = ChartBuilder::on(&draw_backend)
         .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))
         .unwrap();
-    let chosen_vorinni = &data.building_vorinnis[&building_type];
+    let chosen_vorinni = &data.building_voronois[&building_type];
     for (p, index) in &chosen_vorinni.polygons.polygons {
         let c = &Palette99::COLORS[index % 20];
         let c = &RGBColor(c.0, c.1, c.2);
@@ -72,7 +72,7 @@ pub fn draw_osm_buildings_polygons(
 
 pub fn draw_voronoi_polygons(
     filename: String,
-    polygons: &Vec<geo_types::Polygon<isize>>,
+    polygons: &[&geo_types::Polygon<isize>],
     grid_size: u32,
 ) {
     println!("Drawing at: {}", filename);

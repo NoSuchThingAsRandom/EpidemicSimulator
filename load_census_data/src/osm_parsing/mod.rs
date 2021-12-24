@@ -26,12 +26,10 @@ use std::io::{Read, Write};
 use geo_types::Point;
 use log::{debug, error, info};
 use osmpbf::{DenseNode, DenseTagIter};
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use crate::DataLoadingError;
-use crate::osm_parsing::draw_vorinni::{draw_osm_buildings_polygons, draw_voronoi_polygons};
+use crate::osm_parsing::draw_vorinni::draw_voronoi_polygons;
 use crate::voronoi_generator::{Scaling, Voronoi};
 
 pub mod convert;
@@ -50,8 +48,8 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
 );
 //pub const GRID_SIZE: (usize, usize) = ((TOP_RIGHT_BOUNDARY.0 - BOTTOM_LEFT_BOUNDARY.0) as usize, (TOP_RIGHT_BOUNDARY.1 - BOTTOM_LEFT_BOUNDARY.1) as usize);
 
-// Use 200 units per building
-pub const GRID_SIZE: usize = 100;
+// The size of grids to use
+pub const GRID_SIZE: usize = 50000;
 const DUMP_TO_FILE: bool = false;
 const DRAW_VORONOI_DIAGRAMS: bool = false;
 
@@ -101,7 +99,7 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
 
 pub struct OSMRawBuildings {
     pub building_locations: HashMap<RawBuildingTypes, Vec<Point<isize>>>,
-    pub building_vorinnis: HashMap<RawBuildingTypes, Voronoi>,
+    pub building_voronois: HashMap<RawBuildingTypes, Voronoi>,
 }
 
 impl OSMRawBuildings {
@@ -135,9 +133,8 @@ impl OSMRawBuildings {
                 building_type,
                 locations.len()
             );
-            //GRID_SIZE * locations.len()
             match Voronoi::new(
-                50000,
+                GRID_SIZE,
                 locations
                     .iter()
                     .map(|p| (p.0.x as usize, p.0.y as usize))
@@ -154,14 +151,15 @@ impl OSMRawBuildings {
         }
         let data = OSMRawBuildings {
             building_locations,
-            building_vorinnis,
+            building_voronois: building_vorinnis,
         };
         if DRAW_VORONOI_DIAGRAMS {
             debug!("Starting drawing");
-            for (k, p) in data.building_vorinnis.iter() {
-                //keys().clone().for_each(|k| {
-                let f = p.polygons.polygons.iter().map(|(p, i)| p.clone()).collect();
-                draw_voronoi_polygons(format!("images/{:?}Vorinni.png", k), &f, 20000);
+            for (k, p) in data.building_voronois.iter() {
+                //keys().clone().for_each(|k| {:
+                let polygons: Vec<&geo_types::Polygon<isize>> =
+                    p.polygons.polygons.iter().map(|(p, _)| p).collect();
+                draw_voronoi_polygons(format!("images/{:?}Vorinni.png", k), &polygons, 20000);
                 //   });
             }
         }
