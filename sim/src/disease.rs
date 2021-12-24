@@ -123,11 +123,22 @@ impl DiseaseModel {
         }
     }
     // TODO Redo this function
-    pub fn get_exposure_chance(&self, is_vaccinated: bool, global_mask_status: &MaskStatus, is_on_public_transport_and_mask_compliant: bool) -> f64 {
+    pub fn get_exposure_chance(
+        &self,
+        is_vaccinated: bool,
+        global_mask_status: &MaskStatus,
+        is_on_public_transport_and_mask_compliant: bool,
+    ) -> f64 {
         let mut chance = self.exposure_chance
             - match global_mask_status {
             MaskStatus::None(_) => 0.0,
-            MaskStatus::PublicTransport(_) => if is_on_public_transport_and_mask_compliant { 0.2 } else { 0.0 },
+            MaskStatus::PublicTransport(_) => {
+                if is_on_public_transport_and_mask_compliant {
+                    0.2
+                } else {
+                    0.0
+                }
+            }
             MaskStatus::Everywhere(_) => 0.4,
         }
             - if is_vaccinated { 1.0 } else { 0.0 };

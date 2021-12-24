@@ -32,16 +32,22 @@ pub enum SerdeErrors {
 #[derive(Debug)]
 pub enum ParseErrorType {
     /// Cannot parse the value into a float
-    Int { source: ParseIntError },
+    Int {
+        source: ParseIntError,
+    },
     /// Cannot parse the value into a float
-    Float { source: ParseFloatError },
+    Float {
+        source: ParseFloatError,
+    },
     /// The value is not the expected data type
     InvalidDataType {
         value: Option<String>,
         expected_type: String,
     },
     /// The collection is expected to contain one or more values
-    IsEmpty { message: String },
+    IsEmpty {
+        message: String,
+    },
     /// Two values should be equal, but are not
     Mismatching {
         message: String,
@@ -49,8 +55,13 @@ pub enum ParseErrorType {
         value_2: String,
     },
     /// This occurs when the value corresponding to a key in a map is not there
-    MissingKey { context: String, key: String },
-    MathError { context: String },
+    MissingKey {
+        context: String,
+        key: String,
+    },
+    MathError {
+        context: String,
+    },
 }
 
 impl Display for ParseErrorType {

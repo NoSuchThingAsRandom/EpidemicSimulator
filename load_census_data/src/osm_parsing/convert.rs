@@ -18,7 +18,10 @@
  *
  */
 //! This is used to convert latitude and longitude to grid coordinates (National Grid Ordnance Survey - OGB36)
-pub fn decimal_latitude_and_longitude_to_coordinates(latitude: f64, longitude: f64) -> Option<(isize, isize)> {
+pub fn decimal_latitude_and_longitude_to_coordinates(
+    latitude: f64,
+    longitude: f64,
+) -> Option<(isize, isize)> {
     let (latitude, longitude, height) = lat_lon_to_cartesian(latitude, longitude);
     // TODO Change these limits
     if 53.5 < latitude && latitude < 54.598 && -3.0 < longitude && longitude < 0.0 {
@@ -47,7 +50,7 @@ pub fn main() {
     // Degrees: 52 39 27.2531 N, 001 43 04.5177 E = 52.65757,1.717922
     //let f=lat_lon_to_cartesian();
     let lat = 53.961199;
-    let lon = -1.39;//664442;
+    let lon = -1.39; //664442;
     println!("Lat: {}, Lon: {}", lat, lon);
     println!("---------------");
     let (x, y, z) = lat_lon_to_cartesian(lat, lon);

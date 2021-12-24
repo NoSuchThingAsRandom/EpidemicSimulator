@@ -63,7 +63,7 @@ pub struct PublicTransport {
     id: PublicTransportID,
     capacity: u32,
     citizens: Vec<CitizenID>,
-    pub exposure_count: usize
+    pub exposure_count: usize,
 }
 
 impl PublicTransport {
@@ -80,7 +80,9 @@ impl PublicTransport {
             self.citizens.push(citizen_id);
             Ok(())
         } else {
-            Err(Error::Simulation { message: "Cannot add Citizen, as Public Transport is at capacity".to_string() })
+            Err(Error::Simulation {
+                message: "Cannot add Citizen, as Public Transport is at capacity".to_string(),
+            })
         }
     }
 
@@ -95,12 +97,22 @@ impl PublicTransport {
 
 impl Display for PublicTransport {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Public Transport {}, Capacity: {}, Occupancy: {}", self.id, self.capacity, self.citizens.len())
+        write!(
+            f,
+            "Public Transport {}, Capacity: {}, Occupancy: {}",
+            self.id,
+            self.capacity,
+            self.citizens.len()
+        )
     }
 }
 
 impl Debug for PublicTransport {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Public Transport {}, Capacity: {}, Citizens: {:?}", self.id, self.capacity, self.citizens)
+        write!(
+            f,
+            "Public Transport {}, Capacity: {}, Citizens: {:?}",
+            self.id, self.capacity, self.citizens
+        )
     }
 }

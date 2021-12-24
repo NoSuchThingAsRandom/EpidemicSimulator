@@ -316,7 +316,7 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string())?
+            osm_buildings: OSMRawBuildings::build_osm_data(OSM_FILENAME.to_string())?,
         })
     }
     pub async fn resume_download(

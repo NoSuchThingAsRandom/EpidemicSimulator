@@ -133,7 +133,13 @@ impl PointLookup {
 /// Generates the polygons for each output area contained in the given file
 pub fn build_polygons_for_output_areas(
     filename: &str,
-) -> Result<(HashMap<OutputAreaID, geo_types::Polygon<isize>>, PolygonContainer<String>), DataLoadingError> {
+) -> Result<
+    (
+        HashMap<OutputAreaID, geo_types::Polygon<isize>>,
+        PolygonContainer<String>,
+    ),
+    DataLoadingError,
+> {
     let mut reader =
         shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
@@ -154,7 +160,9 @@ pub fn build_polygons_for_output_areas(
                 rings = polygon.rings()[0]
                     .points()
                     .iter()
-                    .map(|p| geo_types::Coordinate::from((p.x.round() as isize, p.y.round() as isize)))
+                    .map(|p| {
+                        geo_types::Coordinate::from((p.x.round() as isize, p.y.round() as isize))
+                    })
                     .collect();
                 interior_ring = Vec::new();
             } else {
@@ -165,7 +173,12 @@ pub fn build_polygons_for_output_areas(
                         LineString::from(
                             r.points()
                                 .iter()
-                                .map(|p| geo_types::Coordinate::from((p.x.round() as isize, p.y.round() as isize)))
+                                .map(|p| {
+                                    geo_types::Coordinate::from((
+                                        p.x.round() as isize,
+                                        p.y.round() as isize,
+                                    ))
+                                })
                                 .collect::<Vec<Coordinate<isize>>>(),
                         )
                     })
@@ -206,9 +219,16 @@ pub fn build_polygons_for_output_areas(
             polygons.push((new_poly.clone(), code.to_string()));
             data.insert(OutputAreaID::from_code(code), new_poly);
             if index % 10000 == 0 {
-                debug!("Built {} polygons in time: {}",index*10000,start_time.elapsed().as_secs_f64());
+                debug!(
+                    "Built {} polygons in time: {}",
+                    index * 10000,
+                    start_time.elapsed().as_secs_f64()
+                );
                 start_time = Instant::now();
-                debug!("Current memory usage: {}", get_memory_usage().expect("Failed to retrieve memory usage"));
+                debug!(
+                    "Current memory usage: {}",
+                    get_memory_usage().expect("Failed to retrieve memory usage")
+                );
             }
         } else {
             return Err(DataLoadingError::ValueParsingError {
@@ -226,7 +246,13 @@ pub fn build_polygons_for_output_areas(
     Ok((data, PolygonContainer::new(polygons, 20000.0)?))
 }
 
-pub fn get_output_area_containing_point(point: &Point<isize>, polygons: &HashMap<OutputAreaID, Polygon<isize>>, point_lookup: &PolygonContainer<String>) -> anyhow::Result<OutputAreaID> {
-    let areas = point_lookup.find_polygon_for_point(*point).context("Finding output area containing point")?;
+pub fn get_output_area_containing_point(
+    point: &Point<isize>,
+    polygons: &HashMap<OutputAreaID, Polygon<isize>>,
+    point_lookup: &PolygonContainer<String>,
+) -> anyhow::Result<OutputAreaID> {
+    let areas = point_lookup
+        .find_polygon_for_point(*point)
+        .context("Finding output area containing point")?;
     Ok(OutputAreaID::from_code(areas.to_string()))
 }

@@ -90,16 +90,9 @@ impl Simulator {
                         key: output_id.to_string(),
                     },
                 })
-                .context(format!(
-                    "Loading polygon shape for area: {}",
-                    output_id
-                ))?;
+                .context(format!("Loading polygon shape for area: {}", output_id))?;
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(
-                output_id,
-                polygon,
-                disease_model.mask_percentage,
-            )
+            let mut new_area = OutputArea::new(output_id, polygon, disease_model.mask_percentage)
                 .context("Failed to create Output Area")?;
             citizens.extend(
                 new_area
@@ -111,12 +104,15 @@ impl Simulator {
         info!("Built residential population in {:?}", start.elapsed());
         debug!("Current memory usage: {}", get_memory_usage()?);
 
-
         use crate::models::get_output_area_containing_point;
         // Assign buildings
         for (building_type, buildings) in &census_data.osm_buildings.building_locations {
             for building in buildings {
-                if let Ok(area_code) = get_output_area_containing_point(building, &output_areas_polygons, &point_lookup) {
+                if let Ok(area_code) = get_output_area_containing_point(
+                    building,
+                    &output_areas_polygons,
+                    &point_lookup,
+                ) {
                     if let Some(area) = output_areas.get_mut(&area_code) {
                         area.add_building(*building, *building_type);
                     }
@@ -124,9 +120,7 @@ impl Simulator {
             }
         }
 
-
         // TODO Need a way of finding the closest building of type X to a point?
-
 
         let mut simulator = Simulator {
             current_population: starting_population,
@@ -383,13 +377,11 @@ impl Simulator {
         let mut building_exposure_list: HashMap<BuildingID, usize> = HashMap::new();
         self.statistics.next();
 
-
         // The list of Citizens on Public Transport, grouped by their origin and destination
         let mut public_transport_pre_generate: HashMap<
             (OutputAreaID, OutputAreaID),
             Vec<(CitizenID, bool)>,
         > = HashMap::new();
-
 
         // Generate exposures for fixed building positions
         for citizen in self.citizens.values_mut() {
@@ -402,7 +394,9 @@ impl Simulator {
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {
-                let transport_session = public_transport_pre_generate.entry(travel.clone()).or_default();
+                let transport_session = public_transport_pre_generate
+                    .entry(travel.clone())
+                    .or_default();
 
                 transport_session.push((citizen.id(), citizen.is_infected()));
             } else if let Infected(_) = citizen.disease_status {
@@ -427,13 +421,18 @@ impl Simulator {
                         ))?;
                     let building = building.as_ref();
                     let occupants = building.occupants().clone();
-                    self.expose_citizens(occupants, exposure_count, ID::Building(building_id.clone()))?;
+                    self.expose_citizens(
+                        occupants,
+                        exposure_count,
+                        ID::Building(building_id.clone()),
+                    )?;
                 }
 
                 None => {
-                    error!("Cannot find output area {}, that had an exposure occurred in!",
-                                &building_id.output_area_code()
-                            );
+                    error!(
+                        "Cannot find output area {}, that had an exposure occurred in!",
+                        &building_id.output_area_code()
+                    );
                 }
             }
         }
@@ -446,17 +445,27 @@ impl Simulator {
                 if current_bus.add_citizen(citizen).is_err() {
                     // Only need to save buses with exposures
                     if current_bus.exposure_count > 0 {
-                        self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()))?;
+                        self.expose_citizens(
+                            current_bus.occupants().clone(),
+                            current_bus.exposure_count,
+                            ID::PublicTransport(current_bus.id().clone()),
+                        )?;
                     }
                     current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
-                    current_bus.add_citizen(citizen).context("Failed to add Citizen to new bus")?;
+                    current_bus
+                        .add_citizen(citizen)
+                        .context("Failed to add Citizen to new bus")?;
                 }
                 if is_infected {
                     current_bus.exposure_count += 1;
                 }
             }
             if current_bus.exposure_count > 0 {
-                self.expose_citizens(current_bus.occupants().clone(), current_bus.exposure_count, ID::PublicTransport(current_bus.id().clone()))?;
+                self.expose_citizens(
+                    current_bus.occupants().clone(),
+                    current_bus.exposure_count,
+                    ID::PublicTransport(current_bus.id().clone()),
+                )?;
             }
         }
         // Apply Public Transport Exposures
@@ -464,7 +473,12 @@ impl Simulator {
         Ok(())
     }
 
-    fn expose_citizens(&mut self, citizens: Vec<CitizenID>, exposure_count: usize, location: ID) -> anyhow::Result<()> {
+    fn expose_citizens(
+        &mut self,
+        citizens: Vec<CitizenID>,
+        exposure_count: usize,
+        location: ID,
+    ) -> anyhow::Result<()> {
         for citizen_id in citizens {
             let citizen = self.citizens.get_mut(&citizen_id);
             match citizen {
@@ -479,20 +493,15 @@ impl Simulator {
                     {
                         self.statistics
                             .citizen_exposed(location.clone())
-                            .context(format!(
-                                "Exposing citizen {}",
-                                citizen_id
-                            ))?;
+                            .context(format!("Exposing citizen {}", citizen_id))?;
 
-                        if let Some(vaccine_list) =
-                        &mut self.citizens_eligible_for_vaccine
-                        {
+                        if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
                             vaccine_list.remove(&citizen_id);
                         }
                     }
                 }
                 None => {
-                    error!("Citizen {}, does not exist!",citizen_id);
+                    error!("Citizen {}, does not exist!", citizen_id);
                 }
             }
         }

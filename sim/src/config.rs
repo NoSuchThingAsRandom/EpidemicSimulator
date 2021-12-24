@@ -35,6 +35,3 @@ pub fn get_memory_usage() -> anyhow::Result<String> {
         (procinfo::pid::statm_self()?.size * page_size::get() / 1024 / 1024) as f64 / 1024.0
     ))
 }
-
-
-
