@@ -26,6 +26,16 @@ Yorkshire And The Humber Census Tables:\
 `data/tables/2013265923TYPE299/ks608uk.csv` - Occupation Counts\
 `data/tables/2013265923TYPE299/wf01bew.csv` - Home To Workplace
 
+## Areas:
+
+2013265923TYPE299 - All Output Areas within Yorkshire and the Humber
+
+# OSM Data
+
+The entire region of England is downloaded from: https://download.geofabrik.de/europe/great-britain/england.html
+
+Size: ~1.1GB
+
 # Table 1 - Usual resident population
 
 https://www.nomisweb.co.uk/census/2011/ks101ew

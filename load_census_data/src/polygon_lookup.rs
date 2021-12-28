@@ -212,7 +212,6 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         &self,
         point: &geo_types::Point<isize>,
     ) -> Result<&T, DataLoadingError> {
-        trace!("Finding polygon for point: {:?}", point);
         // TODO Move this scaling
         let scaled_point: geo_types::Point<isize> = self
             .scaling

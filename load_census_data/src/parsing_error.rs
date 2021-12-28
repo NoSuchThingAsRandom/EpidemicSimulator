@@ -173,7 +173,7 @@ impl From<reqwest::Error> for DataLoadingError {
         DataLoadingError::NetworkError { source: err }
     }
 }
-
+/*
 impl From<csv::Error> for DataLoadingError {
     fn from(err: csv::Error) -> Self {
         DataLoadingError::IOError {
@@ -190,7 +190,7 @@ impl From<std::io::Error> for DataLoadingError {
             context: String::new(),
         }
     }
-}
+}*/
 
 impl From<serde_json::Error> for DataLoadingError {
     fn from(err: serde_json::Error) -> Self {

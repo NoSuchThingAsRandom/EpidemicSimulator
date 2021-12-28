@@ -113,9 +113,9 @@ impl OSMRawBuildings {
         file.read_to_string(&mut data).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to read data!".to_string() })?;
         serde_json::from_str(&data).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to parse OSM cached data with serde!".to_string() })
     }
-    fn load_and_write_cache(cache_filename: String) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
+    fn load_and_write_cache(raw_filename: String, cache_filename: String) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
         debug!("Parsing data from raw OSM file");
-        let building_locations = OSMRawBuildings::read_buildings_from_osm(cache_filename.to_string())?;
+        let building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename.to_string())?;
         let mut file = File::create(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to create file '{}'", cache_filename) })?;
 
         file.write_all(&serde_json::to_vec(&building_locations).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to serialize OSM data with serde!".to_string() })?)
@@ -139,15 +139,15 @@ impl OSMRawBuildings {
         //
         // Otherwise just parse raw osm data
         let building_locations = if use_cache {
-            match OSMRawBuildings::read_cached_osm_data(cache_filename) {
+            match OSMRawBuildings::read_cached_osm_data(cache_filename.to_string()) {
                 Ok(data) => { data }
                 Err(e) => {
                     error!("Loading cached OSM data failed: {}",e);
-                    OSMRawBuildings::load_and_write_cache(filename)?
+                    OSMRawBuildings::load_and_write_cache(filename, cache_filename)?
                 }
             }
         } else {
-            OSMRawBuildings::load_and_write_cache(filename)?
+            OSMRawBuildings::load_and_write_cache(filename, cache_filename)?
         };
 
         debug!("Loaded OSM data");

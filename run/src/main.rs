@@ -22,7 +22,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use clap::{App, Arg};
-use log::{error, info};
+use log::{debug, error, info};
 
 use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
@@ -67,6 +67,11 @@ async fn main() -> anyhow::Result<()> {
                 .required(true)
                 .require_equals(true)
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("disallow-download")
+                .long("disallow-download")
+                .help("If enabled, no downloads will be attempted")
         )
         .arg(
             Arg::with_name("use-cache")
@@ -124,18 +129,17 @@ async fn main() -> anyhow::Result<()> {
     let directory = matches
         .value_of("data_directory")
         .expect("Missing data directory argument");
-    let census_directory = directory.to_owned() + "/tables/";
+    let census_directory = directory.to_owned() + "/";
     let area = matches.value_of("area").expect("Missing area argument");
     let use_cache = matches.is_present("use-cache");
     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
+    let allow_downloads = !matches.is_present("disallow-download");
 
-
-    info!("Using area: {}", area);
-
+    info!("Using area: {}, Utilizing Cache: {}, Allowing downloads: {}", area,use_cache,!allow_downloads);
 
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
-        CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, true, visualise_building_boundaries)
+        CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, allow_downloads, visualise_building_boundaries)
             .await
             .context("Failed to load census data")
             .unwrap();
@@ -159,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
         let total_time = Instant::now();
         info!("Loading data from disk...");
         let census_data =
-            CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, true, visualise_building_boundaries)
+            CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, allow_downloads, visualise_building_boundaries)
                 .await
                 .context("Failed to load census data")
                 .unwrap();
