@@ -23,16 +23,8 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
-use geo_types::{LineString, Point, Polygon};
-use log::{debug, error, info};
 use serde::Serialize;
 
-use load_census_data::osm_parsing::GRID_SIZE;
-use load_census_data::parsing_error::DataLoadingError;
-use load_census_data::voronoi_generator::Scaling;
-
-use crate::config::get_memory_usage;
-use crate::error::Error;
 use crate::models::building::BuildingID;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;

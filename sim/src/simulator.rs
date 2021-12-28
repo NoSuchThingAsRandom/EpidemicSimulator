@@ -34,7 +34,6 @@ use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
-use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::config::{
     DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
@@ -260,8 +259,7 @@ impl Simulator {
                                 // TODO Have better distribution of AreaClassification?
                                 let mut workplace = Workplace::new(
                                     BuildingID::new(
-                                        workplace_area_code.clone(),
-                                        AreaClassification::UrbanCity,
+                                        workplace_area_code.clone()
                                     ),
                                     WORKPLACE_BUILDING_SIZE,
                                     citizen.occupation(),
@@ -277,8 +275,7 @@ impl Simulator {
                         // TODO Have better distribution of AreaClassification?
                         let mut workplace = Workplace::new(
                             BuildingID::new(
-                                workplace_area_code.clone(),
-                                AreaClassification::UrbanCity,
+                                workplace_area_code.clone()
                             ),
                             WORKPLACE_BUILDING_SIZE,
                             citizen.occupation(),
@@ -306,8 +303,7 @@ impl Simulator {
                 .for_each(|(_, workplace)| {
                     workplace_buildings.insert(workplace.id().clone(), Box::new(workplace));
                 });
-            workplace_output_area.buildings[AreaClassification::UrbanCity]
-                .extend(workplace_buildings);
+            workplace_output_area.buildings.extend(workplace_buildings);
         }
         Ok(())
     }
@@ -414,7 +410,7 @@ impl Simulator {
             match area {
                 Some(area) => {
                     // TODO Sometime there's a weird bug here?
-                    let building = &area.buildings[building_id.area_type()]
+                    let building = &area.buildings
                         .get(&building_id)
                         .context(format!(
                             "Failed to retrieve exposure building {}",
@@ -576,11 +572,8 @@ impl Simulator {
         writeln!(file, "{}", self.statistics)?;
         for area in self.output_areas {
             writeln!(file, "Output Area: {}", area.0)?;
-            for (_area_type, building_map) in area.1.buildings.iter() {
-                writeln!(file, "      {:?}", area.0)?;
-                for building in building_map.values() {
-                    writeln!(file, "          {}", building)?;
-                }
+            for building in area.1.buildings.values() {
+                writeln!(file, "      {}", building)?;
             }
         }
         writeln!(file, "\n\n\n----------\n\n\n")?;
@@ -596,17 +589,7 @@ impl Simulator {
 
         let mut output_area_json = HashMap::new();
         for area in self.output_areas {
-            let mut sub_areas = HashMap::new();
-
-            for (area_type, mut building_map) in area.1.buildings {
-                let mut buildings = HashMap::new();
-
-                for (_code, building) in building_map.drain() {
-                    buildings.insert(building.id().clone(), building);
-                }
-                sub_areas.insert(area_type.to_string(), buildings);
-            }
-            output_area_json.insert(area.0, sub_areas);
+            output_area_json.insert(area.0, area.1.buildings);
         }
         let mut citizens = HashMap::new();
         for citizen in self.citizens {

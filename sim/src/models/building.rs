@@ -27,7 +27,6 @@ use uuid::Uuid;
 
 use load_census_data::tables::employment_densities::EmploymentDensities;
 use load_census_data::tables::occupation_count::OccupationType;
-use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::error::Error;
 use crate::models::citizen::CitizenID;
@@ -42,7 +41,6 @@ use crate::models::output_area::OutputAreaID;
 #[derive(Clone, Debug, Serialize)]
 pub struct BuildingID {
     output_area_id: OutputAreaID,
-    area_type: AreaClassification,
     building_id: uuid::Uuid,
 }
 
@@ -63,10 +61,9 @@ impl BuildingID {
     /// assert_eq!(building_code.area_type(), area_type);
     ///
     /// ```
-    pub fn new(output_area_id: OutputAreaID, area_type: AreaClassification) -> BuildingID {
+    pub fn new(output_area_id: OutputAreaID) -> BuildingID {
         BuildingID {
             output_area_id,
-            area_type,
             building_id: Uuid::new_v4(),
         }
     }
@@ -75,17 +72,12 @@ impl BuildingID {
     pub(crate) fn new_from(other: BuildingID) -> Self {
         BuildingID {
             output_area_id: other.output_area_id.clone(),
-            area_type: other.area_type,
             building_id: Default::default(),
         }
     }
     /// Returns the `OutputArea` code
     pub fn output_area_code(&self) -> OutputAreaID {
         self.output_area_id.clone()
-    }
-    /// Returns the type of area this building is located in
-    pub fn area_type(&self) -> AreaClassification {
-        self.area_type
     }
     /// Returns the unique ID of this `BuildingCode`
     pub fn building_id(&self) -> Uuid {
@@ -97,8 +89,8 @@ impl Display for BuildingID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Output Area: {}, Area Type: {:?}, Building ID: {}",
-            self.output_area_id, self.area_type, self.building_id
+            "Output Area: {}, Building ID: {}",
+            self.output_area_id, self.building_id
         )
     }
 }

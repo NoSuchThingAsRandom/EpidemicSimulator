@@ -22,7 +22,6 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
-use enum_map::EnumMap;
 use geo_types::Point;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
@@ -69,7 +68,7 @@ pub struct OutputArea {
     pub output_area_id: OutputAreaID,
 
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
-    pub buildings: EnumMap<AreaClassification, HashMap<BuildingID, Box<dyn Building>>>,
+    pub buildings: HashMap<BuildingID, Box<dyn Building>>,
     /// A polygon for drawing this output area
     //pub polygon: geo_types::Polygon<isize>,
     pub total_residents: u32,
@@ -89,7 +88,7 @@ impl OutputArea {
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {
             output_area_id,
-            buildings: EnumMap::default(),
+            buildings: HashMap::default(),
             //polygon,
             total_residents: 0,
             mask_distribution: Bernoulli::new(mask_compliance_ratio)
@@ -97,6 +96,8 @@ impl OutputArea {
         })
     }
     pub fn add_building(&mut self, _location: Point<isize>, _raw_building_type: RawBuildingTypes) {
+        let household_building_id = BuildingID::new(self.output_area_id.clone());
+        let mut _household = Household::new(household_building_id);
         todo!()
     }
     pub fn generate_citizens(
@@ -104,8 +105,9 @@ impl OutputArea {
         census_data: CensusDataEntry,
         rng: &mut dyn RngCore,
     ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
-        // TODO Fix this
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
+
+        // TODO Fix this
         let area = AreaClassification::Total;
         let pop_count = &census_data.population_count.population_counts[area];
         //for (area, pop_count) in census_data.population_count.population_counts.iter() {
@@ -113,12 +115,10 @@ impl OutputArea {
         // Should use census data instead
         let household_number = pop_count[PersonType::All] / HOUSEHOLD_SIZE;
         let mut generated_population = 0;
-        let mut households_for_area: HashMap<BuildingID, Box<dyn Building>> =
-            HashMap::with_capacity(household_number as usize);
 
         // Build households
         for _ in 0..household_number {
-            let household_building_id = BuildingID::new(self.output_area_id.clone(), area);
+            let household_building_id = BuildingID::new(self.output_area_id.clone());
             let mut household = Household::new(household_building_id.clone());
             for _ in 0..HOUSEHOLD_SIZE {
                 let occupation = census_data
@@ -139,22 +139,19 @@ impl OutputArea {
                 self.total_residents += 1;
                 generated_population += 1;
             }
-            households_for_area.insert(household_building_id, Box::new(household));
+            assert!(self.buildings.insert(household_building_id, Box::new(household)).is_none(), "A collision has occurred with building ID's");
             if generated_population >= pop_count[PersonType::All] {
                 break;
             }
         }
-        self.buildings[area] = households_for_area;
         Ok(citizens)
     }
     fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<CitizenID> {
         let mut citizens = Vec::new();
-        for (_, data) in self.buildings.iter() {
-            for building in data.values() {
-                let building = building.as_any();
-                if let Some(household) = building.downcast_ref::<T>() {
-                    citizens.extend(household.occupants());
-                }
+        for building in self.buildings.values() {
+            let building = building.as_any();
+            if let Some(household) = building.downcast_ref::<T>() {
+                citizens.extend(household.occupants());
             }
         }
         citizens
@@ -169,22 +166,19 @@ impl OutputArea {
 
 impl Clone for OutputArea {
     fn clone(&self) -> Self {
-        let mut buildings_copy = EnumMap::default();
-        for (area, buildings_old) in self.buildings.iter() {
-            let mut new: HashMap<BuildingID, Box<dyn Building>> =
-                HashMap::with_capacity(buildings_old.len());
-            for (code, current_building) in buildings_old {
-                let current_building = current_building.as_any();
-                if let Some(household) = current_building.downcast_ref::<Household>() {
-                    new.insert(code.clone(), Box::new(household.clone()));
-                } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
-                    new.insert(code.clone(), Box::new(workplace.clone()));
-                } else {
-                    unimplemented!()
-                }
+        let mut buildings_copy: HashMap<BuildingID, Box<dyn Building>> =
+            HashMap::with_capacity(self.buildings.len());
+        for (code, current_building) in &self.buildings {
+            let current_building = current_building.as_any();
+            if let Some(household) = current_building.downcast_ref::<Household>() {
+                buildings_copy.insert(code.clone(), Box::new(household.clone()));
+            } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
+                buildings_copy.insert(code.clone(), Box::new(workplace.clone()));
+            } else {
+                panic!("Unsupported building type, for cloning!")
             }
-            buildings_copy[area] = new;
         }
+
         OutputArea {
             output_area_id: self.output_area_id.clone(),
             buildings: buildings_copy,

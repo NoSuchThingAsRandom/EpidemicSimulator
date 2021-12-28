@@ -24,7 +24,6 @@ use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{LineString, Point};
 use log::{debug, info, trace};
-use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint};
 use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 

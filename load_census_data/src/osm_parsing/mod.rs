@@ -79,6 +79,8 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
                 | "cabin" | "apartments" | "terrace" | "residential" => {
                     return Ok(RawBuildingTypes::Household);
                 }
+                "school" => return Ok(RawBuildingTypes::School),
+                "hospital" => return Ok(RawBuildingTypes::Hospital),
                 _ => (),
             }
         }
