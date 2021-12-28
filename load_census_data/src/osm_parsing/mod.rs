@@ -99,6 +99,7 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
     }
 }
 
+#[derive(Debug)]
 pub struct OSMRawBuildings {
     pub building_locations: HashMap<RawBuildingTypes, Vec<Point<isize>>>,
     pub building_voronois: HashMap<RawBuildingTypes, Voronoi>,
@@ -106,25 +107,31 @@ pub struct OSMRawBuildings {
 
 impl OSMRawBuildings {
     /// Returns a hashmap of buildings located at which points
-    pub fn build_osm_data(filename: String) -> Result<OSMRawBuildings, DataLoadingError> {
+    ///
+    /// # Parameters
+    /// * `filename` - The file to read osm map data from
+    /// * `cache_filename` - The file to store parsed osm data
+    /// * `use_cache` - If true, stores the results of loading the OSM file to the `cache_filename` file, otherwise skips parsing the OSM file, and uses the cache instead
+    /// * `visualise_building_boundaries` - If true, generates images representing the Voronoi diagrams for each building type
+    pub fn build_osm_data(filename: String, cache_filename: String, use_cache: bool, visualise_building_boundaries: bool) -> Result<OSMRawBuildings, DataLoadingError> {
         info!("Building OSM Data...");
         debug!("Starting to read data from file");
-        let building_locations = if DUMP_TO_FILE {
+        let building_locations = if use_cache {
+            debug!("Reading cached parsing data");
+            let mut file = File::open(cache_filename).unwrap();
+            let mut data = String::with_capacity(1000);
+            file.read_to_string(&mut data).unwrap();
+            serde_json::from_str(&data).unwrap()
+        } else {
             debug!("Parsing data from raw OSM file");
             let building_locations = OSMRawBuildings::read_buildings_from_osm(filename)?;
-            let mut file = File::create("osm_dump.json").unwrap();
+            let mut file = File::create(cache_filename).unwrap();
 
             file.write_all(&serde_json::to_vec(&building_locations).unwrap())
                 .unwrap();
             file.flush().unwrap();
             debug!("Completed and saved parsing data");
             building_locations
-        } else {
-            debug!("Reading cached parsing data");
-            let mut file = File::open("osm_dump.json").unwrap();
-            let mut data = String::with_capacity(1000);
-            file.read_to_string(&mut data).unwrap();
-            serde_json::from_str(&data).unwrap()
         };
         debug!("Loaded OSM data");
 
@@ -155,14 +162,12 @@ impl OSMRawBuildings {
             building_locations,
             building_voronois: building_vorinnis,
         };
-        if DRAW_VORONOI_DIAGRAMS {
+        if visualise_building_boundaries {
             debug!("Starting drawing");
             for (k, p) in data.building_voronois.iter() {
-                //keys().clone().for_each(|k| {:
                 let polygons: Vec<&geo_types::Polygon<isize>> =
                     p.polygons.polygons.iter().map(|(_, p)| p).collect();
                 draw_voronoi_polygons(format!("images/{:?}Vorinni.png", k), &polygons, 20000);
-                //   });
             }
         }
         debug!("Finished building OSM data");

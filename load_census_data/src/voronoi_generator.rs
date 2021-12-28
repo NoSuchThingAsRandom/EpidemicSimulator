@@ -32,7 +32,7 @@ use crate::osm_parsing::GRID_SIZE;
 use crate::parsing_error::ParseErrorType;
 use crate::polygon_lookup::PolygonContainer;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Scaling {
     x_offset: isize,
     x_scale: isize,
@@ -180,6 +180,7 @@ fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T, T),
     ((min_x, min_y), (max_x, max_y))
 }
 
+#[derive(Debug)]
 pub struct Voronoi {
     pub grid_size: usize,
     pub seeds: Vec<(usize, usize)>,

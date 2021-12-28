@@ -108,6 +108,7 @@ fn geo_point_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default
     Ok(area)
 }
 
+#[derive(Debug)]
 pub struct PolygonContainer<T: Debug + Clone + Eq + Ord + Hash> {
     pub lookup: Quadtree<isize, T>,
     /// The polygon and it's ID

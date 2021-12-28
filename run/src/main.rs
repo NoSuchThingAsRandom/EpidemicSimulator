@@ -69,10 +69,19 @@ async fn main() -> anyhow::Result<()> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("use-cache")
+                .long("use-cache")
+                .help("Will attempt to use cached pre loaded data, instead of parsing tables/maps from scratch"))
+        .arg(
             Arg::with_name("render")
                 .short("r")
                 .long("render")
                 .help("Whether to use the rendering engine"),
+        )
+        .arg(
+            Arg::with_name("visualise-building-boundaries")
+                .long("visualise-building-boundaries")
+                .help("If enabled, generates images for the closed points to each building")
         )
         .arg(
             Arg::with_name("simulate")
@@ -117,10 +126,16 @@ async fn main() -> anyhow::Result<()> {
         .expect("Missing data directory argument");
     let census_directory = directory.to_owned() + "/tables/";
     let area = matches.value_of("area").expect("Missing area argument");
+    let use_cache = matches.is_present("use-cache");
+    let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
+
+
     info!("Using area: {}", area);
+
+
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
-        CensusData::load_all_tables_async(census_directory, area.to_string(), true)
+        CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, true, visualise_building_boundaries)
             .await
             .context("Failed to load census data")
             .unwrap();
@@ -144,7 +159,7 @@ async fn main() -> anyhow::Result<()> {
         let total_time = Instant::now();
         info!("Loading data from disk...");
         let census_data =
-            CensusData::load_all_tables_async(census_directory, area.to_string(), true)
+            CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, true, visualise_building_boundaries)
                 .await
                 .context("Failed to load census data")
                 .unwrap();
