@@ -260,6 +260,7 @@ impl PolygonContainer<String> {
         let mut reader =
             shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
+                context: format!("Shape File '{}' doesn't exist!", filename),
             })?;
         let mut start_time = Instant::now();
         let mut data = HashMap::new();
@@ -267,6 +268,7 @@ impl PolygonContainer<String> {
         for (index, shape_record) in reader.iter_shapes_and_records().enumerate() {
             let (shape, mut record) = shape_record.map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
+                context: "Failed to read shape record!".to_string(),
             })?;
             let polygon = if let Shape::Polygon(polygon) = shape {
                 assert!(!polygon.rings().is_empty());

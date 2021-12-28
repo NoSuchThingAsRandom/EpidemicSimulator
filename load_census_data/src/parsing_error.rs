@@ -144,11 +144,13 @@ pub enum DataLoadingError {
     /// An error occurs reading from disk
     IOError {
         source: Box<dyn std::error::Error + Send + Sync>,
+        context: String,
     },
     Misc {
         source: String,
     },
 }
+
 
 impl std::error::Error for DataLoadingError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -159,7 +161,7 @@ impl std::error::Error for DataLoadingError {
                 SerdeErrors::Plain { ref source } => Some(source),
             },
             DataLoadingError::ValueParsingError { ref source } => Some(source),
-            DataLoadingError::IOError { ref source } => source.source(),
+            DataLoadingError::IOError { ref source, .. } => source.source(),
             DataLoadingError::Misc { .. } => None,
             DataLoadingError::OSMError { ref source } => Some(source),
         }
@@ -176,6 +178,7 @@ impl From<csv::Error> for DataLoadingError {
     fn from(err: csv::Error) -> Self {
         DataLoadingError::IOError {
             source: Box::new(err),
+            context: String::new(),
         }
     }
 }
@@ -184,6 +187,7 @@ impl From<std::io::Error> for DataLoadingError {
     fn from(e: std::io::Error) -> Self {
         DataLoadingError::IOError {
             source: Box::new(e),
+            context: String::new(),
         }
     }
 }
@@ -260,11 +264,12 @@ impl Display for DataLoadingError {
             DataLoadingError::ValueParsingError { source } => {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: ParsingError\n        Source: {} ", source)
             }
-            DataLoadingError::IOError { source } => {
+            DataLoadingError::IOError { source, context } => {
                 write!(
                     f,
-                    "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {} ",
-                    source
+                    "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {}\n     Context: {}",
+                    source,
+                    context
                 )
             }
             DataLoadingError::Misc { source } => {

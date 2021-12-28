@@ -106,6 +106,24 @@ pub struct OSMRawBuildings {
 }
 
 impl OSMRawBuildings {
+    fn read_cached_osm_data(cache_filename: String) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
+        debug!("Reading cached parsing data");
+        let mut file = File::open(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("File '{}' doesn't exist!", cache_filename) })?;
+        let mut data = String::with_capacity(1000);
+        file.read_to_string(&mut data).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to read data!".to_string() })?;
+        serde_json::from_str(&data).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to parse OSM cached data with serde!".to_string() })
+    }
+    fn load_and_write_cache(cache_filename: String) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
+        debug!("Parsing data from raw OSM file");
+        let building_locations = OSMRawBuildings::read_buildings_from_osm(cache_filename.to_string())?;
+        let mut file = File::create(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to create file '{}'", cache_filename) })?;
+
+        file.write_all(&serde_json::to_vec(&building_locations).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to serialize OSM data with serde!".to_string() })?)
+            .map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to write serde data to file!".to_string() })?;
+        file.flush().map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Failed to flush data to file!".to_string() })?;
+        debug!("Completed and saved parsing data");
+        Ok(building_locations)
+    }
     /// Returns a hashmap of buildings located at which points
     ///
     /// # Parameters
@@ -116,23 +134,22 @@ impl OSMRawBuildings {
     pub fn build_osm_data(filename: String, cache_filename: String, use_cache: bool, visualise_building_boundaries: bool) -> Result<OSMRawBuildings, DataLoadingError> {
         info!("Building OSM Data...");
         debug!("Starting to read data from file");
+        // If using cache, attempt to load data from cache
+        //      If that fails, fall back to parsing RAW osm data
+        //
+        // Otherwise just parse raw osm data
         let building_locations = if use_cache {
-            debug!("Reading cached parsing data");
-            let mut file = File::open(cache_filename).unwrap();
-            let mut data = String::with_capacity(1000);
-            file.read_to_string(&mut data).unwrap();
-            serde_json::from_str(&data).unwrap()
+            match OSMRawBuildings::read_cached_osm_data(cache_filename) {
+                Ok(data) => { data }
+                Err(e) => {
+                    error!("Loading cached OSM data failed: {}",e);
+                    OSMRawBuildings::load_and_write_cache(filename)?
+                }
+            }
         } else {
-            debug!("Parsing data from raw OSM file");
-            let building_locations = OSMRawBuildings::read_buildings_from_osm(filename)?;
-            let mut file = File::create(cache_filename).unwrap();
-
-            file.write_all(&serde_json::to_vec(&building_locations).unwrap())
-                .unwrap();
-            file.flush().unwrap();
-            debug!("Completed and saved parsing data");
-            building_locations
+            OSMRawBuildings::load_and_write_cache(filename)?
         };
+
         debug!("Loaded OSM data");
 
         let mut building_vorinnis = HashMap::new();
