@@ -20,7 +20,7 @@
 
 use std::fmt::{Debug, Display, Formatter};
 
-pub enum Error {
+pub enum SimError {
     Default {
         message: String,
     },
@@ -40,20 +40,20 @@ pub enum Error {
     },
 }
 
-impl Error {
-    pub fn new_simulation_error(message: String) -> Error {
-        Error::Simulation { message }
+impl SimError {
+    pub fn new_simulation_error(message: String) -> SimError {
+        SimError::Simulation { message }
     }
 
     pub fn from_option<T: Display, U>(
         value: Option<U>,
         key: T,
         message: String,
-    ) -> Result<U, Error> {
+    ) -> Result<U, SimError> {
         if let Some(value) = value {
             Ok(value)
         } else {
-            Err(Error::OptionRetrievalFailure {
+            Err(SimError::OptionRetrievalFailure {
                 message,
                 key: key.to_string(),
             })
@@ -61,44 +61,44 @@ impl Error {
     }
 }
 
-impl Default for Error {
+impl Default for SimError {
     fn default() -> Self {
-        Error::Default {
+        SimError::Default {
             message: String::from("An error occurred!"),
         }
     }
 }
 
-impl Debug for Error {
+impl Debug for SimError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Default { message } => {
+            SimError::Default { message } => {
                 write!(f, "Error: {}", message)
             }
-            Error::DrawingError { source, context } => {
+            SimError::DrawingError { source, context } => {
                 write!(f, "Error: {}\n{}", context, source)
             }
-            Error::Simulation { message } => {
+            SimError::Simulation { message } => {
                 write!(f, "Simulation Error Occurred: {}", message)
             }
-            Error::OptionRetrievalFailure { message, key } => {
+            SimError::OptionRetrievalFailure { message, key } => {
                 write!(
                     f,
                     "Failed to retrieve value with key ({}), context: {}",
                     key, message
                 )
             }
-            Error::InitializationError { message } => {
+            SimError::InitializationError { message } => {
                 write!(f, "{} has not been Initialized", message)
             }
         }
     }
 }
 
-impl Display for Error {
+impl Display for SimError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error: {}", self)
+        write!(f, "Error: {:?}", self)
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for SimError {}

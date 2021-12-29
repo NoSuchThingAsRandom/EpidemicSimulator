@@ -24,7 +24,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::config::BUS_CAPACITY;
-use crate::error::Error;
+use crate::error::SimError;
 use crate::models::citizen::CitizenID;
 use crate::models::output_area::OutputAreaID;
 
@@ -75,12 +75,12 @@ impl PublicTransport {
             exposure_count: 0,
         }
     }
-    pub fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error> {
+    pub fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
         if self.citizens.len() < self.capacity as usize {
             self.citizens.push(citizen_id);
             Ok(())
         } else {
-            Err(Error::Simulation {
+            Err(SimError::Simulation {
                 message: "Cannot add Citizen, as Public Transport is at capacity".to_string(),
             })
         }

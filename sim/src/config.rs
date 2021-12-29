@@ -31,7 +31,7 @@ pub const BUS_CAPACITY: u32 = 20;
 
 pub fn get_memory_usage() -> anyhow::Result<String> {
     Ok(format!(
-        "{:.3} GB",
+        "{:.2} GB",
         (procinfo::pid::statm_self()?.size * page_size::get() / 1024 / 1024) as f64 / 1024.0
     ))
 }

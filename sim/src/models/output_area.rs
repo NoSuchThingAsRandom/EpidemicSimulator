@@ -23,6 +23,7 @@ use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
 use geo_types::Point;
+use log::{error, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
 use serde::Serialize;
@@ -34,7 +35,8 @@ use load_census_data::tables::population_and_density_per_output_area::{
 };
 
 use crate::config::HOUSEHOLD_SIZE;
-use crate::models::building::{Building, BuildingID, Household, Workplace};
+use crate::error::SimError;
+use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
@@ -95,53 +97,73 @@ impl OutputArea {
                 .context("Failed to initialise the mask distribution")?,
         })
     }
-    pub fn add_building(&mut self, _location: Point<isize>, _raw_building_type: RawBuildingTypes) {
-        let household_building_id = BuildingID::new(self.output_area_id.clone());
-        let mut _household = Household::new(household_building_id);
-        todo!()
-    }
+    /*    pub fn add_building(&mut self, location: Point<isize>, raw_building_type: RawBuildingTypes) {
+            let building_id = BuildingID::new(self.output_area_id.clone());
+
+            match raw_building_type {
+                RawBuildingTypes::Shop => {}
+                RawBuildingTypes::School => {}
+                RawBuildingTypes::Hospital => {}
+                RawBuildingTypes::Household => {
+                    let mut household = Household::new(building_id.clone(), location);
+                    self.buildings.insert(building_id, Box::new(household));
+                }
+                RawBuildingTypes::WorkPlace => {
+                    let mut household = Workplace::new(building_id.clone(), location);
+                    self.buildings.insert(building_id, Box::new(household));
+                }
+                RawBuildingTypes::Unknown => {}
+            }
+
+            todo!()
+        }*/
     pub fn generate_citizens(
         &mut self,
-        census_data: CensusDataEntry,
         rng: &mut dyn RngCore,
+        census_data: CensusDataEntry,
+        possible_households: &Vec<geo_types::Point<isize>>,
     ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
+        trace!("Generating citizens");
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
 
         // TODO Fix this
         let area = AreaClassification::Total;
         let pop_count = &census_data.population_count.population_counts[area];
-        //for (area, pop_count) in census_data.population_count.population_counts.iter() {
         // TODO Currently assigning 4 people per household
         // Should use census data instead
-        let household_number = pop_count[PersonType::All] / HOUSEHOLD_SIZE;
         let mut generated_population = 0;
 
         // Build households
-        for _ in 0..household_number {
-            let household_building_id = BuildingID::new(self.output_area_id.clone());
-            let mut household = Household::new(household_building_id.clone());
-            for _ in 0..HOUSEHOLD_SIZE {
-                let occupation = census_data
-                    .occupation_count
-                    .get_random_occupation(rng)
-                    .context("Cannot generate a random occupation for new Citizen!")?;
-                let citizen = Citizen::new(
-                    household_building_id.clone(),
-                    household_building_id.clone(),
-                    occupation,
-                    self.mask_distribution.sample(rng),
-                    rng,
-                );
-                household
-                    .add_citizen(citizen.id())
-                    .context("Failed to add Citizen to Household")?;
-                citizens.insert(citizen.id(), citizen);
-                self.total_residents += 1;
-                generated_population += 1;
-            }
-            assert!(self.buildings.insert(household_building_id, Box::new(household)).is_none(), "A collision has occurred with building ID's");
-            if generated_population >= pop_count[PersonType::All] {
-                break;
+        while generated_population <= pop_count[PersonType::All] {
+            if let Some(location) = possible_households.iter().next() {
+                let household_building_id = BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
+                let mut household = Household::new(household_building_id.clone(), *location);
+                for _ in 0..HOUSEHOLD_SIZE {
+                    let occupation = census_data
+                        .occupation_count
+                        .get_random_occupation(rng)
+                        .context("Cannot generate a random occupation for new Citizen!")?;
+                    let citizen = Citizen::new(
+                        household_building_id.clone(),
+                        household_building_id.clone(),
+                        occupation,
+                        self.mask_distribution.sample(rng),
+                        rng,
+                    );
+                    household
+                        .add_citizen(citizen.id())
+                        .context("Failed to add Citizen to Household")?;
+                    citizens.insert(citizen.id(), citizen);
+                    self.total_residents += 1;
+                    generated_population += 1;
+                }
+                assert!(self.buildings.insert(household_building_id, Box::new(household)).is_none(), "A collision has occurred with building ID's");
+                if generated_population >= pop_count[PersonType::All] {
+                    break;
+                }
+            } else {
+                error!("Output Area: {} has run out of households to allocate residents: ({}/{}) to.", self.output_area_id,generated_population,pop_count[PersonType::All]);
+                return Ok(citizens);
             }
         }
         Ok(citizens)

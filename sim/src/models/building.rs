@@ -22,15 +22,26 @@ use std::any::Any;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 
+use geo::Point;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
 use load_census_data::tables::employment_densities::EmploymentDensities;
 use load_census_data::tables::occupation_count::OccupationType;
 
-use crate::error::Error;
+use crate::error::SimError;
 use crate::models::citizen::CitizenID;
 use crate::models::output_area::OutputAreaID;
+
+/// A wrapper for all building types, for easier use in Hashmaps
+///
+/// Each element contains
+#[derive(Clone, Debug, Serialize, Hash, Eq, PartialEq)]
+pub enum BuildingType {
+    Household,
+    Workplace,
+
+}
 
 /// This is used to represent a building location
 ///
@@ -38,10 +49,11 @@ use crate::models::output_area::OutputAreaID;
 /// * An `OutputArea` - for broad location in the country,
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Hash, PartialEq, Eq)]
 pub struct BuildingID {
     output_area_id: OutputAreaID,
     building_id: uuid::Uuid,
+    building_type: BuildingType,
 }
 
 impl BuildingID {
@@ -61,10 +73,11 @@ impl BuildingID {
     /// assert_eq!(building_code.area_type(), area_type);
     ///
     /// ```
-    pub fn new(output_area_id: OutputAreaID) -> BuildingID {
+    pub fn new(output_area_id: OutputAreaID, building_type: BuildingType) -> BuildingID {
         BuildingID {
             output_area_id,
             building_id: Uuid::new_v4(),
+            building_type,
         }
     }
 
@@ -73,6 +86,7 @@ impl BuildingID {
         BuildingID {
             output_area_id: other.output_area_id.clone(),
             building_id: Default::default(),
+            building_type: other.building_type,
         }
     }
     /// Returns the `OutputArea` code
@@ -89,26 +103,12 @@ impl Display for BuildingID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Output Area: {}, Building ID: {}",
-            self.output_area_id, self.building_id
+            "Output Area: {}, Type: {:?}, Building ID: {}",
+            self.output_area_id, self.building_type, self.building_id
         )
     }
 }
 
-impl Hash for BuildingID {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.building_id.hash(state);
-        self.output_area_id.hash(state)
-    }
-}
-
-impl PartialEq<Self> for BuildingID {
-    fn eq(&self, other: &Self) -> bool {
-        self.output_area_id == other.output_area_id && self.building_id.eq(&other.building_id)
-    }
-}
-
-impl Eq for BuildingID {}
 
 /// This represents a home for Citizens
 ///
@@ -118,12 +118,14 @@ pub trait Building: Display + Debug {
     //fn new(building_code: BuildingCode) -> Self;
 
     /// Adds the new citizen to this building
-    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error>;
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError>;
     /// Returns the AreaCode where this building is located
     fn id(&self) -> &BuildingID;
     /// Returns a list of ids of occupants that are here
     fn occupants(&self) -> &Vec<CitizenID>;
     fn as_any(&self) -> &dyn Any;
+    /// Returns the location of the building
+    fn get_location(&self) -> geo_types::Point<isize>;
 }
 
 impl Serialize for dyn Building {
@@ -142,25 +144,28 @@ impl Serialize for dyn Building {
     }
 }
 
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Household {
     /// This is unique to the specific output area - ~250 households
     building_code: BuildingID,
     /// A list of all the ID's of citizens who are at this building
     occupants: Vec<CitizenID>,
+    location: geo_types::Point<isize>,
 }
 
 impl Household {
-    pub(crate) fn new(building_code: BuildingID) -> Self {
+    pub(crate) fn new(building_code: BuildingID, location: geo_types::Point<isize>) -> Self {
         Household {
             building_code,
             occupants: Vec::new(),
+            location,
         }
     }
 }
 
 impl Building for Household {
-    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error> {
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
         self.occupants.push(citizen_id);
         Ok(())
     }
@@ -175,6 +180,10 @@ impl Building for Household {
 
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
+    }
+
+    fn get_location(&self) -> Point<isize> {
+        self.location
     }
 }
 
@@ -198,19 +207,21 @@ pub struct Workplace {
     occupants: Vec<CitizenID>,
     floor_space: u16,
     workplace_occupation_type: OccupationType,
+    location: geo_types::Point<isize>,
 }
 
 impl Workplace {
     pub fn new(
         building_code: BuildingID,
         floor_space: u16,
-        occupation_type: OccupationType,
+        occupation_type: OccupationType, location: geo_types::Point<isize>,
     ) -> Self {
         Workplace {
             building_code,
             occupants: Vec::new(),
             floor_space,
             workplace_occupation_type: occupation_type,
+            location,
         }
     }
     pub fn is_at_capacity(&self) -> bool {
@@ -222,9 +233,9 @@ impl Workplace {
 }
 
 impl Building for Workplace {
-    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), Error> {
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
         if self.is_at_capacity() {
-            return Err(Error::Default {
+            return Err(SimError::Default {
                 message: "Workplace has full occupancy, so cannot add new occupant".to_string(),
             });
         }
@@ -241,6 +252,10 @@ impl Building for Workplace {
     }
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
+    }
+
+    fn get_location(&self) -> Point<isize> {
+        self.location
     }
 }
 
