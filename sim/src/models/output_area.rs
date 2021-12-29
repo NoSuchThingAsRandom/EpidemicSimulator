@@ -98,25 +98,25 @@ impl OutputArea {
         })
     }
     /*    pub fn add_building(&mut self, location: Point<isize>, raw_building_type: RawBuildingTypes) {
-            let building_id = BuildingID::new(self.output_area_id.clone());
+        let building_id = BuildingID::new(self.output_area_id.clone());
 
-            match raw_building_type {
-                RawBuildingTypes::Shop => {}
-                RawBuildingTypes::School => {}
-                RawBuildingTypes::Hospital => {}
-                RawBuildingTypes::Household => {
-                    let mut household = Household::new(building_id.clone(), location);
-                    self.buildings.insert(building_id, Box::new(household));
-                }
-                RawBuildingTypes::WorkPlace => {
-                    let mut household = Workplace::new(building_id.clone(), location);
-                    self.buildings.insert(building_id, Box::new(household));
-                }
-                RawBuildingTypes::Unknown => {}
+        match raw_building_type {
+            RawBuildingTypes::Shop => {}
+            RawBuildingTypes::School => {}
+            RawBuildingTypes::Hospital => {}
+            RawBuildingTypes::Household => {
+                let mut household = Household::new(building_id.clone(), location);
+                self.buildings.insert(building_id, Box::new(household));
             }
+            RawBuildingTypes::WorkPlace => {
+                let mut household = Workplace::new(building_id.clone(), location);
+                self.buildings.insert(building_id, Box::new(household));
+            }
+            RawBuildingTypes::Unknown => {}
+        }
 
-            todo!()
-        }*/
+        todo!()
+    }*/
     pub fn generate_citizens(
         &mut self,
         rng: &mut dyn RngCore,
@@ -136,7 +136,8 @@ impl OutputArea {
         // Build households
         while generated_population <= pop_count[PersonType::All] {
             if let Some(location) = possible_households.iter().next() {
-                let household_building_id = BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
+                let household_building_id =
+                    BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
                 let mut household = Household::new(household_building_id.clone(), *location);
                 for _ in 0..HOUSEHOLD_SIZE {
                     let occupation = census_data
@@ -157,12 +158,22 @@ impl OutputArea {
                     self.total_residents += 1;
                     generated_population += 1;
                 }
-                assert!(self.buildings.insert(household_building_id, Box::new(household)).is_none(), "A collision has occurred with building ID's");
+                assert!(
+                    self.buildings
+                        .insert(household_building_id, Box::new(household))
+                        .is_none(),
+                    "A collision has occurred with building ID's"
+                );
                 if generated_population >= pop_count[PersonType::All] {
                     break;
                 }
             } else {
-                error!("Output Area: {} has run out of households to allocate residents: ({}/{}) to.", self.output_area_id,generated_population,pop_count[PersonType::All]);
+                error!(
+                    "Output Area: {} has run out of households to allocate residents: ({}/{}) to.",
+                    self.output_area_id,
+                    generated_population,
+                    pop_count[PersonType::All]
+                );
                 return Ok(citizens);
             }
         }

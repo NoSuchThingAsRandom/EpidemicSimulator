@@ -40,7 +40,6 @@ use crate::models::output_area::OutputAreaID;
 pub enum BuildingType {
     Household,
     Workplace,
-
 }
 
 /// This is used to represent a building location
@@ -109,7 +108,6 @@ impl Display for BuildingID {
     }
 }
 
-
 /// This represents a home for Citizens
 ///
 /// Has an AreaCode for referencing it, and a list of Citizen ID's that live here
@@ -143,7 +141,6 @@ impl Serialize for dyn Building {
         Err(serde::ser::Error::custom("Unknown building type!"))
     }
 }
-
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Household {
@@ -214,7 +211,8 @@ impl Workplace {
     pub fn new(
         building_code: BuildingID,
         floor_space: u16,
-        occupation_type: OccupationType, location: geo_types::Point<isize>,
+        occupation_type: OccupationType,
+        location: geo_types::Point<isize>,
     ) -> Self {
         Workplace {
             building_code,

@@ -135,11 +135,20 @@ async fn main() -> anyhow::Result<()> {
     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
     let allow_downloads = !matches.is_present("disallow-download");
 
-    info!("Using area: {}, Utilizing Cache: {}, Allowing downloads: {}", area,use_cache,!allow_downloads);
+    info!(
+        "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
+        area, use_cache, !allow_downloads
+    );
 
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
-        CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, allow_downloads, visualise_building_boundaries)
+        CensusData::load_all_tables_async(
+            census_directory,
+            area.to_string(),
+            use_cache,
+            allow_downloads,
+            visualise_building_boundaries,
+        )
             .await
             .context("Failed to load census data")
             .unwrap();
@@ -162,11 +171,16 @@ async fn main() -> anyhow::Result<()> {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
         info!("Loading data from disk...");
-        let census_data =
-            CensusData::load_all_tables_async(census_directory, area.to_string(), use_cache, allow_downloads, visualise_building_boundaries)
-                .await
-                .context("Failed to load census data")
-                .unwrap();
+        let census_data = CensusData::load_all_tables_async(
+            census_directory,
+            area.to_string(),
+            use_cache,
+            allow_downloads,
+            visualise_building_boundaries,
+        )
+            .await
+            .context("Failed to load census data")
+            .unwrap();
         info!(
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()

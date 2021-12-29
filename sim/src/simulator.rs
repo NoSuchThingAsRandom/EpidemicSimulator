@@ -59,7 +59,13 @@ struct Timer {
 impl Timer {
     #[inline]
     pub fn code_block_finished(&mut self, message: &str) -> anyhow::Result<()> {
-        info!("{} in {:.2} seconds. Total function time: {:.2} seconds, Memory usage: {}",message, self.code_block_timer.elapsed().as_secs_f64(),self.function_timer.elapsed().as_secs_f64(),get_memory_usage()?);
+        info!(
+            "{} in {:.2} seconds. Total function time: {:.2} seconds, Memory usage: {}",
+            message,
+            self.code_block_timer.elapsed().as_secs_f64(),
+            self.function_timer.elapsed().as_secs_f64(),
+            get_memory_usage()?
+        );
         self.code_block_timer = Instant::now();
         Ok(())
     }
@@ -128,9 +134,14 @@ impl Simulator {
         timer.code_block_finished("Built Output Areas")?;
 
         // Assign possible buildings to output areas
-        let mut possible_buildings_per_area: HashMap<OutputAreaID, HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>> = HashMap::with_capacity(census_data.valid_areas.len());
+        let mut possible_buildings_per_area: HashMap<
+            OutputAreaID,
+            HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>,
+        > = HashMap::with_capacity(census_data.valid_areas.len());
         let mut index = 0;
-        for (building_type, possible_building_locations) in &census_data.osm_buildings.building_locations {
+        for (building_type, possible_building_locations) in
+        &census_data.osm_buildings.building_locations
+        {
             for location in possible_building_locations {
                 if index % 500 == 0 {
                     println!("Building Location: {:?}", location);
@@ -140,12 +151,13 @@ impl Simulator {
                 if let Ok(area_code) = output_areas_polygons.find_polygon_for_point(location) {
                     let area_id = OutputAreaID::from_code(area_code.to_string());
                     if let Some(area) = output_areas.get_mut(&area_id) {
-                        let output_area_entry = possible_buildings_per_area.entry(area_id).or_default();
+                        let output_area_entry =
+                            possible_buildings_per_area.entry(area_id).or_default();
                         // Don't know how many buildings of this type for this area
                         let entry = output_area_entry.entry(*building_type).or_default();
                         entry.push(*location);
                     } else {
-                        warn!("Failed to retrieve Output Area with id: {}",area_id);
+                        warn!("Failed to retrieve Output Area with id: {}", area_id);
                     }
                 } else {
                     //warn!("Failed to retrieve Output Area for building at: {:?}",location);
@@ -156,14 +168,42 @@ impl Simulator {
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
         // Generate Citizens
         for (output_area_id, output_area) in output_areas.iter_mut() {
-            if let Err(e) = || -> anyhow::Result<()>{
-                let census_data = census_data.for_output_area_code(output_area_id.code().to_string()).ok_or_else(|| SimError::InitializationError { message: format!("Cannot generate Citizens for Output Area {} as Census Data exists", output_area_id) })?;
-                let possible_buildings = possible_buildings_per_area.get(output_area_id).ok_or_else(|| SimError::InitializationError { message: format!("Cannot generate Citizens for Output Area {} as no buildings exist", output_area_id) })?;
-                let possible_buildings = possible_buildings.get(&RawBuildingTypes::Household).ok_or_else(|| SimError::InitializationError { message: format!("Cannot generate Citizens for Output Area {} as no households exist", output_area_id) })?;
-                citizens.extend(output_area.generate_citizens(&mut rng, census_data, possible_buildings)?);
+            if let Err(e) = || -> anyhow::Result<()> {
+                let census_data = census_data
+                    .for_output_area_code(output_area_id.code().to_string())
+                    .ok_or_else(|| SimError::InitializationError {
+                        message: format!(
+                            "Cannot generate Citizens for Output Area {} as Census Data exists",
+                            output_area_id
+                        ),
+                    })?;
+                let possible_buildings = possible_buildings_per_area
+                    .get(output_area_id)
+                    .ok_or_else(|| SimError::InitializationError {
+                        message: format!(
+                            "Cannot generate Citizens for Output Area {} as no buildings exist",
+                            output_area_id
+                        ),
+                    })?;
+                let possible_buildings = possible_buildings
+                    .get(&RawBuildingTypes::Household)
+                    .ok_or_else(|| SimError::InitializationError {
+                        message: format!(
+                            "Cannot generate Citizens for Output Area {} as no households exist",
+                            output_area_id
+                        ),
+                    })?;
+                citizens.extend(output_area.generate_citizens(
+                    &mut rng,
+                    census_data,
+                    possible_buildings,
+                )?);
                 Ok(())
             }() {
-                error!("Failed to generate Citizens for area: {}        Error: {}",output_area_id,e)
+                error!(
+                    "Failed to generate Citizens for area: {}        Error: {}",
+                    output_area_id, e
+                )
             }
         }
         timer.code_block_finished("Generated Citizens and residences")?;
@@ -192,8 +232,7 @@ impl Simulator {
             .apply_initial_infections()
             .context("Failed to create initial infections")?;
 
-        timer.code_block_finished(
-            "Initialization completed")?;
+        timer.code_block_finished("Initialization completed")?;
         debug!(
             "Starting Statistics:\n      There are {} total Citizens\n      {} Output Areas",
             simulator.citizens.len(),
@@ -215,11 +254,21 @@ impl Simulator {
     /// Picks a Workplace Output Area, determined from Census Data Distribution
     ///
     /// Allocates that Citizen to the Workplace Building in that chosen Output Area
-    pub fn build_workplaces(&mut self, census_data: CensusData, possible_buildings_per_area: HashMap<OutputAreaID, HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>>) -> anyhow::Result<()> {
+    pub fn build_workplaces(
+        &mut self,
+        census_data: CensusData,
+        possible_buildings_per_area: HashMap<
+            OutputAreaID,
+            HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>,
+        >,
+    ) -> anyhow::Result<()> {
         let areas: Vec<OutputAreaID> = self.output_areas.keys().cloned().collect();
 
         // Add Workplace Output Areas to Every Citizen
-        let mut citizens_to_allocate: HashMap<OutputAreaID, (Vec<CitizenID>, &Vec<geo_types::Point<isize>>)> = HashMap::new();
+        let mut citizens_to_allocate: HashMap<
+            OutputAreaID,
+            (Vec<CitizenID>, &Vec<geo_types::Point<isize>>),
+        > = HashMap::new();
         for household_output_area_code in areas {
             let household_output_area = self
                 .output_areas
@@ -245,9 +294,26 @@ impl Simulator {
                         .context("Selecting a random workplace")?,
                 );
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
-                    let possible_buildings = possible_buildings_per_area.get(&workplace_output_area_code).ok_or_else(|| SimError::InitializationError { message: format!("Cannot generate Citizens for Output Area {} as no buildings exist", workplace_output_area_code) })?;
-                    let possible_buildings = possible_buildings.get(&RawBuildingTypes::WorkPlace).ok_or_else(|| SimError::InitializationError { message: format!("Cannot generate Citizens for Output Area {} as no workpplaces exist", workplace_output_area_code) })?;
-                    citizens_to_allocate.insert(workplace_output_area_code.clone(), (Vec::new(), possible_buildings));
+                    let possible_buildings = possible_buildings_per_area
+                        .get(&workplace_output_area_code)
+                        .ok_or_else(|| SimError::InitializationError {
+                            message: format!(
+                                "Cannot generate Citizens for Output Area {} as no buildings exist",
+                                workplace_output_area_code
+                            ),
+                        })?;
+                    let possible_buildings = possible_buildings
+                        .get(&RawBuildingTypes::WorkPlace)
+                        .ok_or_else(|| SimError::InitializationError {
+                            message: format!(
+                                "Cannot generate Citizens for Output Area {} as no workpplaces exist",
+                                workplace_output_area_code
+                            ),
+                        })?;
+                    citizens_to_allocate.insert(
+                        workplace_output_area_code.clone(),
+                        (Vec::new(), possible_buildings),
+                    );
                 }
                 citizens_to_allocate
                     .get_mut(&workplace_output_area_code)
@@ -256,7 +322,8 @@ impl Simulator {
                             context: "Cannot retrieve Output Area to add Citizens to  ".to_string(),
                             key: workplace_output_area_code.to_string(),
                         },
-                    })?.0
+                    })?
+                    .0
                     .push(citizen_id);
             }
         }
@@ -459,12 +526,10 @@ impl Simulator {
             match area {
                 Some(area) => {
                     // TODO Sometime there's a weird bug here?
-                    let building = &area.buildings
-                        .get(&building_id)
-                        .context(format!(
-                            "Failed to retrieve exposure building {}",
-                            building_id
-                        ))?;
+                    let building = &area.buildings.get(&building_id).context(format!(
+                        "Failed to retrieve exposure building {}",
+                        building_id
+                    ))?;
                     let building = building.as_ref();
                     let occupants = building.occupants().clone();
                     self.expose_citizens(

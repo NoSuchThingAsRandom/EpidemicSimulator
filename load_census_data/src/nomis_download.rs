@@ -126,14 +126,24 @@ impl DataFetcher {
         info!("Using base request: {}", request);
         let dir_path = filename.split('/').last().unwrap();
         let dir_path = filename.to_string().replace(dir_path, "");
-        std::fs::create_dir_all(dir_path.to_string()).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to create directories {} to download table to", dir_path) })?;
+        std::fs::create_dir_all(dir_path.to_string()).map_err(|e| DataLoadingError::IOError {
+            source: Box::new(e),
+            context: format!(
+                "Failed to create directories {} to download table to",
+                dir_path
+            ),
+        })?;
 
         let total_time = Instant::now();
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
             .append(resume_from_record.is_some())
-            .open(filename).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to create file {} to download table to", filename) })?;
+            .open(filename)
+            .map_err(|e| DataLoadingError::IOError {
+                source: Box::new(e),
+                context: format!("Failed to create file {} to download table to", filename),
+            })?;
         let mut processed_row_count = 0;
         if let Some(number_of_records) = number_of_records {
             for index in resume_from_record
@@ -144,7 +154,11 @@ impl DataFetcher {
                 let current_time = Instant::now();
                 let data = self.execute_request(index, request.clone(), 0).await?;
                 if let Some(data) = data {
-                    file.write_all(data.as_bytes()).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to write downloaded data to file") })?;
+                    file.write_all(data.as_bytes())
+                        .map_err(|e| DataLoadingError::IOError {
+                            source: Box::new(e),
+                            context: format!("Failed to write downloaded data to file"),
+                        })?;
                 } else {
                     break;
                 }
@@ -176,7 +190,11 @@ impl DataFetcher {
                             }
                         }
                     }
-                    file.write_all(data.as_bytes()).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to write downloaded data to file") })?;
+                    file.write_all(data.as_bytes())
+                        .map_err(|e| DataLoadingError::IOError {
+                            source: Box::new(e),
+                            context: format!("Failed to write downloaded data to file"),
+                        })?;
                 }
                 data = self.execute_request(index, request.clone(), 0).await?;
                 processed_row_count += PAGE_SIZE;
@@ -190,7 +208,10 @@ impl DataFetcher {
                 info!("Completed request {} in {:?}, current row count {}/{:?}={:?}% Estimated Time: {:?} seconds", index, current_time.elapsed(),processed_row_count,row_count,percentage,est_time);
             }
         }
-        file.flush().map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to flush downloaded data to file") })?;
+        file.flush().map_err(|e| DataLoadingError::IOError {
+            source: Box::new(e),
+            context: format!("Failed to flush downloaded data to file"),
+        })?;
         info!(
             "Finished downloading table with {} rows in {:?}",
             processed_row_count,

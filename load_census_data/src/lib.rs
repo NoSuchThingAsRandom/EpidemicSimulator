@@ -109,12 +109,25 @@ impl CensusData {
     ) -> Result<HashMap<String, HashMap<String, u32>>, DataLoadingError> {
         let mut workplace_reader = csv::ReaderBuilder::new()
             .has_headers(true)
-            .from_path(filename).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: "Cannot create CSV Reader for workplace areas".to_string() })?;
-        let headers = workplace_reader.headers().map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to read workplace CSV headers") })?.clone();
+            .from_path(filename)
+            .map_err(|e| DataLoadingError::IOError {
+                source: Box::new(e),
+                context: "Cannot create CSV Reader for workplace areas".to_string(),
+            })?;
+        let headers = workplace_reader
+            .headers()
+            .map_err(|e| DataLoadingError::IOError {
+                source: Box::new(e),
+                context: format!("Failed to read workplace CSV headers"),
+            })?
+            .clone();
         let mut workplace_areas: HashMap<String, HashMap<String, u32>> =
             HashMap::with_capacity(headers.len());
         for record in workplace_reader.records() {
-            let record = record.map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to read record from workplace table") })?;
+            let record = record.map_err(|e| DataLoadingError::IOError {
+                source: Box::new(e),
+                context: format!("Failed to read record from workplace table"),
+            })?;
             let mut current_workplace: HashMap<String, u32> = HashMap::with_capacity(headers.len());
             let area = record.get(0).unwrap().to_string();
             for index in 1..headers.len() {
@@ -135,8 +148,12 @@ impl CensusData {
         table_name: CensusTableNames,
         data_fetcher: &Option<DataFetcher>,
     ) -> Result<HashMap<String, T>, DataLoadingError> {
-        let filename =
-            String::new() + census_directory + "tables/" + region_code + "/" + table_name.get_filename();
+        let filename = String::new()
+            + census_directory
+            + "tables/"
+            + region_code
+            + "/"
+            + table_name.get_filename();
         info!("Fetching table '{}'", filename);
         if !Path::new(&filename).exists() {
             warn!("{:?} table doesn't exist on disk!", table_name);
@@ -155,8 +172,12 @@ impl CensusData {
         region_code: &str,
         table_name: CensusTableNames,
     ) -> Result<HashMap<String, T>, DataLoadingError> {
-        let filename =
-            String::new() + census_directory + "tables/" + region_code + "/" + table_name.get_filename();
+        let filename = String::new()
+            + census_directory
+            + "tables/"
+            + region_code
+            + "/"
+            + table_name.get_filename();
         CensusData::read_generic_table_from_disk::<T, U>(&filename)
     }
 
@@ -165,9 +186,19 @@ impl CensusData {
         table_name: &str,
     ) -> Result<HashMap<String, T>, DataLoadingError> {
         debug!("Reading census table: '{}' from disk", table_name);
-        let mut reader = csv::Reader::from_path(table_name).map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to create csv reader for file: {}", table_name) })?;
+        let mut reader =
+            csv::Reader::from_path(table_name).map_err(|e| DataLoadingError::IOError {
+                source: Box::new(e),
+                context: format!("Failed to create csv reader for file: {}", table_name),
+            })?;
 
-        let data = reader.deserialize().collect::<Result<Vec<U>, csv::Error>>().map_err(|e| DataLoadingError::IOError { source: Box::new(e), context: format!("Failed to parse csv file: {}", table_name) })?;
+        let data = reader
+            .deserialize()
+            .collect::<Result<Vec<U>, csv::Error>>()
+            .map_err(|e| DataLoadingError::IOError {
+                source: Box::new(e),
+                context: format!("Failed to parse csv file: {}", table_name),
+            })?;
         debug!("Loaded table into pre processing");
         let data = T::generate(data)?;
         Ok(data)
@@ -223,14 +254,18 @@ impl CensusData {
         )
             .await?;
 
-
         let mut census_data = CensusData {
             valid_areas: HashSet::with_capacity(population_counts.len()),
             population_counts,
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: OSMRawBuildings::build_osm_data(census_directory.to_string() + OSM_FILENAME, census_directory + OSM_CACHE_FILENAME, !use_cache, visualise_building_boundaries)?,
+            osm_buildings: OSMRawBuildings::build_osm_data(
+                census_directory.to_string() + OSM_FILENAME,
+                census_directory + OSM_CACHE_FILENAME,
+                !use_cache,
+                visualise_building_boundaries,
+            )?,
         };
         census_data.filter_incomplete_output_areas();
         Ok(census_data)
@@ -279,7 +314,12 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: OSMRawBuildings::build_osm_data(census_directory.to_string() + OSM_FILENAME, census_directory + OSM_CACHE_FILENAME, !use_cache, visualise_building_boundaries)?,
+            osm_buildings: OSMRawBuildings::build_osm_data(
+                census_directory.to_string() + OSM_FILENAME,
+                census_directory + OSM_CACHE_FILENAME,
+                !use_cache,
+                visualise_building_boundaries,
+            )?,
         };
         census_data.filter_incomplete_output_areas();
         Ok(census_data)
@@ -295,8 +335,12 @@ impl CensusData {
             table_name, resume_from_value
         );
         let data_fetcher = DataFetcher::default();
-        let filename =
-            String::new() + census_directory + "tables/" + region_code + "/" + table_name.get_filename();
+        let filename = String::new()
+            + census_directory
+            + "tables/"
+            + region_code
+            + "/"
+            + table_name.get_filename();
         match &table_name {
             CensusTableNames::OccupationCount
             | CensusTableNames::PopulationDensity
@@ -319,18 +363,26 @@ impl CensusData {
         // TODO Is this the most optimal way?
         let mut valid_areas = HashSet::with_capacity(self.population_counts.len());
         for key in self.population_counts.keys() {
-            if self.occupation_counts.contains_key(key) && self.residents_workplace.contains_key(key) {
+            if self.occupation_counts.contains_key(key)
+                && self.residents_workplace.contains_key(key)
+            {
                 valid_areas.insert(key.to_string());
             }
         }
         debug!("Population area count: {:?}", self.population_counts.len());
         debug!("Occupation area count: {:?}", self.occupation_counts.len());
-        debug!("Residents area count:  {:?}", self.residents_workplace.len());
+        debug!(
+            "Residents area count:  {:?}",
+            self.residents_workplace.len()
+        );
         debug!("Filtered area count:   {:?}", valid_areas.len());
 
-        self.population_counts.retain(|area, _| valid_areas.contains(area));
-        self.occupation_counts.retain(|area, _| valid_areas.contains(area));
-        self.residents_workplace.retain(|area, _| valid_areas.contains(area));
+        self.population_counts
+            .retain(|area, _| valid_areas.contains(area));
+        self.occupation_counts
+            .retain(|area, _| valid_areas.contains(area));
+        self.residents_workplace
+            .retain(|area, _| valid_areas.contains(area));
         for record in self.residents_workplace.values_mut() {
             let mut total = 0;
             record.workplace_count.retain(|code, count| {
@@ -344,7 +396,7 @@ impl CensusData {
             record.total_workplace_count = total;
         }
         self.valid_areas = valid_areas;
-        debug!("There are {} complete output areas",self.valid_areas.len());
+        debug!("There are {} complete output areas", self.valid_areas.len());
     }
 }
 
