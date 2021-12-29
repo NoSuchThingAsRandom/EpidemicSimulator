@@ -197,20 +197,17 @@ impl OSMRawBuildings {
         let visible = node.info().map(|info| info.visible()).unwrap_or(true);
         if visible {
             let position =
-                convert::decimal_latitude_and_longitude_to_coordinates(node.lat(), node.lon());
-            if let Some(position) = position {
-                //println!("{} {}",position.0,position.1);
-                if BOTTOM_LEFT_BOUNDARY.0 < position.0
-                    && position.0 < TOP_RIGHT_BOUNDARY.0
-                    && BOTTOM_LEFT_BOUNDARY.1 < position.1
-                    && position.1 < TOP_RIGHT_BOUNDARY.1
-                {
-                    //3000000 < position.0 && position.0 < 6000000 && 3000000 < position.1 && position.1 < 6000000 {
-                    let position = geo_types::Coordinate::from(position);
-                    let position = geo_types::Point::from(position);
-                    if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
-                        return Some((building, position));
-                    }
+                convert::decimal_latitude_and_longitude_to_northing_and_eastings(node.lat(), node.lon());
+            if BOTTOM_LEFT_BOUNDARY.0 < position.0
+                && position.0 < TOP_RIGHT_BOUNDARY.0
+                && BOTTOM_LEFT_BOUNDARY.1 < position.1
+                && position.1 < TOP_RIGHT_BOUNDARY.1
+            {
+                //3000000 < position.0 && position.0 < 6000000 && 3000000 < position.1 && position.1 < 6000000 {
+                let position = geo_types::Coordinate::from(position);
+                let position = geo_types::Point::from(position);
+                if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
+                    return Some((building, position));
                 }
             }
         }

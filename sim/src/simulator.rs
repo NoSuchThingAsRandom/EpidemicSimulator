@@ -129,8 +129,13 @@ impl Simulator {
 
         // Assign possible buildings to output areas
         let mut possible_buildings_per_area: HashMap<OutputAreaID, HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>> = HashMap::with_capacity(census_data.valid_areas.len());
+        let mut index = 0;
         for (building_type, possible_building_locations) in &census_data.osm_buildings.building_locations {
             for location in possible_building_locations {
+                if index % 500 == 0 {
+                    println!("Building Location: {:?}", location);
+                }
+                index += 1;
                 // TODO Fix this
                 if let Ok(area_code) = output_areas_polygons.find_polygon_for_point(location) {
                     let area_id = OutputAreaID::from_code(area_code.to_string());
@@ -147,6 +152,7 @@ impl Simulator {
                 }
             }
         }
+        panic!("");
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
         // Generate Citizens
         for (output_area_id, output_area) in output_areas.iter_mut() {

@@ -350,16 +350,16 @@ impl PolygonContainer<String> {
                     });
                 }
             }
-
-            data.insert(code, polygon);
             if index % 10000 == 0 {
                 debug!(
                     "Built {} polygons in time: {}",
                     index * 10000,
                     start_time.elapsed().as_secs_f64()
                 );
+                println!("Polygon: {:?}", polygon);
                 start_time = Instant::now();
             }
+            data.insert(code, polygon);
         }
         info!("Finished loading map data in {:?}", start_time.elapsed());
         let scaling = Scaling::output_areas();

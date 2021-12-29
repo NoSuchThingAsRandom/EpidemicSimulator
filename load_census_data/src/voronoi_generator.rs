@@ -333,7 +333,7 @@ mod tests {
         points: geo_types::LineString<isize>,
     ) -> Result<PolygonContainer<i32>, DataLoadingError> {
         let polygon = geo_types::Polygon::new(points, vec![]);
-        PolygonContainer::new([(0, polygon)].iter().collect(), Scaling::default(), 100.0)
+        PolygonContainer::new([(0, polygon)].iter().cloned().collect(), Scaling::default(), 100.0)
     }
 
     #[test]
