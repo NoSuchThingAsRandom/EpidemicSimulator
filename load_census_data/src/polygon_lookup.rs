@@ -215,7 +215,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         // TODO Move this scaling
         let scaled_point: geo_types::Point<isize> = self
             .scaling
-            .scale_point((point.x() - 3500000, point.y()), self.grid_size as isize)
+            .scale_point((point.x(), point.y()), self.grid_size as isize)
             .into();
         assert!(
             scaled_point.x() < self.grid_size as isize,
@@ -356,7 +356,6 @@ impl PolygonContainer<String> {
                     index * 10000,
                     start_time.elapsed().as_secs_f64()
                 );
-                println!("Polygon: {:?}", polygon);
                 start_time = Instant::now();
             }
             data.insert(code, polygon);

@@ -36,7 +36,7 @@ pub mod convert;
 pub mod draw_vorinni;
 
 // From guesstimating on: https://maps.nls.uk/geo/explore/#zoom=19&lat=53.94849&lon=-1.03067&layers=170&b=1&marker=53.948300,-1.030701
-pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (4500000, 400000);
+pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (450000, 400000);
 pub const YORKSHIRE_AND_HUMBER_BOTTOM_LEFT: (u32, u32) = (3500000, 100000);
 pub const TOP_RIGHT_BOUNDARY: (isize, isize) = (
     YORKSHIRE_AND_HUMBER_TOP_RIGHT.0 as isize,
@@ -68,8 +68,18 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
 
     fn try_from(value: DenseTagIter<'a>) -> Result<Self, Self::Error> {
         let tags: HashMap<&str, &str> = value.collect();
-        if !tags.contains_key("building") && !tags.contains_key("abandoned:man_made") {
+        if tags.contains_key("abandoned:man_made") {
             return Err(());
+        }
+        if let Some(amenity) = tags.get("amenity") {
+            match *amenity {
+                "school" => return Ok(RawBuildingTypes::School),
+                "hospital" => return Ok(RawBuildingTypes::Hospital),
+                _ => (),
+            }
+        }
+        if tags.contains_key("shop") {
+            return Ok(RawBuildingTypes::Shop);
         }
         if let Some(building) = tags.get("building") {
             match *building {
@@ -81,21 +91,10 @@ impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
                 }
                 "school" => return Ok(RawBuildingTypes::School),
                 "hospital" => return Ok(RawBuildingTypes::Hospital),
-                _ => (),
+                _ => return Ok(RawBuildingTypes::Unknown),
             }
         }
-        if let Some(amenity) = tags.get("amenity") {
-            match *amenity {
-                "school" => return Ok(RawBuildingTypes::School),
-                "hospital" => return Ok(RawBuildingTypes::Hospital),
-                _ => (),
-            }
-        }
-        if tags.contains_key("shop") {
-            Ok(RawBuildingTypes::Shop)
-        } else {
-            Ok(RawBuildingTypes::Unknown)
-        }
+        Err(())
     }
 }
 
@@ -197,7 +196,7 @@ impl OSMRawBuildings {
                 locations.len()
             );
             match Voronoi::new(
-                500000,
+                700000,
                 locations
                     .iter()
                     .map(|p| (p.0.x as usize, p.0.y as usize))
@@ -224,7 +223,10 @@ impl OSMRawBuildings {
                 draw_voronoi_polygons(format!("images/{:?}Vorinni.png", k), &polygons, 20000);
             }
         }
-        debug!("Finished building OSM data");
+        info!("Finished building OSM data");
+        for (building_type, values) in &data.building_locations {
+            debug!("There are {} {:?} ",values.len(),building_type);
+        }
         Ok(data)
     }
     /// Extract the building type, and it's location from an OSM Node
@@ -237,18 +239,12 @@ impl OSMRawBuildings {
                 node.lat(),
                 node.lon(),
             );
-            if BOTTOM_LEFT_BOUNDARY.0 < position.0
-                && position.0 < TOP_RIGHT_BOUNDARY.0
-                && BOTTOM_LEFT_BOUNDARY.1 < position.1
-                && position.1 < TOP_RIGHT_BOUNDARY.1
-            {
-                //3000000 < position.0 && position.0 < 6000000 && 3000000 < position.1 && position.1 < 6000000 {
-                let position = geo_types::Coordinate::from(position);
-                let position = geo_types::Point::from(position);
-                if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
-                    return Some((building, position));
-                }
+            let position = geo_types::Coordinate::from(position);
+            let position = geo_types::Point::from(position);
+            if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
+                return Some((building, position));
             }
+            //}
         }
         None
     }
@@ -260,6 +256,7 @@ impl OSMRawBuildings {
         let reader = ElementReader::from_path(filename)?;
         // Read the OSM data, only select buildings, and build a hashmap of building types, with a list of locations
         debug!("Built reader, now loading Nodes...");
+
         let buildings: HashMap<RawBuildingTypes, Vec<Point<isize>>> = reader
             .par_map_reduce(
                 |element| {

@@ -3,11 +3,11 @@
 The `data` directory contains two folders
 
 * `map`
-  - This contains subdirectories for sections of the output area shape files
+    - This contains subdirectories for sections of the output area shape files
 * `tables`
-  - This has subdirectories for each collection of Output Areas to run
-  - i.e. England, Yorkshire and The Humber, York, etc
-    * For each of these directories, all the required census tables are stored in csv format
+    - This has subdirectories for each collection of Output Areas to run
+    - i.e. England, Yorkshire and The Humber, York, etc
+        * For each of these directories, all the required census tables are stored in csv format
 
 i.e.\
 England Shape Files:\
@@ -35,6 +35,8 @@ Yorkshire And The Humber Census Tables:\
 The entire region of England is downloaded from: https://download.geofabrik.de/europe/great-britain/england.html
 
 Size: ~1.1GB
+
+There are 121003660 dense nodes (Points of interest)
 
 # Table 1 - Usual resident population
 

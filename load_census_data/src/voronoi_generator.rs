@@ -51,7 +51,7 @@ impl Scaling {
     }
     pub const fn yorkshire_national_grid() -> Scaling {
         Scaling {
-            x_offset: 3500000,
+            x_offset: 0000,
             x_scale: 1,
             y_offset: 0,
             y_scale: 1,
@@ -204,6 +204,7 @@ impl Voronoi {
             size,
             seeds.len()
         );
+        println!("Boundary: {:?}", find_seed_bounds(&seeds));
         //let seeds: Vec<(usize, usize)> = seeds.iter().choose_multiple(&mut thread_rng(), 500).iter().map(|p| **p).collect();
         let voronoi_seeds: Vec<voronoice::Point> = seeds
             .iter()

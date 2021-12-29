@@ -133,20 +133,19 @@ impl Simulator {
         }
         timer.code_block_finished("Built Output Areas")?;
 
+
+        debug!("Attempting to allocating {} possible buildings to {} Output Areas",census_data.osm_buildings.building_locations.iter().map(|(k,v)|v.len()).sum::<usize>(),census_data.valid_areas.len());
         // Assign possible buildings to output areas
         let mut possible_buildings_per_area: HashMap<
             OutputAreaID,
             HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>,
         > = HashMap::with_capacity(census_data.valid_areas.len());
-        let mut index = 0;
+        let mut allocated_building_count = 0;
+        let mut failed_building_count = 0;
         for (building_type, possible_building_locations) in
         &census_data.osm_buildings.building_locations
         {
             for location in possible_building_locations {
-                if index % 500 == 0 {
-                    println!("Building Location: {:?}", location);
-                }
-                index += 1;
                 // TODO Fix this
                 if let Ok(area_code) = output_areas_polygons.find_polygon_for_point(location) {
                     let area_id = OutputAreaID::from_code(area_code.to_string());
@@ -156,16 +155,21 @@ impl Simulator {
                         // Don't know how many buildings of this type for this area
                         let entry = output_area_entry.entry(*building_type).or_default();
                         entry.push(*location);
+                        allocated_building_count += 1;
                     } else {
-                        warn!("Failed to retrieve Output Area with id: {}", area_id);
+                        failed_building_count += 1;
+                        //warn!("Failed to retrieve Output Area with id: {}", area_id);
                     }
                 } else {
+                    failed_building_count += 1;
                     //warn!("Failed to retrieve Output Area for building at: {:?}",location);
                 }
             }
         }
-        panic!("");
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
+        output_areas.retain(|code, area| possible_buildings_per_area.contains_key(code));
+        debug!("{} Buildings have been assigned. {} Buildings failed, {} Output Areas remaining (with buildings)",allocated_building_count,failed_building_count,output_areas.len());
+
         // Generate Citizens
         for (output_area_id, output_area) in output_areas.iter_mut() {
             if let Err(e) = || -> anyhow::Result<()> {
@@ -225,7 +229,7 @@ impl Simulator {
         simulator
             .build_workplaces(census_data, possible_buildings_per_area)
             .context("Failed to build workplaces")?;
-        timer.code_block_finished("Generated workplaces");
+        timer.code_block_finished("Generated workplaces")?;
 
         // Infect random citizens
         simulator

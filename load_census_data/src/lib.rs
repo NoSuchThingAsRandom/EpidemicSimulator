@@ -263,7 +263,7 @@ impl CensusData {
             osm_buildings: OSMRawBuildings::build_osm_data(
                 census_directory.to_string() + OSM_FILENAME,
                 census_directory + OSM_CACHE_FILENAME,
-                !use_cache,
+                use_cache,
                 visualise_building_boundaries,
             )?,
         };
