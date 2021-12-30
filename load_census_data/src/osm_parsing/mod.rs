@@ -329,7 +329,11 @@ impl OSMRawBuildings {
                         Element::DenseNode(node) => {
                             // Extract the building type and location from the node
                             // Then if a valid building time,instantiate a new Hashmap to be merged
-                            (None, RawOSMNode::try_from(node).ok().map(|node| BTreeMap::from([(node.id, node)])))
+                            (None, RawOSMNode::try_from(node).ok().map(|node| {
+                                let mut map = BTreeMap::new();
+                                map.insert(node.id, node);
+                                map
+                            }))
                         }
                         //Discard all other OSM elements (Like roads)
                         Element::Way(way) => {
@@ -356,7 +360,8 @@ impl OSMRawBuildings {
         let mut buildings: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
         let mut unvisited_nodes: BTreeSet<i64> = nodes.keys().copied().collect();
         for way in ways {
-            let mut building_classification = HashSet::from([way.classification]);
+            let mut building_classification = HashSet::new();
+            building_classification.insert(way.classification);
             let mut building_polygon = Vec::with_capacity(way.node_ids.len());
             for child in way.node_ids {
                 if let Some(child) = nodes.get(&child) {

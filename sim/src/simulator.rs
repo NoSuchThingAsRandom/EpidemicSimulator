@@ -232,9 +232,12 @@ impl Simulator {
 
         // Build the workplaces
         // TODO Currently any buildings remaining are treated as Workplaces
-        let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> = possible_buildings_per_area.drain().map(|(area, classified_buildings)| {
-            let f = classified_buildings.into_values().into_iter().flat_map(|a| a).collect();
-            (area.clone(), f)
+        let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> = possible_buildings_per_area.drain().filter_map(|(area, mut classified_buildings)| {
+            let buildings: Vec<RawBuilding> = classified_buildings.drain().flat_map(|(_, a)| a).collect();
+            if buildings.is_empty() {
+                return None;
+            }
+            Some((area, buildings))
         }).collect();
 
 
@@ -303,7 +306,7 @@ impl Simulator {
             OutputAreaID, Vec<RawBuilding>>,
     ) -> anyhow::Result<()> {
         let areas: Vec<OutputAreaID> = self.output_areas.keys().cloned().collect();
-        debug!("Assigning workplace output areas");
+        debug!("Assigning workplaces to {} output areas ",self.output_areas.len());
         // Add Workplace Output Areas to Every Citizen
         let mut citizens_to_allocate: HashMap<
             OutputAreaID,
@@ -394,7 +397,7 @@ impl Simulator {
             // This is the list of full workplaces that need to be added to the parent Output Area
             let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
             for (index, citizen_id) in to_allocate.0.iter().enumerate() {
-                let citizen = self.citizens.get_mut(&citizen_id).ok_or_else(|| {
+                let citizen = self.citizens.get_mut(citizen_id).ok_or_else(|| {
                     DataLoadingError::ValueParsingError {
                         source: ParseErrorType::MissingKey {
                             context: "Cannot retrieve Citizen to assign Workplace ".to_string(),
@@ -417,7 +420,7 @@ impl Simulator {
                 let workplace = current_workplaces_to_allocate.remove(&citizen.occupation());
                 let workplace = match workplace {
                     Some(mut workplace) => {
-                        match workplace.add_citizen(citizen_id.clone()) {
+                        match workplace.add_citizen(*citizen_id) {
                             Ok(_) => workplace,
                             Err(_) => {
                                 workplace_buildings
@@ -428,9 +431,9 @@ impl Simulator {
                                         workplace_area_code.clone(),
                                         BuildingType::Workplace,
                                     ),
-                                    *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", workplace_area_code, index, total_workers, total_building_count) })?,
+                                    *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
                                     citizen.occupation());
-                                workplace.add_citizen(citizen_id.clone()).context(
+                                workplace.add_citizen(*citizen_id).context(
                                     "Cannot add Citizen to freshly generated Workplace!",
                                 )?;
                                 workplace
@@ -443,7 +446,7 @@ impl Simulator {
                                 workplace_area_code.clone(),
                                 BuildingType::Workplace,
                             ),
-                            *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces to assign workers to in Output Area: {}", workplace_area_code) })?,
+                            *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
                             citizen.occupation(),
                         );
                         workplace.add_citizen(citizen_id.clone()).context("Cannot add Citizen to new workplace!")?;
