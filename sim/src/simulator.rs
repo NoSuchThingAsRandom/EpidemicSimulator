@@ -25,7 +25,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use geo::Point;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
@@ -142,6 +142,8 @@ impl Simulator {
         > = HashMap::with_capacity(census_data.valid_areas.len());
         let mut allocated_building_count = 0;
         let mut failed_building_count = 0;
+
+        // TODO Parrellise this!
         for (building_type, possible_building_locations) in
         &census_data.osm_buildings.building_locations
         {
@@ -166,6 +168,8 @@ impl Simulator {
                 }
             }
         }
+
+
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
         output_areas.retain(|code, area| possible_buildings_per_area.contains_key(code));
         debug!("{} Buildings have been assigned. {} Buildings failed, {} Output Areas remaining (with buildings)",allocated_building_count,failed_building_count,output_areas.len());
@@ -214,14 +218,40 @@ impl Simulator {
         }
         error!("Failed to generate Households and Citizens for {} Output Areas", failed_output_areas.len());
         for failed_area in failed_output_areas {
-            if let None = output_areas.remove(&failed_area) {
+            if output_areas.remove(&failed_area).is_none() {
                 error!("Failed to remove Output Area {}, which has no Citizens",failed_area);
+            }
+            if possible_buildings_per_area.remove(&failed_area).is_none() {
+                error!("Failed to remove possible buildings for Output Area {}, which has no Citizens",failed_area);
             }
         }
         timer.code_block_finished("Generated Citizens and residences")?;
 
         // TODO Need a way of finding the closest building of type X to a point?
 
+
+        // Build the workplaces
+        // TODO Currently any buildings remaining are treated as Workplaces
+        let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> = possible_buildings_per_area.drain().map(|(area, classified_buildings)| {
+            let f = classified_buildings.into_values().into_iter().flat_map(|a| a).collect();
+            (area.clone(), f)
+        }).collect();
+
+
+        debug!("There are {} areas with workplace buildings",possible_workplaces.len());
+        // Remove any areas that do not have any workplaces
+        output_areas.retain(|code, data| {
+            if !possible_workplaces.contains_key(code) {
+                data.get_residents().iter().for_each(|id|
+                    if citizens.remove(id).is_none() {
+                        error!("Failed to remove citizen: {}",id);
+                    });
+
+                false
+            } else {
+                true
+            }
+        });
         let mut simulator = Simulator {
             current_population: starting_population,
             output_areas,
@@ -233,9 +263,9 @@ impl Simulator {
             public_transport: Default::default(),
             rng: thread_rng(),
         };
-        // Build the workplaces
+        info!("Starting to build workplaces");
         simulator
-            .build_workplaces(census_data, possible_buildings_per_area)
+            .build_workplaces(census_data, possible_workplaces)
             .context("Failed to build workplaces")?;
         timer.code_block_finished("Generated workplaces")?;
 
@@ -270,30 +300,19 @@ impl Simulator {
         &mut self,
         census_data: CensusData,
         mut possible_buildings_per_area: HashMap<
-            OutputAreaID,
-            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
-        >,
+            OutputAreaID, Vec<RawBuilding>>,
     ) -> anyhow::Result<()> {
         let areas: Vec<OutputAreaID> = self.output_areas.keys().cloned().collect();
-
+        debug!("Assigning workplace output areas");
         // Add Workplace Output Areas to Every Citizen
         let mut citizens_to_allocate: HashMap<
             OutputAreaID,
             (Vec<CitizenID>, Vec<RawBuilding>),
         > = HashMap::new();
-
+        let mut failed_output_areas = Vec::new();
         // Assign workplace areas to each Citizen, per Output area
-        for household_output_area_code in areas {
-            // Retrieve the Output Area struct for the household area
-            let household_output_area = self
-                .output_areas
-                .get_mut(&household_output_area_code)
-                .ok_or_else(|| DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::MissingKey {
-                        context: "Retrieving output area for building workplaces ".to_string(),
-                        key: household_output_area_code.to_string(),
-                    },
-                })?;
+        for (household_output_area_code, household_output_area) in &self.output_areas {
+
             // Retrieve the census data for the household output area
             let household_census_data = census_data
                 .for_output_area_code(household_output_area_code.code().to_string())
@@ -303,26 +322,35 @@ impl Simulator {
                         key: household_output_area_code.to_string(),
                     },
                 })?;
+
             for citizen_id in household_output_area.get_residents() {
-                let workplace_output_area_code = OutputAreaID::from_code(
-                    household_census_data
-                        .get_random_workplace_area(&mut self.rng)
-                        .context("Selecting a random workplace")?,
-                );
+                // Generate a workplace Output Area, and ensure it exists!
+                let mut attempt_index = 0;
+                let mut workplace_output_area_code = OutputAreaID::from_code("".to_string());
+                while !(possible_buildings_per_area.contains_key(&workplace_output_area_code) && self.output_areas.contains_key(&workplace_output_area_code)) {
+                    workplace_output_area_code = OutputAreaID::from_code(
+                        household_census_data
+                            .get_random_workplace_area(&mut self.rng)
+                            .context("Selecting a random workplace")?,
+                    );
+                    attempt_index += 1;
+                    if attempt_index == 10 {
+                        workplace_output_area_code = OutputAreaID::from_code("".to_string());
+                        break;
+                    }
+                }
+                if workplace_output_area_code == OutputAreaID::from_code("".to_string()) {
+                    //error!("Failed to find workplace area for household area {:?} ",household_output_area_code);
+                    failed_output_areas.push(household_output_area_code.clone());
+                    break;
+                }
+                // Initialise the workplace area if it doesn't exist
                 if !citizens_to_allocate.contains_key(&workplace_output_area_code) {
-                    let possible_buildings = possible_buildings_per_area
-                        .get_mut(&workplace_output_area_code)
+                    let possible_workplaces = possible_buildings_per_area
+                        .remove(&workplace_output_area_code)
                         .ok_or_else(|| SimError::InitializationError {
                             message: format!(
                                 "Cannot generate Citizens for Output Area {} as no buildings exist",
-                                workplace_output_area_code
-                            ),
-                        })?;
-                    let possible_workplaces = possible_buildings
-                        .remove(&TagClassifiedBuilding::WorkPlace)
-                        .ok_or_else(|| SimError::InitializationError {
-                            message: format!(
-                                "Cannot generate Citizens for Output Area {} as no workpplaces exist",
                                 workplace_output_area_code
                             ),
                         })?;
@@ -343,12 +371,21 @@ impl Simulator {
                     .push(citizen_id);
             }
         }
+        error!("Failed to find workplace area for {} household areas",failed_output_areas.len());
+        /*        for failed_area in failed_output_areas {
+                    if self.output_areas.remove(&failed_area).is_none() {
+                        error!("Failed to remove Output Area {}, which has no Workplace Buildings",failed_area);
+                    }
+                }*/
+        debug!("Creating workplace buildings");
         // Create buildings for each Workplace output area
         for (workplace_area_code, mut to_allocate) in citizens_to_allocate {
             // Randomise the order of the citizens, to reduce the number of Citizens sharing household and Workplace output areas
             to_allocate.0.shuffle(&mut self.rng);
             // TODO Check buildings are shuffled
             let mut possible_buildings = to_allocate.1.iter();
+            let total_building_count = possible_buildings.len();
+            let total_workers = to_allocate.0.len();
 
             // This is the Workplace list to allocate citizens to
             let mut current_workplaces_to_allocate: HashMap<OccupationType, Workplace> =
@@ -356,7 +393,7 @@ impl Simulator {
 
             // This is the list of full workplaces that need to be added to the parent Output Area
             let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
-            for citizen_id in to_allocate.0 {
+            for (index, citizen_id) in to_allocate.0.iter().enumerate() {
                 let citizen = self.citizens.get_mut(&citizen_id).ok_or_else(|| {
                     DataLoadingError::ValueParsingError {
                         source: ParseErrorType::MissingKey {
@@ -380,7 +417,7 @@ impl Simulator {
                 let workplace = current_workplaces_to_allocate.remove(&citizen.occupation());
                 let workplace = match workplace {
                     Some(mut workplace) => {
-                        match workplace.add_citizen(citizen_id) {
+                        match workplace.add_citizen(citizen_id.clone()) {
                             Ok(_) => workplace,
                             Err(_) => {
                                 workplace_buildings
@@ -391,9 +428,9 @@ impl Simulator {
                                         workplace_area_code.clone(),
                                         BuildingType::Workplace,
                                     ),
-                                    *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces to assign workers to in Output Area: {}", workplace_area_code) })?,
+                                    *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", workplace_area_code, index, total_workers, total_building_count) })?,
                                     citizen.occupation());
-                                workplace.add_citizen(citizen_id).context(
+                                workplace.add_citizen(citizen_id.clone()).context(
                                     "Cannot add Citizen to freshly generated Workplace!",
                                 )?;
                                 workplace
@@ -409,7 +446,7 @@ impl Simulator {
                             *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces to assign workers to in Output Area: {}", workplace_area_code) })?,
                             citizen.occupation(),
                         );
-                        workplace.add_citizen(citizen_id)?;
+                        workplace.add_citizen(citizen_id.clone()).context("Cannot add Citizen to new workplace!")?;
                         workplace
                     }
                 };

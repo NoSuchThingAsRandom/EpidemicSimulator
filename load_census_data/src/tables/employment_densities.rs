@@ -27,6 +27,7 @@ use crate::tables::occupation_count::OccupationType;
 #[derive(Copy, Clone)]
 pub struct EmploymentDensities {}
 
+
 impl EmploymentDensities {
     pub const INDUSTRIAL_GENERAL: u32 = 36;
     pub const INDUSTRIAL_LIGHT_INDUSTRY_BUSINESS_PARK: u32 = 47;
@@ -42,7 +43,7 @@ impl EmploymentDensities {
     pub const RETAIL_OTHER_SUPERSTORES_RETAIL_WAREHOUSES: u32 = 90;
     pub const RETAIL_FINANCIAL_PROFESSIONAL_SERVICES: u32 = 16;
     pub const RETAIL_RESTAURANTS_CAFES: u32 = 18;
-    pub fn get_size_for_occupation(occupation: OccupationType) -> u32 {
+    pub fn get_density_for_occupation(occupation: OccupationType) -> u32 {
         match occupation {
             OccupationType::Managers => Self::OFFICE_GENERAL_OFFICE,
             OccupationType::Professional => Self::OFFICE_GENERAL_OFFICE,

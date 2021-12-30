@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2018"
 authors = ["Sam Ralph"]
 
+[dev-dependencies]
+strum = "0.23.0"
 [dependencies]
 load_census_data = { path = "../load_census_data" }
 

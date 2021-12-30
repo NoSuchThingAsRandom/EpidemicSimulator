@@ -18,14 +18,14 @@
  *
  */
 //! Used to load in building types and locations from an OSM file
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{Read, Write};
 
 use geo::area::Area;
 use geo::centroid::Centroid;
-use geo_types::{LineString, Point};
+use geo_types::{LineString, Point, Polygon};
 use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use serde::{Deserialize, Serialize};
@@ -62,6 +62,7 @@ pub enum TagClassifiedBuilding {
     Hospital,
     Household,
     WorkPlace,
+    /// Not a building
     Unknown,
 }
 
@@ -78,17 +79,18 @@ impl<'a> From<HashMap<&'a str, &'a str>> for TagClassifiedBuilding {
             return TagClassifiedBuilding::Shop;
         }
         if let Some(building) = tags.get("building") {
-            match *building {
+            return match *building {
                 "office" | "industrial" | "commercial" | "retail" | "warehouse" | "civic"
-                | "public" => return TagClassifiedBuilding::WorkPlace,
+                | "public" => TagClassifiedBuilding::WorkPlace,
                 "house" | "detached" | "semidetached_house" | "farm" | "hut" | "static_caravan"
                 | "cabin" | "apartments" | "terrace" | "residential" => {
-                    return TagClassifiedBuilding::Household;
+                    TagClassifiedBuilding::Household
                 }
-                "school" => return TagClassifiedBuilding::School,
-                "hospital" => return TagClassifiedBuilding::Hospital,
-                _ => (),
-            }
+                "school" => TagClassifiedBuilding::School,
+                "hospital" => TagClassifiedBuilding::Hospital,
+                // Unknown buildings can be workplaces?
+                _ => TagClassifiedBuilding::WorkPlace,
+            };
         }
         TagClassifiedBuilding::Unknown
     }
@@ -129,7 +131,7 @@ pub struct RawBuilding {
 }
 
 impl RawBuilding {
-    pub fn new(classification: TagClassifiedBuilding, boundary: &LineString<f64>) -> Option<RawBuilding> {
+    pub fn new(classification: TagClassifiedBuilding, boundary: &Polygon<f64>) -> Option<RawBuilding> {
         // Can't find center with integer points
         let size = boundary.unsigned_area().round() as isize;
         Some(RawBuilding { classification, center: boundary.centroid().map(|p| geo_types::Point::from((p.x().round() as isize, p.y().round() as isize)))?, size })
@@ -348,35 +350,57 @@ impl OSMRawBuildings {
                     (ways, nodes)
                 },
             )?;
-        let mut nodes = nodes.ok_or_else(|| DataLoadingError::Misc { source: "No Nodes loaded from OSM file".to_string() })?;
+        let nodes = nodes.ok_or_else(|| DataLoadingError::Misc { source: "No Nodes loaded from OSM file".to_string() })?;
         let ways = ways.ok_or_else(|| DataLoadingError::Misc { source: "No Ways loaded from OSM file".to_string() })?;
         info!("Completed generation of Raw OSM Elements. Now Creating RawBuildings, from {:?} ways and {:?} nodes",ways.len(),nodes.len());
         let mut buildings: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
+        let mut unvisited_nodes: BTreeSet<i64> = nodes.keys().copied().collect();
         for way in ways {
-            let mut building_type = HashSet::from([way.classification]);
+            let mut building_classification = HashSet::from([way.classification]);
             let mut building_polygon = Vec::with_capacity(way.node_ids.len());
             for child in way.node_ids {
                 if let Some(child) = nodes.get(&child) {
+                    unvisited_nodes.remove(&child.id);
                     building_polygon.push(geo_types::Coordinate::from((child.location.x() as f64, child.location.y() as f64)));
-                    building_type.insert(child.classification);
+                    building_classification.insert(child.classification);
                 } else {
                     warn!("Node {} doesn't exist for way {}",child,way.id);
                 }
             }
-            let building_shape = building_polygon.into();
-            for classification in building_type {
+            let building_shape = geo_types::Polygon::new(building_polygon.into(), vec![]);
+            for classification in building_classification {
                 if let Some(building) = RawBuilding::new(classification, &building_shape) {
                     let building_entry = buildings.entry(classification).or_default();
                     building_entry.push(building);
+                } else {
+                    warn!("Failed to create raw building!");
                 }
             }
         }
-        debug!("Removed {} Unknown buildings.",buildings.remove(&TagClassifiedBuilding::Unknown).map(|b|b.len()).unwrap_or(0));
-        // Count the number of unique buildings
-        info!(
-            "Loaded {} buildings from OSM data",
+        debug!(
+            "Loaded {} buildings from Way OSM data",
             buildings.iter().map(|(_, b)| b.len()).sum::<usize>()
         );
+        for node_id in unvisited_nodes {
+            if let Some(node) = nodes.get(&node_id) {
+                let building_shape = geo_types::Polygon::new(vec![(node.location.x() as f64, node.location.y() as f64), (node.location.x() as f64, node.location.y() as f64)].into(), vec![]);
+                if let Some(building) = RawBuilding::new(node.classification, &building_shape) {
+                    let building_entry = buildings.entry(node.classification).or_default();
+                    building_entry.push(building);
+                } else {
+                    warn!("Failed to create raw building!");
+                }
+            } else {
+                warn!("Unvisited Node {} doesn't exist!",node_id);
+            }
+        }
+        debug!(
+            "Loaded {} buildings from node data",
+            buildings.iter().map(|(_, b)| b.len()).sum::<usize>()
+        );
+        debug!("Removed {} Unknown nodes.",buildings.remove(&TagClassifiedBuilding::Unknown).map(|b|b.len()).unwrap_or(0));
+        // Count the number of unique buildings
+        info!("Finished loading with {} buildings",buildings.iter().map(|(_, b)| b.len()).sum::<usize>());
 
         Ok(buildings)
     }

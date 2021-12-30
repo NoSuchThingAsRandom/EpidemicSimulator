@@ -350,7 +350,7 @@ impl PolygonContainer<String> {
                     });
                 }
             }
-            if index % 10000 == 0 {
+            if index % 50000 == 0 {
                 debug!(
                     "Built {} polygons in time: {}",
                     index * 10000,

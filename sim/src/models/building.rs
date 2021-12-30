@@ -34,6 +34,9 @@ use crate::error::SimError;
 use crate::models::citizen::CitizenID;
 use crate::models::output_area::OutputAreaID;
 
+/// The minimum floor size a building can have
+pub const MINIMUM_FLOOR_SPACE_SIZE: u32 = 2000;
+
 /// A wrapper for all building types, for easier use in Hashmaps
 ///
 /// Each element contains
@@ -203,7 +206,7 @@ pub struct Workplace {
     building_code: BuildingID,
     /// A list of all the ID's of citizens who are at this building
     occupants: Vec<CitizenID>,
-    floor_space: u16,
+    floor_space: u32,
     workplace_occupation_type: OccupationType,
     location: geo_types::Point<isize>,
 }
@@ -217,16 +220,16 @@ impl Workplace {
         Workplace {
             building_code,
             occupants: Vec::new(),
-            floor_space: raw_building.size() as u16,
+            floor_space: (raw_building.size() as u32).max(MINIMUM_FLOOR_SPACE_SIZE),
             workplace_occupation_type: occupation_type,
             location: raw_building.center(),
         }
     }
+    fn max_occupant_count(&self) -> u32 {
+        (self.floor_space) / EmploymentDensities::get_density_for_occupation(self.workplace_occupation_type)
+    }
     pub fn is_at_capacity(&self) -> bool {
-        (self.floor_space as usize)
-            <= (self.occupants.len()
-            * EmploymentDensities::get_size_for_occupation(self.workplace_occupation_type)
-            as usize)
+        self.max_occupant_count() <= (self.occupants.len() as u32)
     }
 }
 
@@ -234,7 +237,7 @@ impl Building for Workplace {
     fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
         if self.is_at_capacity() {
             return Err(SimError::Default {
-                message: "Workplace has full occupancy, so cannot add new occupant".to_string(),
+                message: format!("Workplace of type {:?} has full occupancy ({} Citizens out of {}), so cannot add new occupant, with floor space {}", self.workplace_occupation_type, self.occupants.len(), self.max_occupant_count(), self.floor_space),
             });
         }
         self.occupants.push(citizen_id);
@@ -266,5 +269,47 @@ impl Display for Workplace {
             self.building_code,
             self.occupants.len()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use geo::prelude::Area;
+    use geo_types::Geometry::LineString;
+    use strum::IntoEnumIterator;
+
+    use load_census_data::osm_parsing::{RawBuilding, TagClassifiedBuilding};
+    use load_census_data::tables::employment_densities::EmploymentDensities;
+    use load_census_data::tables::occupation_count::OccupationType;
+
+    use crate::models::building::{Building, BuildingID, BuildingType, MINIMUM_FLOOR_SPACE_SIZE, Workplace};
+    use crate::models::citizen::CitizenID;
+    use crate::models::output_area::OutputAreaID;
+
+    #[test]
+    fn minimum_one_occupant() {
+        let building_size = geo_types::Polygon::new(geo_types::LineString::from(vec![(0.0, 0.0), (100.0, 0.0), (100.0, 2.0), (0.0, 2.0), (0.0, 0.0)]), vec![]);
+        let id = BuildingID::new(OutputAreaID::from_code("a".to_string()), BuildingType::Workplace);
+        let raw = RawBuilding::new(TagClassifiedBuilding::WorkPlace, &building_size).unwrap();
+
+        assert_eq!(building_size.unsigned_area(), MINIMUM_FLOOR_SPACE_SIZE as f64);
+        for occupation_type in OccupationType::iter() {
+            println!("Testing: {:?}", occupation_type);
+            let mut workplace = Workplace::new(id.clone(), raw, occupation_type);
+            assert!(EmploymentDensities::get_density_for_occupation(occupation_type) < workplace.floor_space);
+            assert!(0 < workplace.max_occupant_count());
+            assert!(workplace.add_citizen(CitizenID::default()).is_ok());
+        }
+    }
+
+    #[test]
+    fn minimum_size() {
+        let building_size = geo_types::Polygon::new(geo_types::LineString::from(vec![(0.0, 0.0), (100.0, 0.0), (100.0, 2.0), (0.0, 2.0), (0.0, 0.0)]), vec![]);
+        let id = BuildingID::new(OutputAreaID::from_code("a".to_string()), BuildingType::Workplace);
+        let raw = RawBuilding::new(TagClassifiedBuilding::WorkPlace, &building_size).unwrap();
+
+        assert!(building_size.unsigned_area() < MINIMUM_FLOOR_SPACE_SIZE as f64);
+        let mut workplace = Workplace::new(id.clone(), raw, OccupationType::All);
+        assert!(MINIMUM_FLOOR_SPACE_SIZE <= workplace.floor_space);
     }
 }
