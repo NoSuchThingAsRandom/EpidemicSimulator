@@ -18,14 +18,14 @@
  *
  */
 //! Used to load in building types and locations from an OSM file
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{Read, Write};
 
 use geo_types::Point;
 use log::{debug, error, info};
-use osmpbf::{DenseNode, DenseTagIter};
+use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use serde::{Deserialize, Serialize};
 
 use crate::DataLoadingError;
@@ -54,7 +54,7 @@ const DUMP_TO_FILE: bool = false;
 const DRAW_VORONOI_DIAGRAMS: bool = false;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum RawBuildingTypes {
+pub enum TagClassifiedBuilding {
     Shop,
     School,
     Hospital,
@@ -63,51 +63,103 @@ pub enum RawBuildingTypes {
     Unknown,
 }
 
-impl<'a> TryFrom<DenseTagIter<'a>> for RawBuildingTypes {
-    type Error = ();
-
-    fn try_from(value: DenseTagIter<'a>) -> Result<Self, Self::Error> {
-        let tags: HashMap<&str, &str> = value.collect();
-        if tags.contains_key("abandoned:man_made") {
-            return Err(());
-        }
+impl<'a> From<HashMap<&'a str, &'a str>> for TagClassifiedBuilding {
+    fn from(tags: HashMap<&'a str, &'a str>) -> Self {
         if let Some(amenity) = tags.get("amenity") {
             match *amenity {
-                "school" => return Ok(RawBuildingTypes::School),
-                "hospital" => return Ok(RawBuildingTypes::Hospital),
+                "school" => return TagClassifiedBuilding::School,
+                "hospital" => return TagClassifiedBuilding::Hospital,
                 _ => (),
             }
         }
         if tags.contains_key("shop") {
-            return Ok(RawBuildingTypes::Shop);
+            return TagClassifiedBuilding::Shop;
         }
         if let Some(building) = tags.get("building") {
             match *building {
                 "office" | "industrial" | "commercial" | "retail" | "warehouse" | "civic"
-                | "public" => return Ok(RawBuildingTypes::WorkPlace),
+                | "public" => return TagClassifiedBuilding::WorkPlace,
                 "house" | "detached" | "semidetached_house" | "farm" | "hut" | "static_caravan"
                 | "cabin" | "apartments" | "terrace" | "residential" => {
-                    return Ok(RawBuildingTypes::Household);
+                    return TagClassifiedBuilding::Household;
                 }
-                "school" => return Ok(RawBuildingTypes::School),
-                "hospital" => return Ok(RawBuildingTypes::Hospital),
-                _ => return Ok(RawBuildingTypes::Unknown),
+                "school" => return TagClassifiedBuilding::School,
+                "hospital" => return TagClassifiedBuilding::Hospital,
+                _ => (),
             }
+        }
+        TagClassifiedBuilding::Unknown
+    }
+}
+
+impl<'a> From<TagIter<'a>> for TagClassifiedBuilding {
+    fn from(tags: TagIter<'a>) -> Self {
+        TagClassifiedBuilding::from(tags.collect::<HashMap<&'a str, &'a str>>())
+    }
+}
+
+impl<'a> From<DenseTagIter<'a>> for TagClassifiedBuilding {
+    fn from(tags: DenseTagIter<'a>) -> Self {
+        TagClassifiedBuilding::from(tags.collect::<HashMap<&'a str, &'a str>>())
+    }
+}
+
+struct RawOSMWay {
+    id: i64,
+    classification: TagClassifiedBuilding,
+    node_ids: Vec<i64>,
+}
+
+struct RawOSMNode {
+    id: i64,
+    classification: TagClassifiedBuilding,
+    location: Point<isize>,
+}
+
+impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
+    type Error = ();
+
+    fn try_from(node: DenseNode<'a>) -> Result<Self, Self::Error> {
+        let visible = node.info().map(|info| info.visible()).unwrap_or(true);
+        if visible {
+            let position = convert::decimal_latitude_and_longitude_to_northing_and_eastings(
+                node.lat(),
+                node.lon(),
+            );
+            //let position = geo_types::Coordinate::from(position);
+            let position: Point<isize> = position.into();//geo_types::Point::from(position);
+            return Ok(RawOSMNode {
+                id: node.id,
+                classification: TagClassifiedBuilding::from(node.tags()),
+                location: position,
+            });
         }
         Err(())
     }
 }
 
+fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: Option<U>) -> Option<U> {
+    match (a, b) {
+        (Some(mut a), Some(mut b)) => {
+            a.extend(b);
+            Some(a)
+        }
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None
+    }
+}
+
 #[derive(Debug)]
 pub struct OSMRawBuildings {
-    pub building_locations: HashMap<RawBuildingTypes, Vec<Point<isize>>>,
-    pub building_voronois: HashMap<RawBuildingTypes, Voronoi>,
+    pub building_locations: HashMap<TagClassifiedBuilding, Vec<Point<isize>>>,
+    pub building_voronois: HashMap<TagClassifiedBuilding, Voronoi>,
 }
 
 impl OSMRawBuildings {
     fn read_cached_osm_data(
         cache_filename: String,
-    ) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
+    ) -> Result<HashMap<TagClassifiedBuilding, Vec<Point<isize>>>, DataLoadingError> {
         debug!("Reading cached parsing data");
         let mut file =
             File::open(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
@@ -128,7 +180,7 @@ impl OSMRawBuildings {
     fn load_and_write_cache(
         raw_filename: String,
         cache_filename: String,
-    ) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
+    ) -> Result<HashMap<TagClassifiedBuilding, Vec<Point<isize>>>, DataLoadingError> {
         debug!("Parsing data from raw OSM file");
         let building_locations =
             OSMRawBuildings::read_buildings_from_osm(raw_filename.to_string())?;
@@ -229,68 +281,44 @@ impl OSMRawBuildings {
         }
         Ok(data)
     }
-    /// Extract the building type, and it's location from an OSM Node
-    ///
-    /// Returns None, if outside the boundary, not visible or unsupported node type
-    fn parse_node(node: DenseNode) -> Option<(RawBuildingTypes, geo_types::Point<isize>)> {
-        let visible = node.info().map(|info| info.visible()).unwrap_or(true);
-        if visible {
-            let position = convert::decimal_latitude_and_longitude_to_northing_and_eastings(
-                node.lat(),
-                node.lon(),
-            );
-            let position = geo_types::Coordinate::from(position);
-            let position = geo_types::Point::from(position);
-            if let Ok(building) = RawBuildingTypes::try_from(node.tags()) {
-                return Some((building, position));
-            }
-            //}
-        }
-        None
-    }
+
+
     fn read_buildings_from_osm(
         filename: String,
-    ) -> Result<HashMap<RawBuildingTypes, Vec<Point<isize>>>, DataLoadingError> {
+    ) -> Result<HashMap<TagClassifiedBuilding, Vec<Point<isize>>>, DataLoadingError> {
         use osmpbf::{Element, ElementReader};
         info!("Reading OSM data from file: {}", filename);
         let reader = ElementReader::from_path(filename)?;
         // Read the OSM data, only select buildings, and build a hashmap of building types, with a list of locations
         debug!("Built reader, now loading Nodes...");
-
-        let buildings: HashMap<RawBuildingTypes, Vec<Point<isize>>> = reader
+        let (ways, nodes): (Option<Vec<RawOSMWay>>, Option<BTreeMap<i64, RawOSMNode>>) = reader
             .par_map_reduce(
                 |element| {
                     match element {
                         Element::DenseNode(node) => {
                             // Extract the building type and location from the node
                             // Then if a valid building time,instantiate a new Hashmap to be merged
-                            OSMRawBuildings::parse_node(node)
-                                .map(|data| HashMap::from([(data.0, vec![data.1])]))
+                            (None, RawOSMNode::try_from(node).ok().map(|node| BTreeMap::from([(node.id, node)])))
                         }
                         //Discard all other OSM elements (Like roads)
-                        _ => None,
-                    }
-                },
-                || None,
-                |a, b| {
-                    // Fold the multiple hashmaps into a singular hashmap
-                    match (a, b) {
-                        (Some(mut a), Some(mut b)) => {
-                            b.drain().for_each(|(k, v)| {
-                                let entry =
-                                    a.entry(k).or_insert_with(|| Vec::with_capacity(v.len()));
-                                entry.extend(v);
-                            });
-                            a.extend(b);
-                            Some(a)
+                        Element::Way(way) => {
+                            let parsed = RawOSMWay {
+                                id: way.id(),
+                                classification: TagClassifiedBuilding::from(way.tags()),
+                                node_ids: way.refs().collect(),
+                            };
+                            (Some(vec![parsed]), None)
                         }
-                        (Some(a), None) => Some(a),
-                        (None, Some(b)) => Some(b),
-                        (None, None) => None,
+                        _ => (None, None),
                     }
                 },
-            )?
-            .expect("No buildings loaded from osm data");
+                || (None, None),
+                |(a_ways, a_nodes), (b_ways, b_nodes)| {
+                    let ways = merge_iterators(a_ways, b_ways);
+                    let nodes = merge_iterators(a_nodes, b_nodes);
+                    return (ways, nodes);
+                },
+            )?;
 
         // Count the number of unique buildings
         info!(

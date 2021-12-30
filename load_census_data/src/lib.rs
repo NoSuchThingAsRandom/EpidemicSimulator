@@ -30,7 +30,7 @@ use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
-use crate::osm_parsing::{OSMRawBuildings, RawBuildingTypes};
+use crate::osm_parsing::{OSMRawBuildings, TagClassifiedBuilding};
 use crate::parsing_error::DataLoadingError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::employment_densities::EmploymentDensities;

@@ -24,7 +24,7 @@ use plotters::coord::types::RangedCoordi32;
 use plotters::prelude::{BitMapBackend, Cartesian2d, Color, IntoDrawingArea, Palette, Palette99};
 use plotters::style::{RGBColor, WHITE};
 
-use crate::{OSMRawBuildings, RawBuildingTypes};
+use crate::{OSMRawBuildings, TagClassifiedBuilding};
 use crate::osm_parsing::GRID_SIZE;
 
 fn draw_polygon_ring(
@@ -52,7 +52,7 @@ fn draw_polygon_ring(
 pub fn draw_osm_buildings_polygons(
     filename: String,
     data: &OSMRawBuildings,
-    building_type: RawBuildingTypes,
+    building_type: TagClassifiedBuilding,
 ) {
     println!("Drawing at: {}", filename);
     let draw_backend =

@@ -31,7 +31,7 @@ use rand::rngs::ThreadRng;
 use rand::thread_rng;
 
 use load_census_data::CensusData;
-use load_census_data::osm_parsing::RawBuildingTypes;
+use load_census_data::osm_parsing::TagClassifiedBuilding;
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
@@ -138,7 +138,7 @@ impl Simulator {
         // Assign possible buildings to output areas
         let mut possible_buildings_per_area: HashMap<
             OutputAreaID,
-            HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>,
+            HashMap<TagClassifiedBuilding, Vec<geo_types::Point<isize>>>,
         > = HashMap::with_capacity(census_data.valid_areas.len());
         let mut allocated_building_count = 0;
         let mut failed_building_count = 0;
@@ -190,7 +190,7 @@ impl Simulator {
                         ),
                     })?;
                 let possible_buildings = possible_buildings
-                    .get(&RawBuildingTypes::Household)
+                    .get(&TagClassifiedBuilding::Household)
                     .ok_or_else(|| SimError::InitializationError {
                         message: format!(
                             "Cannot generate Citizens for Output Area {} as no households exist",
@@ -263,7 +263,7 @@ impl Simulator {
         census_data: CensusData,
         possible_buildings_per_area: HashMap<
             OutputAreaID,
-            HashMap<RawBuildingTypes, Vec<geo_types::Point<isize>>>,
+            HashMap<TagClassifiedBuilding, Vec<geo_types::Point<isize>>>,
         >,
     ) -> anyhow::Result<()> {
         let areas: Vec<OutputAreaID> = self.output_areas.keys().cloned().collect();
@@ -307,7 +307,7 @@ impl Simulator {
                             ),
                         })?;
                     let possible_buildings = possible_buildings
-                        .get(&RawBuildingTypes::WorkPlace)
+                        .get(&TagClassifiedBuilding::WorkPlace)
                         .ok_or_else(|| SimError::InitializationError {
                             message: format!(
                                 "Cannot generate Citizens for Output Area {} as no workpplaces exist",

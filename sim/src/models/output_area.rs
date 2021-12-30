@@ -29,7 +29,7 @@ use rand::RngCore;
 use serde::Serialize;
 
 use load_census_data::CensusDataEntry;
-use load_census_data::osm_parsing::RawBuildingTypes;
+use load_census_data::osm_parsing::TagClassifiedBuilding;
 use load_census_data::tables::population_and_density_per_output_area::{
     AreaClassification, PersonType,
 };
