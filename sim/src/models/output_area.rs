@@ -29,7 +29,7 @@ use rand::RngCore;
 use serde::Serialize;
 
 use load_census_data::CensusDataEntry;
-use load_census_data::osm_parsing::TagClassifiedBuilding;
+use load_census_data::osm_parsing::{RawBuilding, TagClassifiedBuilding};
 use load_census_data::tables::population_and_density_per_output_area::{
     AreaClassification, PersonType,
 };
@@ -117,28 +117,29 @@ impl OutputArea {
 
         todo!()
     }*/
-    pub fn generate_citizens(
+    /// Generates the Citizens for this Output Area, with households being the provided [`RawBuilding`]
+    ///
+    /// Note each [`RawBuilding`] must have a classification of [`TagClassifiedBuilding::Household`]
+    pub fn generate_citizens_with_households(
         &mut self,
         rng: &mut dyn RngCore,
         census_data: CensusDataEntry,
-        possible_households: &Vec<geo_types::Point<isize>>,
+        possible_buildings: Vec<RawBuilding>,
     ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
-        trace!("Generating citizens");
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
-
         // TODO Fix this
         let area = AreaClassification::Total;
         let pop_count = &census_data.population_count.population_counts[area];
         // TODO Currently assigning 4 people per household
         // Should use census data instead
         let mut generated_population = 0;
-
         // Build households
         while generated_population <= pop_count[PersonType::All] {
-            if let Some(location) = possible_households.iter().next() {
+            if let Some(location) = possible_buildings.iter().next() {
+                assert_eq!(location.classification(), TagClassifiedBuilding::Household);
                 let household_building_id =
                     BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
-                let mut household = Household::new(household_building_id.clone(), *location);
+                let mut household = Household::new(household_building_id.clone(), location.center());
                 for _ in 0..HOUSEHOLD_SIZE {
                     let occupation = census_data
                         .occupation_count

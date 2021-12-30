@@ -67,7 +67,6 @@ Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=DataLoadingError>
         data: Vec<impl PreProcessingTable + 'static>,
     ) -> Result<HashMap<String, Self>, DataLoadingError> {
         let mut grouped: HashMap<String, Vec<Box<T>>> = T::group_by_area(data)?;
-        trace!("Grouped table by area");
         // Convert into Population Records
         let mut output = HashMap::new();
         for (code, records) in grouped.drain() {

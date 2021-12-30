@@ -18,13 +18,15 @@
  *
  */
 //! Used to load in building types and locations from an OSM file
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{Read, Write};
 
-use geo_types::Point;
-use log::{debug, error, info};
+use geo::area::Area;
+use geo::centroid::Centroid;
+use geo_types::{LineString, Point};
+use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use serde::{Deserialize, Serialize};
 
@@ -116,6 +118,33 @@ struct RawOSMNode {
     location: Point<isize>,
 }
 
+/// This is a representation of an OSM building
+///
+/// It has a type, given by the OSM Tags, as well as a center point, and an approximate size
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct RawBuilding {
+    classification: TagClassifiedBuilding,
+    center: Point<isize>,
+    size: isize,
+}
+
+impl RawBuilding {
+    pub fn new(classification: TagClassifiedBuilding, boundary: &LineString<f64>) -> Option<RawBuilding> {
+        // Can't find center with integer points
+        let size = boundary.unsigned_area().round() as isize;
+        Some(RawBuilding { classification, center: boundary.centroid().map(|p| geo_types::Point::from((p.x().round() as isize, p.y().round() as isize)))?, size })
+    }
+    pub fn center(&self) -> Point<isize> {
+        self.center
+    }
+    pub fn size(&self) -> isize {
+        self.size
+    }
+    pub fn classification(&self) -> TagClassifiedBuilding {
+        self.classification
+    }
+}
+
 impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
     type Error = ();
 
@@ -140,7 +169,7 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
 
 fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: Option<U>) -> Option<U> {
     match (a, b) {
-        (Some(mut a), Some(mut b)) => {
+        (Some(mut a), Some(b)) => {
             a.extend(b);
             Some(a)
         }
@@ -152,14 +181,14 @@ fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: Opti
 
 #[derive(Debug)]
 pub struct OSMRawBuildings {
-    pub building_locations: HashMap<TagClassifiedBuilding, Vec<Point<isize>>>,
+    pub building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
     pub building_voronois: HashMap<TagClassifiedBuilding, Voronoi>,
 }
 
 impl OSMRawBuildings {
     fn read_cached_osm_data(
         cache_filename: String,
-    ) -> Result<HashMap<TagClassifiedBuilding, Vec<Point<isize>>>, DataLoadingError> {
+    ) -> Result<HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, DataLoadingError> {
         debug!("Reading cached parsing data");
         let mut file =
             File::open(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
@@ -180,10 +209,10 @@ impl OSMRawBuildings {
     fn load_and_write_cache(
         raw_filename: String,
         cache_filename: String,
-    ) -> Result<HashMap<TagClassifiedBuilding, Vec<Point<isize>>>, DataLoadingError> {
+    ) -> Result<HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, DataLoadingError> {
         debug!("Parsing data from raw OSM file");
         let building_locations =
-            OSMRawBuildings::read_buildings_from_osm(raw_filename.to_string())?;
+            OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
         let mut file =
             File::create(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
@@ -251,7 +280,7 @@ impl OSMRawBuildings {
                 700000,
                 locations
                     .iter()
-                    .map(|p| (p.0.x as usize, p.0.y as usize))
+                    .map(|p| (p.center.x() as usize, p.center.y() as usize))
                     .collect(),
                 Scaling::yorkshire_national_grid(),
             ) {
@@ -285,12 +314,12 @@ impl OSMRawBuildings {
 
     fn read_buildings_from_osm(
         filename: String,
-    ) -> Result<HashMap<TagClassifiedBuilding, Vec<Point<isize>>>, DataLoadingError> {
+    ) -> Result<HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, DataLoadingError> {
         use osmpbf::{Element, ElementReader};
         info!("Reading OSM data from file: {}", filename);
         let reader = ElementReader::from_path(filename)?;
         // Read the OSM data, only select buildings, and build a hashmap of building types, with a list of locations
-        debug!("Built reader, now loading Nodes...");
+        debug!("Built reader, now generating Raw OSM Elements");
         let (ways, nodes): (Option<Vec<RawOSMWay>>, Option<BTreeMap<i64, RawOSMNode>>) = reader
             .par_map_reduce(
                 |element| {
@@ -316,10 +345,33 @@ impl OSMRawBuildings {
                 |(a_ways, a_nodes), (b_ways, b_nodes)| {
                     let ways = merge_iterators(a_ways, b_ways);
                     let nodes = merge_iterators(a_nodes, b_nodes);
-                    return (ways, nodes);
+                    (ways, nodes)
                 },
             )?;
-
+        let mut nodes = nodes.ok_or_else(|| DataLoadingError::Misc { source: "No Nodes loaded from OSM file".to_string() })?;
+        let ways = ways.ok_or_else(|| DataLoadingError::Misc { source: "No Ways loaded from OSM file".to_string() })?;
+        info!("Completed generation of Raw OSM Elements. Now Creating RawBuildings, from {:?} ways and {:?} nodes",ways.len(),nodes.len());
+        let mut buildings: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
+        for way in ways {
+            let mut building_type = HashSet::from([way.classification]);
+            let mut building_polygon = Vec::with_capacity(way.node_ids.len());
+            for child in way.node_ids {
+                if let Some(child) = nodes.get(&child) {
+                    building_polygon.push(geo_types::Coordinate::from((child.location.x() as f64, child.location.y() as f64)));
+                    building_type.insert(child.classification);
+                } else {
+                    warn!("Node {} doesn't exist for way {}",child,way.id);
+                }
+            }
+            let building_shape = building_polygon.into();
+            for classification in building_type {
+                if let Some(building) = RawBuilding::new(classification, &building_shape) {
+                    let building_entry = buildings.entry(classification).or_default();
+                    building_entry.push(building);
+                }
+            }
+        }
+        debug!("Removed {} Unknown buildings.",buildings.remove(&TagClassifiedBuilding::Unknown).map(|b|b.len()).unwrap_or(0));
         // Count the number of unique buildings
         info!(
             "Loaded {} buildings from OSM data",

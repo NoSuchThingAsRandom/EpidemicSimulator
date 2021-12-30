@@ -26,6 +26,7 @@ use geo::Point;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
+use load_census_data::osm_parsing::RawBuilding;
 use load_census_data::tables::employment_densities::EmploymentDensities;
 use load_census_data::tables::occupation_count::OccupationType;
 
@@ -210,16 +211,15 @@ pub struct Workplace {
 impl Workplace {
     pub fn new(
         building_code: BuildingID,
-        floor_space: u16,
+        raw_building: RawBuilding,
         occupation_type: OccupationType,
-        location: geo_types::Point<isize>,
     ) -> Self {
         Workplace {
             building_code,
             occupants: Vec::new(),
-            floor_space,
+            floor_space: raw_building.size() as u16,
             workplace_occupation_type: occupation_type,
-            location,
+            location: raw_building.center(),
         }
     }
     pub fn is_at_capacity(&self) -> bool {
