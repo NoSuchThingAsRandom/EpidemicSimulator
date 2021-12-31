@@ -49,6 +49,12 @@ pub struct CitizenID {
     id: Uuid,
 }
 
+impl CitizenID {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+}
+
 impl Default for CitizenID {
     fn default() -> Self {
         CitizenID { id: Uuid::new_v4() }

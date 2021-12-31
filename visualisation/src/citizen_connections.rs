@@ -31,16 +31,14 @@ pub fn build_citizen_graph(simulation: &sim::simulator::Simulator) -> GraphMap<u
     let mut graph: GraphMap<u128, u8, Undirected> = GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
 
     simulation.citizens.keys().for_each(|citizen| {
-        graph.add_node(citizen.as_u128());
+        graph.add_node(citizen.id().as_u128());
     });
     simulation.output_areas.values().for_each(|area| {
-        for (_, building_list) in &area.buildings {
-            for building in building_list.values() {
-                let citizens = building.occupants();
-                for outer_citizen in citizens {
-                    for inner_citizen in citizens {
-                        graph.add_edge(outer_citizen.as_u128(), inner_citizen.as_u128(), 1);
-                    }
+        for (_, building) in &area.buildings {
+            let citizens = building.occupants();
+            for outer_citizen in citizens {
+                for inner_citizen in citizens {
+                    graph.add_edge(outer_citizen.id().as_u128(), inner_citizen.id().as_u128(), 1);
                 }
             }
         }
@@ -71,6 +69,6 @@ pub fn draw_graph(filename: String, graph: GraphMap<u128, u8, Undirected>) -> an
     let mut file = File::create(filename.to_string()).context(format!("Failed to create file: {}", filename))?;
     let mut writer = BufWriter::new(file);
     //writer.write_all(dot.);
-    write!(writer, "{}", dot)?;
+    write!(writer, "{:?}", dot)?;
     Ok(())
 }

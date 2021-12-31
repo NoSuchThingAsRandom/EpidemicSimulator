@@ -124,7 +124,7 @@ impl RenderSim {
                     .simulator
                     .statistics
                     .output_areas_exposed
-                    .get(&area.output_area_code)
+                    .get(&area.output_area_id)
                 {
                     Color::from((
                         max(

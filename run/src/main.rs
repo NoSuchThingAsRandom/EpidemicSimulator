@@ -29,6 +29,8 @@ use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use load_census_data::osm_parsing::OSMRawBuildings;
 use load_census_data::tables::CensusTableNames;
 use sim::simulator::Simulator;
+use visualisation::citizen_connections::{connected_groups, draw_graph};
+use visualisation::image_export::DrawingRecord;
 
 //use visualisation::citizen_connections::{connected_groups, draw_graph};
 //use visualisation::image_export::DrawingRecord;
@@ -86,10 +88,14 @@ async fn main() -> anyhow::Result<()> {
                 .help("Whether to use the rendering engine"),
         )
         .arg(
-            Arg::with_name("visualise-building-boundaries")
-                .long("visualise-building-boundaries")
-                .help("If enabled, generates images for the closed points to each building")
-        )
+            Arg::with_name("visualise-buildings")
+                .long("visualise-buildings")
+                .help("Shows the density of buildings per Output Area")
+        ).arg(
+        Arg::with_name("visualise-output_area")
+            .long("visualise-output_area")
+            .help("If enabled, shows Output Areas coloured against several measures")
+    )
         .arg(
             Arg::with_name("simulate")
                 .short("s")
@@ -169,34 +175,25 @@ async fn main() -> anyhow::Result<()> {
             .context("Failed to resume download of table")
     } else if matches.is_present("render") {
         unimplemented!("Cannot use renderer on current Rust version (2018")
+    } else if matches.is_present("visualise-buildings") {
+        info!("Visualising map areas");
+        let sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, false).await?;
+
+        let total_buildings = 100.0;
+        let data: Vec<visualisation::image_export::DrawingRecord> = sim.output_areas
+            .iter()
+            .map(|(code, area)| {
+                DrawingRecord::from((code.to_string(), (area.polygon.clone()), Some(area.buildings.len() as f64 / total_buildings)))
+            })
+            .collect();
+        visualisation::image_export::draw(String::from("BuildingDensity.png"), data)?;
+
+        Ok(())
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
-        info!("Loading data from disk...");
-        let census_data = CensusData::load_all_tables_async(
-            census_directory.to_string(),
-            area.to_string(),
-            use_cache,
-            allow_downloads,
-            visualise_building_boundaries,
-        )
-            .await
-            .context("Failed to load census data")
-            .unwrap();
-        let osm_buildings = OSMRawBuildings::build_osm_data(
-            census_directory.to_string() + OSM_FILENAME,
-            census_directory + OSM_CACHE_FILENAME,
-            use_cache,
-            visualise_building_boundaries,
-        )?;
-        info!(
-            "Finished loading data in {:?},     Now Initialising  simulator",
-            total_time.elapsed()
-        );
-        let mut sim = Simulator::new(census_data, osm_buildings)
-            .context("Failed to initialise sim")
-            .unwrap();
-        info!("Initialised simulator, starting sim...");
+        let mut sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
+        info!("Finished loading data and Initialising  simulator in {:?}",total_time.elapsed());
         if let Err(e) = sim.simulate() {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
@@ -210,7 +207,31 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     }
 }
-/*
+
+async fn load_data_and_init_sim(area: String, census_directory: String, use_cache: bool, allow_downloads: bool, visualise_building_boundaries: bool) -> anyhow::Result<Simulator> {
+    info!("Loading data from disk...");
+    let census_data = CensusData::load_all_tables_async(
+        census_directory.to_string(),
+        area.to_string(),
+        use_cache,
+        allow_downloads,
+        visualise_building_boundaries,
+    )
+        .await
+        .context("Failed to load census data")
+        .unwrap();
+    let osm_buildings = OSMRawBuildings::build_osm_data(
+        census_directory.to_string() + OSM_FILENAME,
+        census_directory + OSM_CACHE_FILENAME,
+        use_cache,
+        visualise_building_boundaries,
+    )?;
+    let mut sim = Simulator::new(census_data, osm_buildings)
+        .context("Failed to initialise sim")
+        .unwrap();
+    Ok(sim)
+}
+
 //TODO Enable when compiler on 2021
 pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
     let start = Instant::now();
@@ -225,7 +246,7 @@ pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
 
 pub fn draw_census_data(
     census_data: &CensusData,
-    output_areas_polygons: HashMap<String, Polygon<f64>>,
+    output_areas_polygons: HashMap<String, geo_types::Polygon<f64>>,
 ) -> anyhow::Result<()> {
     let data: Vec<visualisation::image_export::DrawingRecord> = census_data
         .population_counts
@@ -269,4 +290,4 @@ pub fn draw_census_data(
         .collect();
     visualisation::image_export::draw(String::from("OccupationCounts.png"), data)?;
     Ok(())
-}*/
+}

@@ -82,6 +82,7 @@ impl Default for Timer {
     }
 }
 
+/// On csgpu2 with 20? threads took 11 seconds as oppose to 57 seconds for single threaded version
 fn parallel_assign_buildings_to_output_areas(building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, output_area_lookup: PolygonContainer<String>) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
     building_locations.into_par_iter().map(|(building_type, possible_building_locations)|
         {
@@ -190,17 +191,16 @@ impl Simulator {
         for entry in census_data.values() {
             let output_id = OutputAreaID::from_code(entry.output_area_code.to_string());
             // TODO Remove polygons from grid
-            /*            let polygon = output_areas_polygons
-            .remove(&output_id)
-            .ok_or_else(|| DataLoadingError::ValueParsingError {
-                source: ParseErrorType::MissingKey {
-                    context: "Building output areas map".to_string(),
-                    key: output_id.to_string(),
-                },
-            })
-            .context(format!("Loading polygon shape for area: {}", output_id))?;*/
+            let polygon = output_areas_polygons.polygons.get(output_id.code())
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
+                    source: ParseErrorType::MissingKey {
+                        context: "Building output areas map".to_string(),
+                        key: output_id.to_string(),
+                    },
+                })
+                .context(format!("Loading polygon shape for area: {}", output_id))?;
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(output_id, disease_model.mask_percentage)
+            let mut new_area = OutputArea::new(output_id, polygon.clone(), disease_model.mask_percentage)
                 .context("Failed to create Output Area")?;
             output_areas.insert(new_area.output_area_id.clone(), new_area);
         }
@@ -284,7 +284,6 @@ impl Simulator {
             }
             Some((area, buildings))
         }).collect();
-
 
         debug!("There are {} areas with workplace buildings",possible_workplaces.len());
         // Remove any areas that do not have any workplaces
