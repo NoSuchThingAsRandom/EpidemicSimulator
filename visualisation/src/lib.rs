@@ -24,6 +24,7 @@ use crate::error::{DrawingResult, MyDrawingError};
 
 pub mod error;
 pub mod image_export;
+#[cfg(feature = "webp")]
 pub mod live_render;
 pub mod citizen_connections;
 

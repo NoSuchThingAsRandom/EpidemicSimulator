@@ -18,7 +18,7 @@ ndarray = "0.15.4"
 osmpbf = "0.2.6"
 ostn02_phf = "0.1.13"
 rand = "0.8.4"
-reqwest = { version = "0.11", features = ["json", "blocking"] }
+reqwest = { version = "0.11.7", features = ["json", "blocking"] }
 proj5 = "0.1.7"
 plotters = "0.3.1"
 quadtree_rs = "0.1.2"

@@ -25,14 +25,60 @@ use geo_types::{Coordinate, Polygon};
 use log::{debug, info};
 use plotters::chart::ChartContext;
 use plotters::coord::types::RangedCoordi32;
-use plotters::prelude::{
-    BitMapBackend, Cartesian2d, ChartBuilder, IntoDrawingArea, IntoFont, RED, WHITE,
-};
+use plotters::prelude::{BitMapBackend, Cartesian2d, ChartBuilder, IntoDrawingArea, IntoFont, Palette, Palette99, RED, WHITE};
 use plotters::style::TextStyle;
 use polylabel::polylabel;
 
+use load_census_data::osm_parsing::TagClassifiedBuilding;
+
 use crate::{convert_geo_point_to_pixel, GRID_SIZE};
 use crate::error::DrawingResult;
+
+#[inline]
+fn building_colour(class: load_census_data::osm_parsing::TagClassifiedBuilding) -> plotters::style::RGBColor {
+    let index = match class {
+        TagClassifiedBuilding::Shop => { 1 }
+        TagClassifiedBuilding::School => { 2 }
+        TagClassifiedBuilding::Hospital => { 3 }
+        TagClassifiedBuilding::Household => { 4 }
+        TagClassifiedBuilding::WorkPlace => { 5 }
+        TagClassifiedBuilding::Unknown => { 6 }
+    };
+    let c = &Palette99::COLORS[index];
+    plotters::style::RGBColor(c.0, c.1, c.2)
+}
+
+pub fn draw_buildings(filename: String, buildings: Vec<load_census_data::osm_parsing::RawBuilding>) -> DrawingResult<()> {
+    let start_time = Instant::now();
+    info!("Drawing output areas on map...");
+    // TODO Did we fuck up the lat and lon somewhere?
+    let scale = ((700000 as f64 / GRID_SIZE as f64).ceil() as i32).max(1);
+    let draw_backend = BitMapBackend::new(&filename, (GRID_SIZE, GRID_SIZE)).into_drawing_area();
+    draw_backend.fill(&WHITE)?;
+
+    for (index, building) in buildings.iter().enumerate() {
+        let colour = building_colour(building.classification());
+        let size = ((building.size().max(1) / scale as isize) as f64).sqrt().ceil() as i32;
+        let side_length = (size / 2);
+        let top_left = ((building.center().x() as i32 / scale) - side_length, (building.center().y() as i32) / scale - side_length);
+        let bottom_right = ((building.center().x() as i32 / scale) + side_length, (building.center().y() as i32 / scale) + side_length);
+        let rect = plotters::element::Rectangle::new([top_left, bottom_right], colour);
+
+
+        if index % 1000000 == 0 {
+            debug!(
+                "  Drawing the {} rect ({:?},{:?}) with colour {:?} at time {:?}",
+                index,
+                top_left,bottom_right,colour,
+                start_time.elapsed()
+            );
+        }
+        draw_backend.draw(&rect)?;
+    }
+    draw_backend.present().unwrap();
+    info!("Finished drawing in {:?}", start_time.elapsed());
+    Ok(())
+}
 
 /// This is a representation of an Output Area to be passed to the Draw function
 pub struct DrawingRecord {
@@ -94,7 +140,6 @@ pub fn draw(filename: String, data: Vec<DrawingRecord>) -> DrawingResult<()> {
     draw_backend.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&draw_backend)
         .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))?;
-
     let style = TextStyle::from(("sans-serif", 20).into_font()).color(&RED);
     for (index, area) in data.iter().enumerate() {
         if let Some(label) = &area.label {

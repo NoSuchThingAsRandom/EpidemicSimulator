@@ -176,6 +176,15 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("render") {
         unimplemented!("Cannot use renderer on current Rust version (2018")
     } else if matches.is_present("visualise-buildings") {
+        info!("Visualising buildings");
+        let osm_buildings = OSMRawBuildings::build_osm_data(
+            census_directory.to_string() + OSM_FILENAME,
+            census_directory + OSM_CACHE_FILENAME,
+            use_cache,
+            visualise_building_boundaries,
+        )?.building_locations.drain().map(|(_, b)| b).flatten().collect();
+        visualisation::image_export::draw_buildings("raw_buildings.png".to_string(), osm_buildings);
+        return Ok(());
         info!("Visualising map areas");
         let sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, false).await?;
 

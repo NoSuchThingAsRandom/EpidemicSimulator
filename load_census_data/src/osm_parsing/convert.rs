@@ -73,7 +73,7 @@ pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
     let (x, y, z) = helmert_wgs84_to_osbg36((x, y, z));
     let (lat, lon) = cartesian_to_lat_lon(x, y, z, Ellipsoid::airy());
     let (northing, easting) = lat_lon_to_eastings(lat, lon, Ellipsoid::airy());
-    f64_trimmed_to_isize((northing, easting))
+    f64_trimmed_to_isize((easting, northing))
 }
 
 /// Trims f64 coordinates to an isize

@@ -168,6 +168,7 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
         Err(())
     }
 }
+
 /// Merges two optional iterators
 ///
 /// DO NOT USE WITH HASHMAPS/BTREEMAPS AS DUPLICATE KEYS ARE REMOVED
@@ -419,5 +420,33 @@ impl OSMRawBuildings {
         info!("Finished loading with {} buildings",buildings.iter().map(|(_, b)| b.len()).sum::<usize>());
 
         Ok(buildings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings};
+    use crate::voronoi_generator::find_seed_bounds;
+
+    #[test]
+    pub fn check_x_y_range() {
+        let census_directory = "../data/".to_string();
+        let osm_buildings = OSMRawBuildings::build_osm_data(
+            census_directory.to_string() + OSM_FILENAME,
+            census_directory + OSM_CACHE_FILENAME,
+            false,
+            false,
+        );
+        //assert!(osm_buildings.is_ok());
+        let osm_buildings = osm_buildings.unwrap();
+        let points: Vec<Vec<(isize, isize)>> = osm_buildings.building_locations.iter().map(|(_, b)| b.iter().map(|p| (p.center.x(), p.center.y())).collect::<Vec<(isize, isize)>>()).collect::<Vec<Vec<(isize, isize)>>>();
+        let p: Vec<(isize, isize)> = points.into_iter().flatten().collect();//.collect();
+        let bounds = find_seed_bounds(&p);
+        let width = bounds.1.0 - bounds.0.0;
+        let height = bounds.1.1 - bounds.0.1;
+        println!("Bounds: {:?}", bounds);
+        println!("Height: {:?}", height);
+        println!("Width: {:?}", width);
+        assert!(width < height);
     }
 }

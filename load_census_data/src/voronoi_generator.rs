@@ -75,9 +75,9 @@ impl Scaling {
         let x = (point.0 as isize - self.x_offset) / self.x_scale;
         let y = (point.1 as isize - self.y_offset) / self.y_scale;
         assert!(0 <= x, "X Coord {} is less than zero", x);
-        assert!(x < grid_size, "X Coord {} is greater than the grid size", x);
+        assert!(x < grid_size, "X Coord {} is greater than the grid size {}", x, grid_size);
         assert!(0 <= y, "Y Coord {} is less than zero", y);
-        assert!(y < grid_size, "Y Coord {} is greater than the grid size", y);
+        assert!(y < grid_size, "Y Coord {} is greater than the grid size {}", y, grid_size);
         (x, y)
     }
     pub fn scale_polygon(
@@ -157,7 +157,7 @@ fn voronoi_cell_to_polygon(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<
 }
 
 /// Returns the minimum and maximum grid size required for the seeds
-fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
+pub fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
     let mut min_x = T::max_value();
     let mut max_x = T::zero();
     let mut min_y = T::max_value();
