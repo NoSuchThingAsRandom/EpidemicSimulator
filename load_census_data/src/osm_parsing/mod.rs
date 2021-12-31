@@ -168,8 +168,19 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
         Err(())
     }
 }
-
-fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: Option<U>) -> Option<U> {
+/// Merges two optional iterators
+///
+/// DO NOT USE WITH HASHMAPS/BTREEMAPS AS DUPLICATE KEYS ARE REMOVED
+///
+/// # Example
+/// ```
+///     let mut a=HashMap::from([(1,2),(2,3)]);
+///     let mut b=HashMap::from([(1,2),(2,4),(3,2)]);
+///     println!("{:?}",a); //{1: 2, 2: 3}
+///     a.extend(b);
+///     println!("{:?}",a); // {2: 4, 1: 2, 3: 2}
+/// ```
+pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: Option<U>) -> Option<U> {
     match (a, b) {
         (Some(mut a), Some(b)) => {
             a.extend(b);

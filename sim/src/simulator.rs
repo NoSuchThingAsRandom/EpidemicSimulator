@@ -19,6 +19,7 @@
  */
 
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::time::Instant;
@@ -29,9 +30,10 @@ use log::{debug, error, info, trace, warn};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use load_census_data::CensusData;
-use load_census_data::osm_parsing::{RawBuilding, TagClassifiedBuilding};
+use load_census_data::osm_parsing::{merge_iterators, OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
@@ -80,6 +82,77 @@ impl Default for Timer {
     }
 }
 
+fn parallel_assign_buildings_to_output_areas(building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, output_area_lookup: PolygonContainer<String>) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
+    building_locations.into_par_iter().map(|(building_type, possible_building_locations)|
+        {
+            // Try find Area Codes for the given building
+            let area_codes = possible_building_locations.into_par_iter().filter_map(|building| {
+                if let Ok(area_code) = output_area_lookup.find_polygon_for_point(&building.center()) {
+                    let area_id = OutputAreaID::from_code(area_code.to_string());
+                    return Some((area_id, vec![building]));
+                }
+                None
+            }
+                                                                                    // Group By Area Code
+            ).fold(HashMap::new, |mut a: HashMap<OutputAreaID, Vec<RawBuilding>>, b| {
+                let area_entry = a.entry(b.0.clone()).or_default();
+                area_entry.extend(b.1);
+                a
+                // Combine into single hashmap
+            }).reduce(HashMap::new, |mut a, b| {
+                for (area, area_buildings) in b {
+                    let area_entry = a.entry(area).or_default();
+                    area_entry.extend(area_buildings)
+                }
+                a
+            });
+            (building_type, area_codes)
+        }).
+        // Group buildings per area, by Classification code
+        fold(HashMap::new, |mut a: HashMap<
+            OutputAreaID,
+            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>, b| {
+            for (area_code, buildings) in b.1 {
+                let area_entry = a.entry(area_code).or_default();
+                let class_entry = area_entry.entry(b.0).or_default();
+                class_entry.extend(buildings);
+            }
+            a
+        }).
+        // Reduce to a single hashmap
+        reduce(HashMap::new, |mut a, b| {
+            for (area, classed_buildings) in b {
+                let area_entry = a.entry(area).or_default();
+                for (class, buildings) in classed_buildings {
+                    let class_entry = area_entry.entry(class).or_default();
+                    class_entry.extend(buildings);
+                }
+            }
+            a
+        })
+}
+
+fn assign_buildings_to_output_areas(building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, output_area_lookup: PolygonContainer<String>) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
+    let mut possible_buildings_per_area: HashMap<
+        OutputAreaID,
+        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+    > = HashMap::new();
+    for (building_type, possible_building_locations) in building_locations
+    {
+        for building in possible_building_locations {
+            // TODO Fix this
+            if let Ok(area_code) = output_area_lookup.find_polygon_for_point(&building.center()) {
+                let area_id = OutputAreaID::from_code(area_code.to_string());
+                let output_area_entry = possible_buildings_per_area.entry(area_id).or_default();
+                // Don't know how many buildings of this type for this area
+                let entry = output_area_entry.entry(building_type).or_default();
+                entry.push(building);
+            }
+        }
+    }
+    possible_buildings_per_area
+}
+
 //#[derive(Clone)]
 pub struct Simulator {
     /// The total size of the population
@@ -98,7 +171,7 @@ pub struct Simulator {
 
 /// Initialisation Methods
 impl Simulator {
-    pub fn new(census_data: CensusData) -> Result<Simulator> {
+    pub fn new(census_data: CensusData, osm_data: OSMRawBuildings) -> Result<Simulator> {
         let mut timer = Timer::default();
         let mut rng = thread_rng();
         let disease_model = DiseaseModel::covid();
@@ -134,45 +207,17 @@ impl Simulator {
         timer.code_block_finished("Built Output Areas")?;
 
 
-        debug!("Attempting to allocating {} possible buildings to {} Output Areas",census_data.osm_buildings.building_locations.iter().map(|(k,v)|v.len()).sum::<usize>(),census_data.valid_areas.len());
+        debug!("Attempting to allocating {} possible buildings to {} Output Areas",osm_data.building_locations.iter().map(|(k,v)|v.len()).sum::<usize>(),census_data.valid_areas.len());
         // Assign possible buildings to output areas
         let mut possible_buildings_per_area: HashMap<
             OutputAreaID,
             HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
-        > = HashMap::with_capacity(census_data.valid_areas.len());
-        let mut allocated_building_count = 0;
-        let mut failed_building_count = 0;
-
-        // TODO Parrellise this!
-        for (building_type, possible_building_locations) in
-        &census_data.osm_buildings.building_locations
-        {
-            for building in possible_building_locations {
-                // TODO Fix this
-                if let Ok(area_code) = output_areas_polygons.find_polygon_for_point(&building.center()) {
-                    let area_id = OutputAreaID::from_code(area_code.to_string());
-                    if let Some(area) = output_areas.get_mut(&area_id) {
-                        let output_area_entry =
-                            possible_buildings_per_area.entry(area_id).or_default();
-                        // Don't know how many buildings of this type for this area
-                        let entry = output_area_entry.entry(*building_type).or_default();
-                        entry.push(*building);
-                        allocated_building_count += 1;
-                    } else {
-                        failed_building_count += 1;
-                        //warn!("Failed to retrieve Output Area with id: {}", area_id);
-                    }
-                } else {
-                    failed_building_count += 1;
-                    //warn!("Failed to retrieve Output Area for building at: {:?}",location);
-                }
-            }
-        }
-
+        > = parallel_assign_buildings_to_output_areas(osm_data.building_locations, output_areas_polygons);
+        let count: usize = possible_buildings_per_area.par_iter().map(|(_, classed_building)| classed_building.par_iter().map(|(_, buildings)| buildings.len()).sum::<usize>()).sum();
 
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
         output_areas.retain(|code, area| possible_buildings_per_area.contains_key(code));
-        debug!("{} Buildings have been assigned. {} Buildings failed, {} Output Areas remaining (with buildings)",allocated_building_count,failed_building_count,output_areas.len());
+        debug!("{} Buildings have been assigned. {} Output Areas remaining (with buildings)",count,output_areas.len());
 
         // Generate Citizens
         let mut failed_output_areas = Vec::new();

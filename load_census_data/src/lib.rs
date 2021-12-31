@@ -98,7 +98,6 @@ pub struct CensusData {
     pub workplace_density: EmploymentDensities,
     /// Residential Area -> Workplace Area -> Count
     pub residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
-    pub osm_buildings: OSMRawBuildings,
 }
 
 /// Initialization
@@ -260,12 +259,6 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: OSMRawBuildings::build_osm_data(
-                census_directory.to_string() + OSM_FILENAME,
-                census_directory + OSM_CACHE_FILENAME,
-                use_cache,
-                visualise_building_boundaries,
-            )?,
         };
         census_data.filter_incomplete_output_areas();
         Ok(census_data)
@@ -314,12 +307,6 @@ impl CensusData {
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
-            osm_buildings: OSMRawBuildings::build_osm_data(
-                census_directory.to_string() + OSM_FILENAME,
-                census_directory + OSM_CACHE_FILENAME,
-                !use_cache,
-                visualise_building_boundaries,
-            )?,
         };
         census_data.filter_incomplete_output_areas();
         Ok(census_data)

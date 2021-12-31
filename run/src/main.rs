@@ -17,6 +17,7 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::time::Instant;
 
@@ -24,7 +25,8 @@ use anyhow::Context;
 use clap::{App, Arg};
 use log::{debug, error, info};
 
-use load_census_data::CensusData;
+use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
+use load_census_data::osm_parsing::OSMRawBuildings;
 use load_census_data::tables::CensusTableNames;
 use sim::simulator::Simulator;
 
@@ -172,7 +174,7 @@ async fn main() -> anyhow::Result<()> {
         let total_time = Instant::now();
         info!("Loading data from disk...");
         let census_data = CensusData::load_all_tables_async(
-            census_directory,
+            census_directory.to_string(),
             area.to_string(),
             use_cache,
             allow_downloads,
@@ -181,11 +183,17 @@ async fn main() -> anyhow::Result<()> {
             .await
             .context("Failed to load census data")
             .unwrap();
+        let osm_buildings = OSMRawBuildings::build_osm_data(
+            census_directory.to_string() + OSM_FILENAME,
+            census_directory + OSM_CACHE_FILENAME,
+            use_cache,
+            visualise_building_boundaries,
+        )?;
         info!(
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
-        let mut sim = Simulator::new(census_data)
+        let mut sim = Simulator::new(census_data, osm_buildings)
             .context("Failed to initialise sim")
             .unwrap();
         info!("Initialised simulator, starting sim...");
