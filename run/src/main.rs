@@ -221,36 +221,54 @@ async fn main() -> anyhow::Result<()> {
 
 async fn load_data_and_init_sim(area: String, census_directory: String, use_cache: bool, allow_downloads: bool, visualise_building_boundaries: bool) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
-    let a = census_directory.clone();
-    let thread_1 = std::thread::spawn(move || -> anyhow::Result<CensusData> {
-        let census_data = CensusData::load_all_tables(
-            a.to_string(),
-            area.to_string(),
-            use_cache,
-            allow_downloads,
-            visualise_building_boundaries,
-        );
-        return census_data.context("Failed to load census data");
+    let mut census_data: Option<anyhow::Result<CensusData>> = None;
+    let mut osm_buildings: Option<anyhow::Result<OSMRawBuildings>> = None;
+    let mut output_area_polygons: Option<anyhow::Result<PolygonContainer<String>>> = None;
+    rayon::scope(|s| {
+        // Load census data
+        let filename = census_directory.clone();
+        s.spawn(|_| {
+            let census_closure = (move || -> anyhow::Result<CensusData> {
+                let census_data = CensusData::load_all_tables(
+                    filename.to_string(),
+                    area.to_string(),
+                    use_cache,
+                    allow_downloads,
+                    visualise_building_boundaries,
+                );
+                census_data.context("Failed to load census data")
+            });
+            census_data = Some(census_closure());
+        });
+
+        // Load OSM Buildings
+        s.spawn(|_| {
+            let filename = census_directory.clone();
+            let buildings = (move || -> anyhow::Result<OSMRawBuildings> {
+                let osm_buildings = OSMRawBuildings::build_osm_data(
+                    filename.to_string() + OSM_FILENAME,
+                    filename + OSM_CACHE_FILENAME,
+                    use_cache,
+                    visualise_building_boundaries,
+                ).context("Failed to load OSM map");
+                osm_buildings
+            });
+            osm_buildings = Some(buildings());
+        });
+
+        // Build output area polygons
+        s.spawn(|_| {
+            let polygon = (move || -> anyhow::Result<PolygonContainer<String>> {
+                let output_area_polygons =
+                    PolygonContainer::load_polygons_from_file(
+                        CensusTableNames::OutputAreaMap.get_filename(),
+                    ).context("Loading polygons for output areas");
+                output_area_polygons
+            });
+            output_area_polygons = Some(polygon());
+        });
     });
-    let a = census_directory.clone();
-    let thread_2 = std::thread::spawn(move || -> anyhow::Result<OSMRawBuildings> {
-        let osm_buildings = OSMRawBuildings::build_osm_data(
-            a.to_string() + OSM_FILENAME,
-            a + OSM_CACHE_FILENAME,
-            use_cache,
-            visualise_building_boundaries,
-        ).context("Failed to load OSM map");
-        return osm_buildings;
-    });
-    let thread_3 = std::thread::spawn(move || -> anyhow::Result<PolygonContainer<String>> {
-        let output_area_polygons =
-            PolygonContainer::load_polygons_from_file(
-                CensusTableNames::OutputAreaMap.get_filename(),
-            ).context("Loading polygons for output areas");
-        return output_area_polygons;
-    });
-    let (census_data, osm_buildings, output_area_polygons) = (thread_1.join().unwrap()?, thread_2.join().unwrap()?, thread_3.join().unwrap()?);
-    //let (census_data, osm_buildings, output_area_polygons) = futures::join!(census_data,osm_buildings,output_area_polygons);
+    let (census_data, osm_buildings, output_area_polygons) = (census_data.expect("Census Data hasn't been executed!")?, osm_buildings.expect("OSM Buildings Data hasn't been executed!")?, output_area_polygons.expect("Output Area Polygons hasn't been executed!")?);
     let sim = Simulator::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();

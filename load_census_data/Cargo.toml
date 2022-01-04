@@ -31,4 +31,5 @@ serde_plain = "1.0.0"
 shapefile = { version = "0.3.0", features = ["geo-types"] }
 strum = "0.23"
 strum_macros = "0.23"
+syn = "=1.0.82"
 voronoice = { git = "https://github.com/NoSuchThingAsRandom/voronoice" }

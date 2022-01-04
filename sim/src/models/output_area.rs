@@ -133,6 +133,7 @@ impl OutputArea {
         let mut generated_population = 0;
         // Build households
         let mut possible_buildings = possible_buildings.iter();
+        let possible_buildings_size = possible_buildings.len();
         while generated_population <= pop_count[PersonType::All] {
             if let Some(location) = possible_buildings.next() {
                 assert_eq!(location.classification(), TagClassifiedBuilding::Household);
@@ -169,9 +170,10 @@ impl OutputArea {
                 }
             } else {
                 error!(
-                    "Output Area: {} has run out of households to allocate residents: ({}/{}) to.",
+                    "Output Area: {} has run out of households ({}) to allocate residents: ({}/{}) to.",
                     self.output_area_id,
                     generated_population,
+                    possible_buildings_size,
                     pop_count[PersonType::All]
                 );
                 return Ok(citizens);
