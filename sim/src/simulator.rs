@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -19,29 +19,25 @@
  */
 
 use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::Entry;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::time::Instant;
 
 use anyhow::{Context, Result};
-use geo::Point;
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use load_census_data::CensusData;
-use load_census_data::osm_parsing::{merge_iterators, OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
+use load_census_data::osm_parsing::{OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
-use load_census_data::tables::CensusTableNames;
 use load_census_data::tables::occupation_count::OccupationType;
 
 use crate::config::{
-    DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
-};
+    DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::error::SimError;
@@ -133,27 +129,6 @@ fn parallel_assign_buildings_to_output_areas(building_locations: HashMap<TagClas
         })
 }
 
-fn assign_buildings_to_output_areas(building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, output_area_lookup: PolygonContainer<String>) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
-    let mut possible_buildings_per_area: HashMap<
-        OutputAreaID,
-        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
-    > = HashMap::new();
-    for (building_type, possible_building_locations) in building_locations
-    {
-        for building in possible_building_locations {
-            // TODO Fix this
-            if let Ok(area_code) = output_area_lookup.find_polygon_for_point(&building.center()) {
-                let area_id = OutputAreaID::from_code(area_code.to_string());
-                let output_area_entry = possible_buildings_per_area.entry(area_id).or_default();
-                // Don't know how many buildings of this type for this area
-                let entry = output_area_entry.entry(building_type).or_default();
-                entry.push(building);
-            }
-        }
-    }
-    possible_buildings_per_area
-}
-
 //#[derive(Clone)]
 pub struct Simulator {
     /// The total size of the population
@@ -172,17 +147,13 @@ pub struct Simulator {
 
 /// Initialisation Methods
 impl Simulator {
-    pub fn new(census_data: CensusData, osm_data: OSMRawBuildings) -> Result<Simulator> {
+    pub fn new(census_data: CensusData, osm_data: OSMRawBuildings, output_areas_polygons: PolygonContainer<String>) -> Result<Simulator> {
         let mut timer = Timer::default();
         let mut rng = thread_rng();
         let disease_model = DiseaseModel::covid();
         let mut output_areas: HashMap<OutputAreaID, OutputArea> = HashMap::new();
 
-        let output_areas_polygons: PolygonContainer<String> =
-            PolygonContainer::load_polygons_from_file(
-                CensusTableNames::OutputAreaMap.get_filename(),
-            )
-                .context("Loading polygons for output areas")?;
+
         timer.code_block_finished("Loaded output map polygons")?;
         let mut starting_population = 0;
 
@@ -200,14 +171,14 @@ impl Simulator {
                 })
                 .context(format!("Loading polygon shape for area: {}", output_id))?;
             starting_population += entry.total_population_size() as u32;
-            let mut new_area = OutputArea::new(output_id, polygon.clone(), disease_model.mask_percentage)
+            let new_area = OutputArea::new(output_id, polygon.clone(), disease_model.mask_percentage)
                 .context("Failed to create Output Area")?;
             output_areas.insert(new_area.output_area_id.clone(), new_area);
         }
         timer.code_block_finished("Built Output Areas")?;
 
 
-        debug!("Attempting to allocating {} possible buildings to {} Output Areas",osm_data.building_locations.iter().map(|(k,v)|v.len()).sum::<usize>(),census_data.valid_areas.len());
+        debug!("Attempting to allocating {} possible buildings to {} Output Areas",osm_data.building_locations.iter().map(|(_k,v)|v.len()).sum::<usize>(),census_data.valid_areas.len());
         // Assign possible buildings to output areas
         let mut possible_buildings_per_area: HashMap<
             OutputAreaID,
@@ -216,13 +187,13 @@ impl Simulator {
         let count: usize = possible_buildings_per_area.par_iter().map(|(_, classed_building)| classed_building.par_iter().map(|(_, buildings)| buildings.len()).sum::<usize>()).sum();
 
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
-        output_areas.retain(|code, area| possible_buildings_per_area.contains_key(code));
+        output_areas.retain(|code, _area| possible_buildings_per_area.contains_key(code));
         debug!("{} Buildings have been assigned. {} Output Areas remaining (with buildings)",count,output_areas.len());
 
         // Generate Citizens
         let mut failed_output_areas = Vec::new();
         for (output_area_id, output_area) in output_areas.iter_mut() {
-            if let Err(e) = || -> anyhow::Result<()> {
+            let generate_citizen_closure = || -> anyhow::Result<()> {
                 // Retrieve the Census Data
                 let census_data = census_data
                     .for_output_area_code(output_area_id.code().to_string())
@@ -256,7 +227,8 @@ impl Simulator {
                     possible_households,
                 )?);
                 Ok(())
-            }() {
+            }();
+            if generate_citizen_closure.is_err() {
                 failed_output_areas.push(output_area_id.clone());
                 //error!("Failed to generate Citizens for area: {}        Error: {}",output_area_id, e);
             }
@@ -493,7 +465,7 @@ impl Simulator {
                             *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
                             citizen.occupation(),
                         );
-                        workplace.add_citizen(citizen_id.clone()).context("Cannot add Citizen to new workplace!")?;
+                        workplace.add_citizen(*citizen_id).context("Cannot add Citizen to new workplace!")?;
                         workplace
                     }
                 };

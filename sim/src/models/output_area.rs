@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -22,7 +22,6 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
-use geo_types::Point;
 use log::{error, trace};
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
@@ -35,7 +34,6 @@ use load_census_data::tables::population_and_density_per_output_area::{
 };
 
 use crate::config::HOUSEHOLD_SIZE;
-use crate::error::SimError;
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 
@@ -134,8 +132,9 @@ impl OutputArea {
         // Should use census data instead
         let mut generated_population = 0;
         // Build households
+        let mut possible_buildings = possible_buildings.iter();
         while generated_population <= pop_count[PersonType::All] {
-            if let Some(location) = possible_buildings.iter().next() {
+            if let Some(location) = possible_buildings.next() {
                 assert_eq!(location.classification(), TagClassifiedBuilding::Household);
                 let household_building_id =
                     BuildingID::new(self.output_area_id.clone(), BuildingType::Household);

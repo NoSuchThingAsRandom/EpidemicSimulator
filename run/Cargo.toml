@@ -17,9 +17,10 @@ load_census_data = { path = "../load_census_data" }
 visualisation = { path = "../visualisation" }
 sim = { path = "../sim" }
 
-anyhow = "1.0"
+anyhow = "=1.0.51"
 clap = "2.34.0"
 dotenv = "0.15"
+futures = "=0.3.17"
 geo-types = "0.7.2"
 log = "0.4"
 pretty_env_logger = "0.4"

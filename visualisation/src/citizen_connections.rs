@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -22,10 +22,9 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 
 use anyhow::Context;
-use petgraph::{EdgeType, Undirected};
-use petgraph::dot::Config::{EdgeNoLabel, GraphContentOnly, NodeIndexLabel};
-use petgraph::graph::Node;
+use petgraph::dot::Config::{EdgeNoLabel, NodeIndexLabel};
 use petgraph::graphmap::GraphMap;
+use petgraph::Undirected;
 
 pub fn build_citizen_graph(simulation: &sim::simulator::Simulator) -> GraphMap<u128, u8, Undirected> {
     let mut graph: GraphMap<u128, u8, Undirected> = GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
@@ -50,9 +49,9 @@ pub fn build_building_graph(simulation: &sim::simulator::Simulator) -> GraphMap<
     let mut graph: GraphMap<u128, u8, Undirected> = GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
 
     simulation.citizens.values().for_each(|citizen| {
-        let mut weight = graph.edge_weight_mut(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128());
+        let weight = graph.edge_weight_mut(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128());
         if let Some(mut weight) = weight {
-            weight = &mut (*weight + 1);
+            *weight += 1;
         } else {
             graph.add_edge(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128(), 1);
         }
@@ -66,7 +65,7 @@ pub fn connected_groups(graph: &GraphMap<u128, u8, Undirected>) -> usize {
 
 pub fn draw_graph(filename: String, graph: GraphMap<u128, u8, Undirected>) -> anyhow::Result<()> {
     let dot = petgraph::dot::Dot::with_config(&graph, &[NodeIndexLabel, EdgeNoLabel]);
-    let mut file = File::create(filename.to_string()).context(format!("Failed to create file: {}", filename))?;
+    let file = File::create(filename.to_string()).context(format!("Failed to create file: {}", filename))?;
     let mut writer = BufWriter::new(file);
     //writer.write_all(dot.);
     write!(writer, "{:?}", dot)?;

@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -27,6 +27,7 @@ use log::{debug, error, info};
 
 use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use load_census_data::osm_parsing::OSMRawBuildings;
+use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
 use sim::simulator::Simulator;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
@@ -183,7 +184,7 @@ async fn main() -> anyhow::Result<()> {
             use_cache,
             visualise_building_boundaries,
         )?.building_locations.drain().map(|(_, b)| b).flatten().collect();
-        visualisation::image_export::draw_buildings("raw_buildings.png".to_string(), osm_buildings);
+        visualisation::image_export::draw_buildings("raw_buildings.png".to_string(), osm_buildings)?;
         return Ok(());
         info!("Visualising map areas");
         let sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, false).await?;
@@ -203,6 +204,7 @@ async fn main() -> anyhow::Result<()> {
         let total_time = Instant::now();
         let mut sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
         info!("Finished loading data and Initialising  simulator in {:?}",total_time.elapsed());
+        return Ok(());
         if let Err(e) = sim.simulate() {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
@@ -219,23 +221,37 @@ async fn main() -> anyhow::Result<()> {
 
 async fn load_data_and_init_sim(area: String, census_directory: String, use_cache: bool, allow_downloads: bool, visualise_building_boundaries: bool) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
-    let census_data = CensusData::load_all_tables_async(
-        census_directory.to_string(),
-        area.to_string(),
-        use_cache,
-        allow_downloads,
-        visualise_building_boundaries,
-    )
-        .await
-        .context("Failed to load census data")
-        .unwrap();
-    let osm_buildings = OSMRawBuildings::build_osm_data(
-        census_directory.to_string() + OSM_FILENAME,
-        census_directory + OSM_CACHE_FILENAME,
-        use_cache,
-        visualise_building_boundaries,
-    )?;
-    let mut sim = Simulator::new(census_data, osm_buildings)
+    let a = census_directory.clone();
+    let thread_1 = std::thread::spawn(move || -> anyhow::Result<CensusData> {
+        let census_data = CensusData::load_all_tables(
+            a.to_string(),
+            area.to_string(),
+            use_cache,
+            allow_downloads,
+            visualise_building_boundaries,
+        );
+        return census_data.context("Failed to load census data");
+    });
+    let a = census_directory.clone();
+    let thread_2 = std::thread::spawn(move || -> anyhow::Result<OSMRawBuildings> {
+        let osm_buildings = OSMRawBuildings::build_osm_data(
+            a.to_string() + OSM_FILENAME,
+            a + OSM_CACHE_FILENAME,
+            use_cache,
+            visualise_building_boundaries,
+        ).context("Failed to load OSM map");
+        return osm_buildings;
+    });
+    let thread_3 = std::thread::spawn(move || -> anyhow::Result<PolygonContainer<String>> {
+        let output_area_polygons =
+            PolygonContainer::load_polygons_from_file(
+                CensusTableNames::OutputAreaMap.get_filename(),
+            ).context("Loading polygons for output areas");
+        return output_area_polygons;
+    });
+    let (census_data, osm_buildings, output_area_polygons) = (thread_1.join().unwrap()?, thread_2.join().unwrap()?, thread_3.join().unwrap()?);
+    //let (census_data, osm_buildings, output_area_polygons) = futures::join!(census_data,osm_buildings,output_area_polygons);
+    let sim = Simulator::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
     Ok(sim)

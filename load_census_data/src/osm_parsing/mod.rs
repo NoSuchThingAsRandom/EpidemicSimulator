@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -25,9 +25,10 @@ use std::io::{Read, Write};
 
 use geo::area::Area;
 use geo::centroid::Centroid;
-use geo_types::{LineString, Point, Polygon};
+use geo_types::{Point, Polygon};
 use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::DataLoadingError;
@@ -65,6 +66,7 @@ pub enum TagClassifiedBuilding {
     /// Not a building
     Unknown,
 }
+
 
 impl<'a> From<HashMap<&'a str, &'a str>> for TagClassifiedBuilding {
     fn from(tags: HashMap<&'a str, &'a str>) -> Self {
@@ -283,14 +285,13 @@ impl OSMRawBuildings {
 
         debug!("Loaded OSM data");
 
-        let mut building_vorinnis = HashMap::new();
-        for (building_type, locations) in &building_locations {
+        let building_vorinnis: HashMap<TagClassifiedBuilding, Voronoi> = building_locations.par_iter().filter_map(|(building_type, locations)| {
             info!(
                 "Building voronoi diagram for {:?} with {} buildings",
                 building_type,
                 locations.len()
             );
-            match Voronoi::new(
+            return match Voronoi::new(
                 700000,
                 locations
                     .iter()
@@ -299,13 +300,14 @@ impl OSMRawBuildings {
                 Scaling::yorkshire_national_grid(),
             ) {
                 Ok(voronoi) => {
-                    building_vorinnis.insert(*building_type, voronoi);
+                    Some((*building_type, voronoi))
                 }
                 Err(e) => {
-                    error!("{}", e)
+                    error!("{}", e);
+                    None
                 }
             }
-        }
+        }).collect();
         let data = OSMRawBuildings {
             building_locations,
             building_voronois: building_vorinnis,

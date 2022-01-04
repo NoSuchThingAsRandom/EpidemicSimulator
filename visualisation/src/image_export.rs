@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -59,7 +59,7 @@ pub fn draw_buildings(filename: String, buildings: Vec<load_census_data::osm_par
     for (index, building) in buildings.iter().enumerate() {
         let colour = building_colour(building.classification());
         let size = ((building.size().max(1) / scale as isize) as f64).sqrt().ceil() as i32;
-        let side_length = (size / 2);
+        let side_length = size / 2;
         let top_left = ((building.center().x() as i32 / scale) - side_length, (building.center().y() as i32) / scale - side_length);
         let bottom_right = ((building.center().x() as i32 / scale) + side_length, (building.center().y() as i32 / scale) + side_length);
         let rect = plotters::element::Rectangle::new([top_left, bottom_right], colour);
