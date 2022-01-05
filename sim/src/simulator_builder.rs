@@ -56,7 +56,7 @@ impl SimulatorBuilder {
     /// Generates the Output Area Structs, from the Census Data
     ///
     /// And returns the starting population count
-    fn initialise_output_areas(&mut self) -> anyhow::Result<()> {
+    pub fn initialise_output_areas(&mut self) -> anyhow::Result<()> {
         // Build the initial Output Areas and Households
         for entry in self.census_data.values() {
             let output_id = OutputAreaID::from_code(entry.output_area_code.to_string());
@@ -85,7 +85,7 @@ impl SimulatorBuilder {
     }
 
     /// Assigns buildings to their enclosing Output Area, and Removes Output Areas that do not have any buildings
-    fn assign_buildings_to_output_areas(
+    pub fn assign_buildings_to_output_areas(
         &mut self,
     ) -> anyhow::Result<HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>>
     {
@@ -124,26 +124,27 @@ impl SimulatorBuilder {
     }
 
     /// Generates the Citizens for each Output Area
-    fn generate_citizens(
+    pub fn generate_citizens(
         &mut self,
         rng: &mut dyn RngCore,
         possible_buildings_per_area: &mut HashMap<
             OutputAreaID,
             HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
         >,
-    ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
+    ) -> anyhow::Result<()> {
         let mut citizens = HashMap::new();
         let mut no_buildings = 0;
         let mut no_households = 0;
         // Generate Citizens
 
         // This ref self is needed, because we have a mut borrow (Output Areas) and an immutable borrow (Census Data)
-        let ref_self = Rc::new(RefCell::new(self));
-        ref_self.borrow_mut().output_areas.retain(|output_area_id, output_area| {
+        // TODO This is super hacky and I hate it
+        let ref_output_areas = Rc::new(RefCell::new(&mut self.output_areas));
+        let census_data_ref = &self.census_data;
+        ref_output_areas.borrow_mut().retain(|output_area_id, output_area| {
             let generate_citizen_closure = || -> anyhow::Result<()> {
                 // Retrieve the Census Data
-                let immut_self = ref_self.borrow();
-                let census_data = immut_self.census_data
+                let census_data_entry = census_data_ref
                     .for_output_area_code(output_area_id.code().to_string())
                     .ok_or_else(|| SimError::InitializationError {
                         message: format!(
@@ -177,7 +178,7 @@ impl SimulatorBuilder {
                     })?;
                 citizens.extend(output_area.generate_citizens_with_households(
                     rng,
-                    census_data,
+                    census_data_entry,
                     possible_households,
                 )?);
                 Ok(())
@@ -186,9 +187,10 @@ impl SimulatorBuilder {
         });
         error!(
             "Households and Citizen generation succeeded for {} Output Areas.",
-            ref_self.borrow().output_areas.len()
+            ref_output_areas.borrow().len()
         );
-        Ok(citizens)
+        self.citizens = citizens;
+        Ok(())
     }
 
     /// Iterates through all Output Areas, and All Citizens in that Output Area
@@ -421,8 +423,7 @@ impl SimulatorBuilder {
             .assign_buildings_to_output_areas()
             .context("Failed to assign buildings to output areas")?;
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
-        let mut citizens = self
-            .generate_citizens(&mut rng, &mut possible_buildings_per_area)
+        self.generate_citizens(&mut rng, &mut possible_buildings_per_area)
             .context("Failed to generate Citizens")?;
 
         timer.code_block_finished(&format!(
@@ -459,10 +460,12 @@ impl SimulatorBuilder {
         debug!("Union of workplace and output area:{} ", c.len());
 
         // Remove any areas that do not have any workplaces
-        self.output_areas.retain(|code, data| {
+        let output_area_ref = Rc::new(RefCell::new(&mut self.output_areas));
+        let citizens_ref = &mut self.citizens;
+        output_area_ref.borrow_mut().retain(|code, data| {
             if !possible_workplaces.contains_key(code) {
                 data.get_residents().iter().for_each(|id| {
-                    if citizens.remove(id).is_none() {
+                    if citizens_ref.remove(id).is_none() {
                         error!("Failed to remove citizen: {}", id);
                     }
                 });

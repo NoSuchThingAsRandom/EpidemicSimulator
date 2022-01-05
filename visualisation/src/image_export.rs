@@ -126,6 +126,36 @@ impl From<(String, Polygon<f64>)> for DrawingRecord {
     }
 }
 
+
+impl From<(String, &Polygon<isize>, Option<f64>)> for DrawingRecord {
+    fn from(data: (String, &Polygon<isize>, Option<f64>)) -> Self {
+        DrawingRecord {
+            code: data.0,
+            polygon: geo_types::Polygon::new(
+                data.1
+                    .exterior()
+                    .0
+                    .iter()
+                    .map(|p| (p.x as f64, p.y as f64).into())
+                    .collect::<Vec<geo_types::Coordinate<f64>>>()
+                    .into(),
+                data.1
+                    .interiors()
+                    .iter()
+                    .map(|l| {
+                        l.0.iter()
+                            .map(|p| (p.x as f64, p.y as f64).into())
+                            .collect::<Vec<geo_types::Coordinate<f64>>>()
+                            .into()
+                    })
+                    .collect(),
+            ),
+            percentage_highlighting: data.2,
+            label: None,
+        }
+    }
+}
+
 impl From<(String, Polygon<isize>, Option<f64>)> for DrawingRecord {
     fn from(data: (String, Polygon<isize>, Option<f64>)) -> Self {
         DrawingRecord {

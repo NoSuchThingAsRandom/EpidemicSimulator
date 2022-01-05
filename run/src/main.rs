@@ -17,18 +17,22 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::rc::Rc;
 use std::time::Instant;
 
 use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
+use rand::thread_rng;
 
 use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
-use load_census_data::osm_parsing::OSMRawBuildings;
+use load_census_data::osm_parsing::{OSMRawBuildings, RawBuilding};
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
+use sim::models::output_area::{OutputArea, OutputAreaID};
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
@@ -223,7 +227,7 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
-        let sim = load_data_and_init_sim(
+        let sim = load_data_and_init_sim_with_debug_images(
             area.to_string(),
             census_directory,
             use_cache,
@@ -236,27 +240,17 @@ async fn main() -> anyhow::Result<()> {
             total_time.elapsed()
         );
 
-        let data: Vec<visualisation::image_export::DrawingRecord> = sim
-            .output_areas
-            .into_iter()
-            .filter_map(|(code, area)| {
-                Some(DrawingRecord::from((
-                    area.output_area_id.code().to_string(),
-                    area.polygon,
-                    None,
-                )))
-            })
-            .collect();
-        visualisation::image_export::draw(String::from("AreaMap.png"), data)?;
 
         return Ok(());
-        if let Err(e) = sim.simulate() {
+        /*if let Err(e) = sim.simulate() {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
         } else {
             //sim.statistics.summarise();
         }
+
         info!("Finished in {:?}", total_time.elapsed());
+         */
         Ok(())
     } else {
         error!("No runtime option specified\nQuitting...");
@@ -264,14 +258,28 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-async fn load_data_and_init_sim(
-    area: String,
-    census_directory: String,
-    use_cache: bool,
-    allow_downloads: bool,
-    visualise_building_boundaries: bool,
-) -> anyhow::Result<Simulator> {
-    info!("Loading data from disk...");
+fn draw_output_areas(filename: String, sim: &HashMap<OutputAreaID, OutputArea>) -> anyhow::Result<()> {
+    info!("Drawing Output Areas to: {}",filename);
+    let data: Vec<visualisation::image_export::DrawingRecord> = sim
+        .iter()
+        .map(|(_, area)| {
+            DrawingRecord::from((
+                area.output_area_id.code().to_string(),
+                &area.polygon,
+                None,
+            ))
+        })
+        .collect();
+    visualisation::image_export::draw(filename, data)?;
+    Ok(())
+}
+
+
+async fn load_data(area: String,
+                   census_directory: String,
+                   use_cache: bool,
+                   allow_downloads: bool,
+                   visualise_building_boundaries: bool) -> anyhow::Result<(CensusData, OSMRawBuildings, PolygonContainer<String>)> {
     let mut census_data: Option<anyhow::Result<CensusData>> = None;
     let mut osm_buildings: Option<anyhow::Result<OSMRawBuildings>> = None;
     let mut output_area_polygons: Option<anyhow::Result<PolygonContainer<String>>> = None;
@@ -325,10 +333,90 @@ async fn load_data_and_init_sim(
         osm_buildings.expect("OSM Buildings Data hasn't been executed!")?,
         output_area_polygons.expect("Output Area Polygons hasn't been executed!")?,
     );
+    Ok((census_data, osm_buildings, output_area_polygons))
+}
+
+async fn load_data_and_init_sim(
+    area: String,
+    census_directory: String,
+    use_cache: bool,
+    allow_downloads: bool,
+    visualise_building_boundaries: bool,
+) -> anyhow::Result<Simulator> {
+    info!("Loading data from disk...");
+    let (census_data, osm_buildings, output_area_polygons) = load_data(area, census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
     let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
     sim.build().context("Failed to initialise sim").unwrap();
+    Ok(Simulator::from(sim))
+}
+
+
+async fn load_data_and_init_sim_with_debug_images(
+    area: String,
+    census_directory: String,
+    use_cache: bool,
+    allow_downloads: bool,
+    visualise_building_boundaries: bool,
+) -> anyhow::Result<Simulator> {
+    info!("Loading data from disk...");
+    let (census_data, osm_buildings, output_area_polygons) = load_data(area, census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
+    let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
+        .context("Failed to initialise sim")
+        .unwrap();
+    let mut rng = thread_rng();
+
+    sim.initialise_output_areas()
+        .context("Failed to initialise output areas!")?;
+
+    draw_output_areas(String::from("images/AllOutputAreas.png"), &sim.output_areas)?;
+
+    let mut possible_buildings_per_area = sim
+        .assign_buildings_to_output_areas()
+        .context("Failed to assign buildings to output areas")?;
+
+    draw_output_areas(String::from("images/OutputAreasWithBuildings.png"), &sim.output_areas)?;
+    let mut citizens = sim
+        .generate_citizens(&mut rng, &mut possible_buildings_per_area)
+        .context("Failed to generate Citizens")?;
+
+    draw_output_areas(String::from("images/OutputAreasWithHouseholds.png"), &sim.output_areas)?;
+    // TODO Currently any buildings remaining are treated as Workplaces
+    let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> =
+        possible_buildings_per_area
+            .drain()
+            .filter_map(|(area, mut classified_buildings)| {
+                let buildings: Vec<RawBuilding> =
+                    classified_buildings.drain().flat_map(|(_, a)| a).collect();
+                if buildings.is_empty() {
+                    return None;
+                }
+                Some((area, buildings))
+            })
+            .collect();
+
+
+    let output_area_ref = Rc::new(RefCell::new(&mut sim.output_areas));
+    let citizens_ref = &mut sim.citizens;
+    output_area_ref.borrow_mut().retain(|code, data| {
+        if !possible_workplaces.contains_key(code) {
+            data.get_residents().iter().for_each(|id| {
+                if citizens_ref.remove(id).is_none() {
+                    error!("Failed to remove citizen: {}", id);
+                }
+            });
+
+            false
+        } else {
+            true
+        }
+    });
+    draw_output_areas(String::from("images/OutputAreasWithWorkplaces.png"), &sim.output_areas)?;
+    info!("Starting to build workplaces");
+    sim.build_workplaces(&mut rng, possible_workplaces)
+        .context("Failed to build workplaces")?;
+
     Ok(Simulator::from(sim))
 }
 
