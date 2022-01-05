@@ -36,7 +36,7 @@ use sim::models::output_area::{OutputArea, OutputAreaID};
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
-use visualisation::image_export::DrawingRecord;
+use visualisation::image_export::{draw_buildings_and_output_areas, DrawingRecord};
 
 //use visualisation::citizen_connections::{connected_groups, draw_graph};
 //use visualisation::image_export::DrawingRecord;
@@ -92,6 +92,11 @@ async fn main() -> anyhow::Result<()> {
                 .short("r")
                 .long("render")
                 .help("Whether to use the rendering engine"),
+        )
+        .arg(
+            Arg::with_name("visualise")
+                .long("visualise")
+                .help("Creates a png of Buildings overlayed with Output Area polygons")
         )
         .arg(
             Arg::with_name("visualise-buildings")
@@ -199,6 +204,7 @@ async fn main() -> anyhow::Result<()> {
             osm_buildings,
         )?;
         return Ok(());
+    } else if matches.is_present("visualise_output_areas") {
         info!("Visualising map areas");
         let sim = load_data_and_init_sim(
             area.to_string(),
@@ -221,8 +227,33 @@ async fn main() -> anyhow::Result<()> {
                 ))
             })
             .collect();
-        visualisation::image_export::draw(String::from("BuildingDensity.png"), data)?;
+        visualisation::image_export::draw_output_areas(String::from("BuildingDensity.png"), data)?;
 
+        Ok(())
+    } else if matches.is_present("visualise") {
+        let (census, mut osm, polygons) = load_data(
+            area.to_string(),
+            census_directory,
+            use_cache,
+            allow_downloads,
+            false).await?;
+        let polygon_data: Vec<visualisation::image_export::DrawingRecord> = polygons.polygons
+            .iter()
+            .map(|(code, area)| {
+                DrawingRecord::from((
+                    code.to_string(),
+                    (area),
+                    None,
+                ))
+            })
+            .collect();
+        let osm_buildings = osm
+            .building_locations
+            .drain()
+            .map(|(_, b)| b)
+            .flatten()
+            .collect();
+        visualisation::image_export::draw_buildings_and_output_areas(String::from("images/BuildingsAndOutputAreas.png"), polygon_data, osm_buildings)?;
         Ok(())
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
@@ -270,7 +301,7 @@ fn draw_output_areas(filename: String, sim: &HashMap<OutputAreaID, OutputArea>) 
             ))
         })
         .collect();
-    visualisation::image_export::draw(filename, data)?;
+    visualisation::image_export::draw_output_areas(filename, data)?;
     Ok(())
 }
 
@@ -452,7 +483,7 @@ pub fn draw_census_data(
             })
         })
         .collect();
-    visualisation::image_export::draw(String::from("PopulationMap.png"), data)?;
+    visualisation::image_export::draw_output_areas(String::from("PopulationMap.png"), data)?;
 
     let data: Vec<DrawingRecord> = census_data
         .residents_workplace
@@ -466,7 +497,7 @@ pub fn draw_census_data(
             })
         })
         .collect();
-    visualisation::image_export::draw(String::from("ResidentsWorkplace.png"), data)?;
+    visualisation::image_export::draw_output_areas(String::from("ResidentsWorkplace.png"), data)?;
 
     let data: Vec<DrawingRecord> = census_data
         .occupation_counts
@@ -480,6 +511,6 @@ pub fn draw_census_data(
             })
         })
         .collect();
-    visualisation::image_export::draw(String::from("OccupationCounts.png"), data)?;
+    visualisation::image_export::draw_output_areas(String::from("OccupationCounts.png"), data)?;
     Ok(())
 }

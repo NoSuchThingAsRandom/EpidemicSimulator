@@ -28,29 +28,32 @@ pub mod image_export;
 #[cfg(feature = "webp")]
 pub mod live_render;
 
-pub const GRID_SIZE: u32 = 32800;
-const X_OFFSET: i32 = 75000;
-const Y_OFFSET: i32 = 1000;
+pub const GRID_SIZE: u32 = 700000;
+pub const PIXEL_SIZE: u32 = 32800;
+pub const SCALE: i32 = ((GRID_SIZE / PIXEL_SIZE) as i32) + 1;
+const X_OFFSET: i32 = 0;
+//75000;
+const Y_OFFSET: i32 = 0;// 1000;
 
 /// Converts a geo_types::Coordinate to a Pixel Mapping on the GRID
 fn convert_geo_point_to_pixel(coords: Coordinate<f64>) -> DrawingResult<(i32, i32)> {
     let coords = (
-        (coords.x - X_OFFSET as f64) as i32 / 21,
-        (coords.y - Y_OFFSET as f64) as i32 / 21,
+        (coords.x - X_OFFSET as f64) as i32 / SCALE,
+        (coords.y - Y_OFFSET as f64) as i32 / SCALE,
     );
-    if coords.0 > GRID_SIZE as i32 {
+    if coords.0 > PIXEL_SIZE as i32 {
         return Err(MyDrawingError::ConversionError {
             message: format!(
                 "X Coordinate {} exceeds maximum Grid Size {}",
-                coords.0, GRID_SIZE
+                coords.0, PIXEL_SIZE
             ),
             value: Some(coords.0.to_string()),
         });
-    } else if coords.1 > GRID_SIZE as i32 {
+    } else if coords.1 > PIXEL_SIZE as i32 {
         return Err(MyDrawingError::ConversionError {
             message: format!(
                 "Y Coordinate {} exceeds maximum Grid Size {}",
-                coords.0, GRID_SIZE
+                coords.0, PIXEL_SIZE
             ),
             value: Some(coords.1.to_string()),
         });
