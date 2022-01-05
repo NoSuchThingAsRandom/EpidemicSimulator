@@ -23,13 +23,14 @@ use std::time::Instant;
 
 use anyhow::Context;
 use clap::{App, Arg};
-use log::{debug, error, info};
+use log::{error, info};
 
 use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use load_census_data::osm_parsing::OSMRawBuildings;
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
 use sim::simulator::Simulator;
+use sim::simulator_builder::SimulatorBuilder;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
 use visualisation::image_export::DrawingRecord;
 
@@ -202,8 +203,17 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
-        let mut sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
+        let sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
         info!("Finished loading data and Initialising  simulator in {:?}",total_time.elapsed());
+
+        let data: Vec<visualisation::image_export::DrawingRecord> = sim.output_areas.into_iter()
+            .filter_map(|(code, area)| {
+                Some(DrawingRecord::from((area.output_area_id.code().to_string(), area.polygon, None)))
+            })
+            .collect();
+        visualisation::image_export::draw(String::from("AreaMap.png"), data)?;
+
+
         return Ok(());
         if let Err(e) = sim.simulate() {
             error!("{}", e);
@@ -269,10 +279,12 @@ async fn load_data_and_init_sim(area: String, census_directory: String, use_cach
         });
     });
     let (census_data, osm_buildings, output_area_polygons) = (census_data.expect("Census Data hasn't been executed!")?, osm_buildings.expect("OSM Buildings Data hasn't been executed!")?, output_area_polygons.expect("Output Area Polygons hasn't been executed!")?);
-    let sim = Simulator::new(census_data, osm_buildings, output_area_polygons)
+    let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
-    Ok(sim)
+    sim.build().context("Failed to initialise sim")
+        .unwrap();
+    Ok(Simulator::from(sim))
 }
 
 //TODO Enable when compiler on 2021

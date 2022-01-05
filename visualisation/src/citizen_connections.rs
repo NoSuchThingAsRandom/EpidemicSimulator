@@ -50,7 +50,7 @@ pub fn build_building_graph(simulation: &sim::simulator::Simulator) -> GraphMap<
 
     simulation.citizens.values().for_each(|citizen| {
         let weight = graph.edge_weight_mut(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128());
-        if let Some(mut weight) = weight {
+        if let Some(weight) = weight {
             *weight += 1;
         } else {
             graph.add_edge(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128(), 1);

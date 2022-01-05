@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -45,7 +45,7 @@ use std::time::Instant;
 
 use geo::prelude::{BoundingRect, Contains};
 use geo_types::{CoordNum, LineString};
-use log::{debug, info, trace, warn};
+use log::{debug, info, warn};
 use num_traits::PrimInt;
 use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use shapefile::dbase::FieldValue;

@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -23,7 +23,6 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
-use log::trace;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 

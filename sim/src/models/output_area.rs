@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 use anyhow::Context;
-use log::{error, trace};
+use log::error;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
 use serde::Serialize;
@@ -33,7 +33,6 @@ use load_census_data::tables::population_and_density_per_output_area::{
     AreaClassification, PersonType,
 };
 
-use crate::config::HOUSEHOLD_SIZE;
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 
@@ -129,6 +128,7 @@ impl OutputArea {
         let area = AreaClassification::Total;
         let pop_count = &census_data.population_count.population_counts[area];
         // TODO Currently assigning 4 people per household
+        let household_size = (pop_count[PersonType::All] as usize / possible_buildings.len()) + 1;
         // Should use census data instead
         let mut generated_population = 0;
         // Build households
@@ -140,7 +140,7 @@ impl OutputArea {
                 let household_building_id =
                     BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
                 let mut household = Household::new(household_building_id.clone(), location.center());
-                for _ in 0..HOUSEHOLD_SIZE {
+                for _ in 0..household_size {
                     let occupation = census_data
                         .occupation_count
                         .get_random_occupation(rng)
@@ -170,10 +170,11 @@ impl OutputArea {
                 }
             } else {
                 error!(
-                    "Output Area: {} has run out of households ({}) to allocate residents: ({}/{}) to.",
+                    "Output Area: {} has run out of households ({}) of size {} to allocate residents: ({}/{}) to.",
                     self.output_area_id,
+                possible_buildings_size,
+                household_size,
                     generated_population,
-                    possible_buildings_size,
                     pop_count[PersonType::All]
                 );
                 return Ok(citizens);

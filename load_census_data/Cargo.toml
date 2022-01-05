@@ -8,6 +8,8 @@ authors = ["Sam Ralph"]
 async-recursion = "=0.3.2"
 csv = "1.1.6"
 enum-map = "1.1.1"
+futures-core = "=0.3.17"
+http = "=0.2.5"
 geo = "0.18.0"
 geo-types = { version = "0.7.2", features = ["serde"] }
 lazy_static = "1.4.0"

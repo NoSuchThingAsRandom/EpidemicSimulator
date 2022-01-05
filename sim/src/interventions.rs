@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -114,12 +114,12 @@ impl InterventionStatus {
         if let Some(threshold) = self.thresholds.lockdown {
             // Lockdown is enabled
             if threshold < percentage_infected {
-                if let Some(mut hour) = self.lockdown {
-                    hour += 1;
+                self.lockdown = Some(if let Some(hour) = self.lockdown {
+                    hour + 1
                 } else {
-                    self.lockdown = Some(0);
                     new_interventions.insert(InterventionsEnabled::Lockdown);
-                }
+                    0
+                });
             }
             // Lockdown is removed
             else if self.lockdown.is_some() {
@@ -130,12 +130,12 @@ impl InterventionStatus {
         // Vaccination
         if let Some(threshold) = self.thresholds.vaccination_threshold {
             if threshold < percentage_infected {
-                if let Some(mut hour) = self.vaccination {
-                    hour += 1;
+                self.vaccination = Some(if let Some(hour) = self.vaccination {
+                    hour + 1
                 } else {
-                    self.vaccination = Some(0);
                     new_interventions.insert(InterventionsEnabled::Vaccination);
-                }
+                    0
+                });
             }
         }
         //Mask Wearing
