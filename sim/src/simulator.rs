@@ -29,8 +29,7 @@ use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
 
-use crate::config::{
-    DEBUG_ITERATION_PRINT, get_memory_usage};
+use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
@@ -70,7 +69,6 @@ impl Default for Timer {
         }
     }
 }
-
 
 //#[derive(Clone)]
 pub struct Simulator {

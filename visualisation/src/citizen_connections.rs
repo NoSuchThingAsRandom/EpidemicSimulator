@@ -26,8 +26,11 @@ use petgraph::dot::Config::{EdgeNoLabel, NodeIndexLabel};
 use petgraph::graphmap::GraphMap;
 use petgraph::Undirected;
 
-pub fn build_citizen_graph(simulation: &sim::simulator::Simulator) -> GraphMap<u128, u8, Undirected> {
-    let mut graph: GraphMap<u128, u8, Undirected> = GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
+pub fn build_citizen_graph(
+    simulation: &sim::simulator::Simulator,
+) -> GraphMap<u128, u8, Undirected> {
+    let mut graph: GraphMap<u128, u8, Undirected> =
+        GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
 
     simulation.citizens.keys().for_each(|citizen| {
         graph.add_node(citizen.id().as_u128());
@@ -37,7 +40,11 @@ pub fn build_citizen_graph(simulation: &sim::simulator::Simulator) -> GraphMap<u
             let citizens = building.occupants();
             for outer_citizen in citizens {
                 for inner_citizen in citizens {
-                    graph.add_edge(outer_citizen.id().as_u128(), inner_citizen.id().as_u128(), 1);
+                    graph.add_edge(
+                        outer_citizen.id().as_u128(),
+                        inner_citizen.id().as_u128(),
+                        1,
+                    );
                 }
             }
         }
@@ -45,15 +52,25 @@ pub fn build_citizen_graph(simulation: &sim::simulator::Simulator) -> GraphMap<u
     graph
 }
 
-pub fn build_building_graph(simulation: &sim::simulator::Simulator) -> GraphMap<u128, u8, Undirected> {
-    let mut graph: GraphMap<u128, u8, Undirected> = GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
+pub fn build_building_graph(
+    simulation: &sim::simulator::Simulator,
+) -> GraphMap<u128, u8, Undirected> {
+    let mut graph: GraphMap<u128, u8, Undirected> =
+        GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
 
     simulation.citizens.values().for_each(|citizen| {
-        let weight = graph.edge_weight_mut(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128());
+        let weight = graph.edge_weight_mut(
+            citizen.household_code.building_id().as_u128(),
+            citizen.workplace_code.building_id().as_u128(),
+        );
         if let Some(weight) = weight {
             *weight += 1;
         } else {
-            graph.add_edge(citizen.household_code.building_id().as_u128(), citizen.workplace_code.building_id().as_u128(), 1);
+            graph.add_edge(
+                citizen.household_code.building_id().as_u128(),
+                citizen.workplace_code.building_id().as_u128(),
+                1,
+            );
         }
     });
     graph
@@ -65,7 +82,8 @@ pub fn connected_groups(graph: &GraphMap<u128, u8, Undirected>) -> usize {
 
 pub fn draw_graph(filename: String, graph: GraphMap<u128, u8, Undirected>) -> anyhow::Result<()> {
     let dot = petgraph::dot::Dot::with_config(&graph, &[NodeIndexLabel, EdgeNoLabel]);
-    let file = File::create(filename.to_string()).context(format!("Failed to create file: {}", filename))?;
+    let file = File::create(filename.to_string())
+        .context(format!("Failed to create file: {}", filename))?;
     let mut writer = BufWriter::new(file);
     //writer.write_all(dot.);
     write!(writer, "{:?}", dot)?;

@@ -139,7 +139,8 @@ impl OutputArea {
                 assert_eq!(location.classification(), TagClassifiedBuilding::Household);
                 let household_building_id =
                     BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
-                let mut household = Household::new(household_building_id.clone(), location.center());
+                let mut household =
+                    Household::new(household_building_id.clone(), location.center());
                 for _ in 0..household_size {
                     let occupation = census_data
                         .occupation_count

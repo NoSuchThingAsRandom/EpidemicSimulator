@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -26,7 +26,6 @@ use crate::tables::occupation_count::OccupationType;
 /// https://www.gov.uk/government/publications/employment-densities-guide
 #[derive(Copy, Clone)]
 pub struct EmploymentDensities {}
-
 
 impl EmploymentDensities {
     pub const INDUSTRIAL_GENERAL: u32 = 36;

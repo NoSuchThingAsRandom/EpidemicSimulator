@@ -184,17 +184,37 @@ async fn main() -> anyhow::Result<()> {
             census_directory + OSM_CACHE_FILENAME,
             use_cache,
             visualise_building_boundaries,
-        )?.building_locations.drain().map(|(_, b)| b).flatten().collect();
-        visualisation::image_export::draw_buildings("raw_buildings.png".to_string(), osm_buildings)?;
+        )?
+            .building_locations
+            .drain()
+            .map(|(_, b)| b)
+            .flatten()
+            .collect();
+        visualisation::image_export::draw_buildings(
+            "raw_buildings.png".to_string(),
+            osm_buildings,
+        )?;
         return Ok(());
         info!("Visualising map areas");
-        let sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, false).await?;
+        let sim = load_data_and_init_sim(
+            area.to_string(),
+            census_directory,
+            use_cache,
+            allow_downloads,
+            false,
+        )
+            .await?;
 
         let total_buildings = 100.0;
-        let data: Vec<visualisation::image_export::DrawingRecord> = sim.output_areas
+        let data: Vec<visualisation::image_export::DrawingRecord> = sim
+            .output_areas
             .iter()
             .map(|(code, area)| {
-                DrawingRecord::from((code.to_string(), (area.polygon.clone()), Some(area.buildings.len() as f64 / total_buildings)))
+                DrawingRecord::from((
+                    code.to_string(),
+                    (area.polygon.clone()),
+                    Some(area.buildings.len() as f64 / total_buildings),
+                ))
             })
             .collect();
         visualisation::image_export::draw(String::from("BuildingDensity.png"), data)?;
@@ -203,16 +223,31 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
-        let sim = load_data_and_init_sim(area.to_string(), census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
-        info!("Finished loading data and Initialising  simulator in {:?}",total_time.elapsed());
+        let sim = load_data_and_init_sim(
+            area.to_string(),
+            census_directory,
+            use_cache,
+            allow_downloads,
+            visualise_building_boundaries,
+        )
+            .await?;
+        info!(
+            "Finished loading data and Initialising  simulator in {:?}",
+            total_time.elapsed()
+        );
 
-        let data: Vec<visualisation::image_export::DrawingRecord> = sim.output_areas.into_iter()
+        let data: Vec<visualisation::image_export::DrawingRecord> = sim
+            .output_areas
+            .into_iter()
             .filter_map(|(code, area)| {
-                Some(DrawingRecord::from((area.output_area_id.code().to_string(), area.polygon, None)))
+                Some(DrawingRecord::from((
+                    area.output_area_id.code().to_string(),
+                    area.polygon,
+                    None,
+                )))
             })
             .collect();
         visualisation::image_export::draw(String::from("AreaMap.png"), data)?;
-
 
         return Ok(());
         if let Err(e) = sim.simulate() {
@@ -229,7 +264,13 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-async fn load_data_and_init_sim(area: String, census_directory: String, use_cache: bool, allow_downloads: bool, visualise_building_boundaries: bool) -> anyhow::Result<Simulator> {
+async fn load_data_and_init_sim(
+    area: String,
+    census_directory: String,
+    use_cache: bool,
+    allow_downloads: bool,
+    visualise_building_boundaries: bool,
+) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
     let mut census_data: Option<anyhow::Result<CensusData>> = None;
     let mut osm_buildings: Option<anyhow::Result<OSMRawBuildings>> = None;
@@ -260,7 +301,8 @@ async fn load_data_and_init_sim(area: String, census_directory: String, use_cach
                     filename + OSM_CACHE_FILENAME,
                     use_cache,
                     visualise_building_boundaries,
-                ).context("Failed to load OSM map");
+                )
+                    .context("Failed to load OSM map");
                 osm_buildings
             });
             osm_buildings = Some(buildings());
@@ -269,21 +311,24 @@ async fn load_data_and_init_sim(area: String, census_directory: String, use_cach
         // Build output area polygons
         s.spawn(|_| {
             let polygon = (move || -> anyhow::Result<PolygonContainer<String>> {
-                let output_area_polygons =
-                    PolygonContainer::load_polygons_from_file(
-                        CensusTableNames::OutputAreaMap.get_filename(),
-                    ).context("Loading polygons for output areas");
+                let output_area_polygons = PolygonContainer::load_polygons_from_file(
+                    CensusTableNames::OutputAreaMap.get_filename(),
+                )
+                    .context("Loading polygons for output areas");
                 output_area_polygons
             });
             output_area_polygons = Some(polygon());
         });
     });
-    let (census_data, osm_buildings, output_area_polygons) = (census_data.expect("Census Data hasn't been executed!")?, osm_buildings.expect("OSM Buildings Data hasn't been executed!")?, output_area_polygons.expect("Output Area Polygons hasn't been executed!")?);
+    let (census_data, osm_buildings, output_area_polygons) = (
+        census_data.expect("Census Data hasn't been executed!")?,
+        osm_buildings.expect("OSM Buildings Data hasn't been executed!")?,
+        output_area_polygons.expect("Output Area Polygons hasn't been executed!")?,
+    );
     let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
-    sim.build().context("Failed to initialise sim")
-        .unwrap();
+    sim.build().context("Failed to initialise sim").unwrap();
     Ok(Simulator::from(sim))
 }
 
@@ -292,7 +337,11 @@ pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
     let start = Instant::now();
     let graph = visualisation::citizen_connections::build_citizen_graph(sim);
     println!("Built graph in {:?}", start.elapsed());
-    println!("There are {} nodes and {} edges", graph.node_count(), graph.edge_count());
+    println!(
+        "There are {} nodes and {} edges",
+        graph.node_count(),
+        graph.edge_count()
+    );
     println!("There are {} connected groups", connected_groups(&graph));
     if save_to_file {
         let graph_viz = draw_graph("tiny_graphviz_no_label.dot".to_string(), graph);

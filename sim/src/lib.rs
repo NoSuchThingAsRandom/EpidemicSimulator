@@ -28,5 +28,5 @@ mod error;
 mod interventions;
 pub mod models;
 pub mod simulator;
-mod statistics;
 pub mod simulator_builder;
+mod statistics;

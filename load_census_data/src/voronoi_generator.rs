@@ -75,9 +75,19 @@ impl Scaling {
         let x = (point.0 as isize - self.x_offset) / self.x_scale;
         let y = (point.1 as isize - self.y_offset) / self.y_scale;
         assert!(0 <= x, "X Coord {} is less than zero", x);
-        assert!(x < grid_size, "X Coord {} is greater than the grid size {}", x, grid_size);
+        assert!(
+            x < grid_size,
+            "X Coord {} is greater than the grid size {}",
+            x,
+            grid_size
+        );
         assert!(0 <= y, "Y Coord {} is less than zero", y);
-        assert!(y < grid_size, "Y Coord {} is greater than the grid size {}", y, grid_size);
+        assert!(
+            y < grid_size,
+            "Y Coord {} is greater than the grid size {}",
+            y,
+            grid_size
+        );
         (x, y)
     }
     pub fn scale_polygon(

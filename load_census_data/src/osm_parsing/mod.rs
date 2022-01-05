@@ -67,7 +67,6 @@ pub enum TagClassifiedBuilding {
     Unknown,
 }
 
-
 impl<'a> From<HashMap<&'a str, &'a str>> for TagClassifiedBuilding {
     fn from(tags: HashMap<&'a str, &'a str>) -> Self {
         if let Some(amenity) = tags.get("amenity") {
@@ -133,10 +132,19 @@ pub struct RawBuilding {
 }
 
 impl RawBuilding {
-    pub fn new(classification: TagClassifiedBuilding, boundary: &Polygon<f64>) -> Option<RawBuilding> {
+    pub fn new(
+        classification: TagClassifiedBuilding,
+        boundary: &Polygon<f64>,
+    ) -> Option<RawBuilding> {
         // Can't find center with integer points
         let size = boundary.unsigned_area().round() as isize;
-        Some(RawBuilding { classification, center: boundary.centroid().map(|p| geo_types::Point::from((p.x().round() as isize, p.y().round() as isize)))?, size })
+        Some(RawBuilding {
+            classification,
+            center: boundary.centroid().map(|p| {
+                geo_types::Point::from((p.x().round() as isize, p.y().round() as isize))
+            })?,
+            size,
+        })
     }
     pub fn center(&self) -> Point<isize> {
         self.center
@@ -160,7 +168,7 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
                 node.lon(),
             );
             //let position = geo_types::Coordinate::from(position);
-            let position: Point<isize> = position.into();//geo_types::Point::from(position);
+            let position: Point<isize> = position.into(); //geo_types::Point::from(position);
             return Ok(RawOSMNode {
                 id: node.id,
                 classification: TagClassifiedBuilding::from(node.tags()),
@@ -183,7 +191,10 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
 ///     a.extend(b);
 ///     println!("{:?}",a); // {2: 4, 1: 2, 3: 2}
 /// ```
-pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: Option<U>) -> Option<U> {
+pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(
+    a: Option<U>,
+    b: Option<U>,
+) -> Option<U> {
     match (a, b) {
         (Some(mut a), Some(b)) => {
             a.extend(b);
@@ -191,7 +202,7 @@ pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(a: Option<U>, b: 
         }
         (Some(a), None) => Some(a),
         (None, Some(b)) => Some(b),
-        (None, None) => None
+        (None, None) => None,
     }
 }
 
@@ -227,8 +238,7 @@ impl OSMRawBuildings {
         cache_filename: String,
     ) -> Result<HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, DataLoadingError> {
         debug!("Parsing data from raw OSM file");
-        let building_locations =
-            OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
+        let building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
         let mut file =
             File::create(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
@@ -285,29 +295,30 @@ impl OSMRawBuildings {
 
         debug!("Loaded OSM data");
 
-        let building_vorinnis: HashMap<TagClassifiedBuilding, Voronoi> = building_locations.par_iter().filter_map(|(building_type, locations)| {
-            info!(
-                "Building voronoi diagram for {:?} with {} buildings",
-                building_type,
-                locations.len()
-            );
-            return match Voronoi::new(
-                700000,
-                locations
-                    .iter()
-                    .map(|p| (p.center.x() as usize, p.center.y() as usize))
-                    .collect(),
-                Scaling::yorkshire_national_grid(),
-            ) {
-                Ok(voronoi) => {
-                    Some((*building_type, voronoi))
-                }
-                Err(e) => {
-                    error!("{}", e);
-                    None
-                }
-            }
-        }).collect();
+        let building_vorinnis: HashMap<TagClassifiedBuilding, Voronoi> = building_locations
+            .par_iter()
+            .filter_map(|(building_type, locations)| {
+                info!(
+                    "Building voronoi diagram for {:?} with {} buildings",
+                    building_type,
+                    locations.len()
+                );
+                return match Voronoi::new(
+                    700000,
+                    locations
+                        .iter()
+                        .map(|p| (p.center.x() as usize, p.center.y() as usize))
+                        .collect(),
+                    Scaling::yorkshire_national_grid(),
+                ) {
+                    Ok(voronoi) => Some((*building_type, voronoi)),
+                    Err(e) => {
+                        error!("{}", e);
+                        None
+                    }
+                };
+            })
+            .collect();
         let data = OSMRawBuildings {
             building_locations,
             building_voronois: building_vorinnis,
@@ -322,11 +333,10 @@ impl OSMRawBuildings {
         }
         info!("Finished building OSM data");
         for (building_type, values) in &data.building_locations {
-            debug!("There are {} {:?} ",values.len(),building_type);
+            debug!("There are {} {:?} ", values.len(), building_type);
         }
         Ok(data)
     }
-
 
     fn read_buildings_from_osm(
         filename: String,
@@ -343,11 +353,14 @@ impl OSMRawBuildings {
                         Element::DenseNode(node) => {
                             // Extract the building type and location from the node
                             // Then if a valid building time,instantiate a new Hashmap to be merged
-                            (None, RawOSMNode::try_from(node).ok().map(|node| {
-                                let mut map = BTreeMap::new();
-                                map.insert(node.id, node);
-                                map
-                            }))
+                            (
+                                None,
+                                RawOSMNode::try_from(node).ok().map(|node| {
+                                    let mut map = BTreeMap::new();
+                                    map.insert(node.id, node);
+                                    map
+                                }),
+                            )
                         }
                         //Discard all other OSM elements (Like roads)
                         Element::Way(way) => {
@@ -368,8 +381,12 @@ impl OSMRawBuildings {
                     (ways, nodes)
                 },
             )?;
-        let nodes = nodes.ok_or_else(|| DataLoadingError::Misc { source: "No Nodes loaded from OSM file".to_string() })?;
-        let ways = ways.ok_or_else(|| DataLoadingError::Misc { source: "No Ways loaded from OSM file".to_string() })?;
+        let nodes = nodes.ok_or_else(|| DataLoadingError::Misc {
+            source: "No Nodes loaded from OSM file".to_string(),
+        })?;
+        let ways = ways.ok_or_else(|| DataLoadingError::Misc {
+            source: "No Ways loaded from OSM file".to_string(),
+        })?;
         info!("Completed generation of Raw OSM Elements. Now Creating RawBuildings, from {:?} ways and {:?} nodes",ways.len(),nodes.len());
         let mut buildings: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
         let mut unvisited_nodes: BTreeSet<i64> = nodes.keys().copied().collect();
@@ -380,10 +397,13 @@ impl OSMRawBuildings {
             for child in way.node_ids {
                 if let Some(child) = nodes.get(&child) {
                     unvisited_nodes.remove(&child.id);
-                    building_polygon.push(geo_types::Coordinate::from((child.location.x() as f64, child.location.y() as f64)));
+                    building_polygon.push(geo_types::Coordinate::from((
+                        child.location.x() as f64,
+                        child.location.y() as f64,
+                    )));
                     building_classification.insert(child.classification);
                 } else {
-                    warn!("Node {} doesn't exist for way {}",child,way.id);
+                    warn!("Node {} doesn't exist for way {}", child, way.id);
                 }
             }
             let building_shape = geo_types::Polygon::new(building_polygon.into(), vec![]);
@@ -402,7 +422,14 @@ impl OSMRawBuildings {
         );
         for node_id in unvisited_nodes {
             if let Some(node) = nodes.get(&node_id) {
-                let building_shape = geo_types::Polygon::new(vec![(node.location.x() as f64, node.location.y() as f64), (node.location.x() as f64, node.location.y() as f64)].into(), vec![]);
+                let building_shape = geo_types::Polygon::new(
+                    vec![
+                        (node.location.x() as f64, node.location.y() as f64),
+                        (node.location.x() as f64, node.location.y() as f64),
+                    ]
+                        .into(),
+                    vec![],
+                );
                 if let Some(building) = RawBuilding::new(node.classification, &building_shape) {
                     let building_entry = buildings.entry(node.classification).or_default();
                     building_entry.push(building);
@@ -410,16 +437,25 @@ impl OSMRawBuildings {
                     warn!("Failed to create raw building!");
                 }
             } else {
-                warn!("Unvisited Node {} doesn't exist!",node_id);
+                warn!("Unvisited Node {} doesn't exist!", node_id);
             }
         }
         debug!(
             "Loaded {} buildings from node data",
             buildings.iter().map(|(_, b)| b.len()).sum::<usize>()
         );
-        debug!("Removed {} Unknown nodes.",buildings.remove(&TagClassifiedBuilding::Unknown).map(|b|b.len()).unwrap_or(0));
+        debug!(
+            "Removed {} Unknown nodes.",
+            buildings
+                .remove(&TagClassifiedBuilding::Unknown)
+                .map(|b| b.len())
+                .unwrap_or(0)
+        );
         // Count the number of unique buildings
-        info!("Finished loading with {} buildings",buildings.iter().map(|(_, b)| b.len()).sum::<usize>());
+        info!(
+            "Finished loading with {} buildings",
+            buildings.iter().map(|(_, b)| b.len()).sum::<usize>()
+        );
 
         Ok(buildings)
     }
@@ -441,8 +477,16 @@ mod tests {
         );
         //assert!(osm_buildings.is_ok());
         let osm_buildings = osm_buildings.unwrap();
-        let points: Vec<Vec<(isize, isize)>> = osm_buildings.building_locations.iter().map(|(_, b)| b.iter().map(|p| (p.center.x(), p.center.y())).collect::<Vec<(isize, isize)>>()).collect::<Vec<Vec<(isize, isize)>>>();
-        let p: Vec<(isize, isize)> = points.into_iter().flatten().collect();//.collect();
+        let points: Vec<Vec<(isize, isize)>> = osm_buildings
+            .building_locations
+            .iter()
+            .map(|(_, b)| {
+                b.iter()
+                    .map(|p| (p.center.x(), p.center.y()))
+                    .collect::<Vec<(isize, isize)>>()
+            })
+            .collect::<Vec<Vec<(isize, isize)>>>();
+        let p: Vec<(isize, isize)> = points.into_iter().flatten().collect(); //.collect();
         let bounds = find_seed_bounds(&p);
         let width = bounds.1.0 - bounds.0.0;
         let height = bounds.1.1 - bounds.0.1;

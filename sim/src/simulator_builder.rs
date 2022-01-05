@@ -61,7 +61,10 @@ impl SimulatorBuilder {
         for entry in self.census_data.values() {
             let output_id = OutputAreaID::from_code(entry.output_area_code.to_string());
             // TODO Remove polygons from grid
-            let polygon = self.output_areas_polygons.polygons.get(output_id.code())
+            let polygon = self
+                .output_areas_polygons
+                .polygons
+                .get(output_id.code())
                 .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Building output areas map".to_string(),
@@ -69,32 +72,66 @@ impl SimulatorBuilder {
                     },
                 })
                 .context(format!("Loading polygon shape for area: {}", output_id))?;
-            let new_area = OutputArea::new(output_id, polygon.clone(), self.disease_model.mask_percentage)
+            let new_area = OutputArea::new(
+                output_id,
+                polygon.clone(),
+                self.disease_model.mask_percentage,
+            )
                 .context("Failed to create Output Area")?;
-            self.output_areas.insert(new_area.output_area_id.clone(), new_area);
+            self.output_areas
+                .insert(new_area.output_area_id.clone(), new_area);
         }
         Ok(())
     }
 
     /// Assigns buildings to their enclosing Output Area, and Removes Output Areas that do not have any buildings
-    fn assign_buildings_to_output_areas(&mut self) -> anyhow::Result<HashMap<
-        OutputAreaID,
-        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>, > {
-        debug!("Attempting to allocating {} possible buildings to {} Output Areas",self.osm_data.building_locations.iter().map(|(_k,v)|v.len()).sum::<usize>(),self.output_areas.len());
+    fn assign_buildings_to_output_areas(
+        &mut self,
+    ) -> anyhow::Result<HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>>
+    {
+        debug!(
+            "Attempting to allocating {} possible buildings to {} Output Areas",
+            self.osm_data
+                .building_locations
+                .iter()
+                .map(|(_k, v)| v.len())
+                .sum::<usize>(),
+            self.output_areas.len()
+        );
         // Assign possible buildings to output areas
-        let possible_buildings_per_area = parallel_assign_buildings_to_output_areas(&self.osm_data.building_locations, &self.output_areas_polygons);
-        let count: usize = possible_buildings_per_area.par_iter().map(|(_, classed_building)| classed_building.par_iter().map(|(_, buildings)| buildings.len()).sum::<usize>()).sum();
+        let possible_buildings_per_area = parallel_assign_buildings_to_output_areas(
+            &self.osm_data.building_locations,
+            &self.output_areas_polygons,
+        );
+        let count: usize = possible_buildings_per_area
+            .par_iter()
+            .map(|(_, classed_building)| {
+                classed_building
+                    .par_iter()
+                    .map(|(_, buildings)| buildings.len())
+                    .sum::<usize>()
+            })
+            .sum();
 
-        self.output_areas.retain(|code, _area| possible_buildings_per_area.contains_key(code));
-        debug!("{} Buildings have been assigned. {} Output Areas remaining (with buildings)",count,self.output_areas.len());
+        self.output_areas
+            .retain(|code, _area| possible_buildings_per_area.contains_key(code));
+        debug!(
+            "{} Buildings have been assigned. {} Output Areas remaining (with buildings)",
+            count,
+            self.output_areas.len()
+        );
         Ok(possible_buildings_per_area)
     }
 
-
     /// Generates the Citizens for each Output Area
-    fn generate_citizens(&mut self, rng: &mut dyn RngCore, possible_buildings_per_area: &mut HashMap<
-        OutputAreaID,
-        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
+    fn generate_citizens(
+        &mut self,
+        rng: &mut dyn RngCore,
+        possible_buildings_per_area: &mut HashMap<
+            OutputAreaID,
+            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+        >,
+    ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
         let mut citizens = HashMap::new();
         let mut no_buildings = 0;
         let mut no_households = 0;
@@ -147,7 +184,10 @@ impl SimulatorBuilder {
             }();
             generate_citizen_closure.is_ok()
         });
-        error!("Households and Citizen generation succeeded for {} Output Areas.",ref_self.borrow().output_areas.len());
+        error!(
+            "Households and Citizen generation succeeded for {} Output Areas.",
+            ref_self.borrow().output_areas.len()
+        );
         Ok(citizens)
     }
 
@@ -157,21 +197,24 @@ impl SimulatorBuilder {
     ///
     /// Allocates that Citizen to the Workplace Building in that chosen Output Area
     pub fn build_workplaces(
-        &mut self, rng: &mut dyn RngCore, mut possible_buildings_per_area: HashMap<OutputAreaID, Vec<RawBuilding>>,
+        &mut self,
+        rng: &mut dyn RngCore,
+        mut possible_buildings_per_area: HashMap<OutputAreaID, Vec<RawBuilding>>,
     ) -> anyhow::Result<()> {
-        debug!("Assigning workplaces to {} output areas ",self.output_areas.len());
+        debug!(
+            "Assigning workplaces to {} output areas ",
+            self.output_areas.len()
+        );
         // Add Workplace Output Areas to Every Citizen
-        let mut citizens_to_allocate: HashMap<
-            OutputAreaID,
-            (Vec<CitizenID>, Vec<RawBuilding>),
-        > = HashMap::new();
+        let mut citizens_to_allocate: HashMap<OutputAreaID, (Vec<CitizenID>, Vec<RawBuilding>)> =
+            HashMap::new();
         let mut failed_output_areas = Vec::new();
         // Assign workplace areas to each Citizen, per Output area
 
         for (household_output_area_code, household_output_area) in &self.output_areas {
-
             // Retrieve the census data for the household output area
-            let household_census_data = self.census_data
+            let household_census_data = self
+                .census_data
                 .for_output_area_code(household_output_area_code.code().to_string())
                 .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
@@ -186,7 +229,9 @@ impl SimulatorBuilder {
                 let mut workplace_output_area_code = OutputAreaID::from_code("".to_string());
 
                 // TODO This generation is broken!
-                while !(possible_buildings_per_area.contains_key(&workplace_output_area_code) && self.output_areas.contains_key(&workplace_output_area_code)) {
+                while !(possible_buildings_per_area.contains_key(&workplace_output_area_code)
+                    && self.output_areas.contains_key(&workplace_output_area_code))
+                {
                     workplace_output_area_code = OutputAreaID::from_code(
                         household_census_data
                             .get_random_workplace_area(rng)
@@ -230,7 +275,10 @@ impl SimulatorBuilder {
                     .push(citizen_id);
             }
         }
-        error!("Failed to find workplace buildings for {} output areas",failed_output_areas.len());
+        error!(
+            "Failed to find workplace buildings for {} output areas",
+            failed_output_areas.len()
+        );
         debug!("Creating workplace buildings");
         // Create buildings for each Workplace output area
         for (workplace_area_code, mut to_allocate) in citizens_to_allocate {
@@ -300,7 +348,9 @@ impl SimulatorBuilder {
                             *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
                             citizen.occupation(),
                         );
-                        workplace.add_citizen(*citizen_id).context("Cannot add Citizen to new workplace!")?;
+                        workplace
+                            .add_citizen(*citizen_id)
+                            .context("Cannot add Citizen to new workplace!")?;
                         workplace
                     }
                 };
@@ -346,8 +396,11 @@ impl SimulatorBuilder {
         Ok(())
     }
 
-
-    pub fn new(census_data: CensusData, osm_data: OSMRawBuildings, output_areas_polygons: PolygonContainer<String>) -> anyhow::Result<SimulatorBuilder> {
+    pub fn new(
+        census_data: CensusData,
+        osm_data: OSMRawBuildings,
+        output_areas_polygons: PolygonContainer<String>,
+    ) -> anyhow::Result<SimulatorBuilder> {
         Ok(SimulatorBuilder {
             census_data,
             osm_data,
@@ -361,35 +414,58 @@ impl SimulatorBuilder {
         let mut timer = Timer::default();
         let mut rng = thread_rng();
 
-        self.initialise_output_areas().context("Failed to initialise output areas!")?;
+        self.initialise_output_areas()
+            .context("Failed to initialise output areas!")?;
         timer.code_block_finished("Initialised Output Areas")?;
-        let mut possible_buildings_per_area = self.assign_buildings_to_output_areas().context("Failed to assign buildings to output areas")?;
+        let mut possible_buildings_per_area = self
+            .assign_buildings_to_output_areas()
+            .context("Failed to assign buildings to output areas")?;
         timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
-        let mut citizens = self.generate_citizens(&mut rng, &mut possible_buildings_per_area).context("Failed to generate Citizens")?;
+        let mut citizens = self
+            .generate_citizens(&mut rng, &mut possible_buildings_per_area)
+            .context("Failed to generate Citizens")?;
 
-
-        timer.code_block_finished(&format!("Generated Citizens and residences for {} output areas", self.output_areas.len()))?;
+        timer.code_block_finished(&format!(
+            "Generated Citizens and residences for {} output areas",
+            self.output_areas.len()
+        ))?;
         // TODO Currently any buildings remaining are treated as Workplaces
-        let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> = possible_buildings_per_area.drain().filter_map(|(area, mut classified_buildings)| {
-            let buildings: Vec<RawBuilding> = classified_buildings.drain().flat_map(|(_, a)| a).collect();
-            if buildings.is_empty() {
-                return None;
-            }
-            Some((area, buildings))
-        }).collect();
-        let a = possible_workplaces.keys().cloned().collect::<HashSet<OutputAreaID>>();
-        let b = self.output_areas.keys().cloned().collect::<HashSet<OutputAreaID>>();
+        let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> =
+            possible_buildings_per_area
+                .drain()
+                .filter_map(|(area, mut classified_buildings)| {
+                    let buildings: Vec<RawBuilding> =
+                        classified_buildings.drain().flat_map(|(_, a)| a).collect();
+                    if buildings.is_empty() {
+                        return None;
+                    }
+                    Some((area, buildings))
+                })
+                .collect();
+        let a = possible_workplaces
+            .keys()
+            .cloned()
+            .collect::<HashSet<OutputAreaID>>();
+        let b = self
+            .output_areas
+            .keys()
+            .cloned()
+            .collect::<HashSet<OutputAreaID>>();
         let c: HashSet<&OutputAreaID> = a.intersection(&b).collect();
-        debug!("There are {} areas with workplace buildings",possible_workplaces.len());
-        debug!("Union of workplace and output area:{} ",c.len());
+        debug!(
+            "There are {} areas with workplace buildings",
+            possible_workplaces.len()
+        );
+        debug!("Union of workplace and output area:{} ", c.len());
 
         // Remove any areas that do not have any workplaces
         self.output_areas.retain(|code, data| {
             if !possible_workplaces.contains_key(code) {
-                data.get_residents().iter().for_each(|id|
+                data.get_residents().iter().for_each(|id| {
                     if citizens.remove(id).is_none() {
-                        error!("Failed to remove citizen: {}",id);
-                    });
+                        error!("Failed to remove citizen: {}", id);
+                    }
+                });
 
                 false
             } else {
@@ -397,14 +473,12 @@ impl SimulatorBuilder {
             }
         });
         info!("Starting to build workplaces");
-        self
-            .build_workplaces(&mut rng, possible_workplaces)
+        self.build_workplaces(&mut rng, possible_workplaces)
             .context("Failed to build workplaces")?;
         timer.code_block_finished("Generated workplaces for {} Output Areas")?;
 
         // Infect random citizens
-        self
-            .apply_initial_infections(&mut rng)
+        self.apply_initial_infections(&mut rng)
             .context("Failed to create initial infections")?;
 
         timer.code_block_finished("Initialization completed wi")?;
@@ -415,8 +489,7 @@ impl SimulatorBuilder {
         );
         assert_eq!(
             self.citizens.len() as u32,
-            self
-                .output_areas
+            self.output_areas
                 .iter()
                 .map(|area| area.1.total_residents)
                 .sum::<u32>()
@@ -425,9 +498,11 @@ impl SimulatorBuilder {
     }
 }
 
-
 /// On csgpu2 with 20? threads took 11 seconds as oppose to 57 seconds for single threaded version
-fn parallel_assign_buildings_to_output_areas(building_locations: &HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, output_area_lookup: &PolygonContainer<String>) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
+fn parallel_assign_buildings_to_output_areas(
+    building_locations: &HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+    output_area_lookup: &PolygonContainer<String>,
+) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
     building_locations.into_par_iter().map(|(building_type, possible_building_locations)|
         {
             // Try find Area Codes for the given building

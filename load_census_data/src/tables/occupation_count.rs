@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -29,7 +29,9 @@ use strum_macros::{EnumCount as EnumCountMacro, EnumIter};
 use crate::parsing_error::{DataLoadingError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
-#[derive(Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy, EnumIter)]
+#[derive(
+Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy, EnumIter,
+)]
 pub enum OccupationType {
     #[serde(alias = "All categories: Occupation")]
     All,

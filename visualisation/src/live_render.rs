@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -103,11 +103,7 @@ impl RenderSim {
             max_height - min_height,
         );
         self.screen_coords = r;
-        ggez::graphics::set_screen_coordinates(
-            ctx,
-            r,
-        )
-            .unwrap();
+        ggez::graphics::set_screen_coordinates(ctx, r).unwrap();
     }
     fn get_colour_for_area(&self, area: &OutputArea) -> Color {
         match self.colour_coding_strategy {
@@ -189,8 +185,15 @@ impl EventHandler for RenderSim {
         }
         // Draw Statistics For Epidemic
         let mut statistics = graphics::Text::new(format!("{}", self.simulator.statistics));
-        statistics.set_font(Font::default(), PxScale::from(20.0 * self.screen_coords.w as f32 / 1920.0));
-        let coords = [self.screen_coords.x + (self.screen_coords.w / 2.0) - statistics.width(ctx) as f32 / 2.0, self.screen_coords.y + (self.screen_coords.h * 0.02)];
+        statistics.set_font(
+            Font::default(),
+            PxScale::from(20.0 * self.screen_coords.w as f32 / 1920.0),
+        );
+        let coords = [
+            self.screen_coords.x + (self.screen_coords.w / 2.0)
+                - statistics.width(ctx) as f32 / 2.0,
+            self.screen_coords.y + (self.screen_coords.h * 0.02),
+        ];
         let mut params = graphics::DrawParam::default().dest(coords);
         params.color = Color::BLACK;
         graphics::draw(ctx, &statistics, params)?;

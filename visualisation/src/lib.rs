@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -22,11 +22,11 @@ use geo_types::Coordinate;
 
 use crate::error::{DrawingResult, MyDrawingError};
 
+pub mod citizen_connections;
 pub mod error;
 pub mod image_export;
 #[cfg(feature = "webp")]
 pub mod live_render;
-pub mod citizen_connections;
 
 pub const GRID_SIZE: u32 = 32800;
 const X_OFFSET: i32 = 75000;

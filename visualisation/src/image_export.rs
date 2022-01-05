@@ -25,7 +25,10 @@ use geo_types::{Coordinate, Polygon};
 use log::{debug, info};
 use plotters::chart::ChartContext;
 use plotters::coord::types::RangedCoordi32;
-use plotters::prelude::{BitMapBackend, Cartesian2d, ChartBuilder, IntoDrawingArea, IntoFont, Palette, Palette99, RED, WHITE};
+use plotters::prelude::{
+    BitMapBackend, Cartesian2d, ChartBuilder, IntoDrawingArea, IntoFont, Palette, Palette99, RED,
+    WHITE,
+};
 use plotters::style::TextStyle;
 use polylabel::polylabel;
 
@@ -35,20 +38,25 @@ use crate::{convert_geo_point_to_pixel, GRID_SIZE};
 use crate::error::DrawingResult;
 
 #[inline]
-fn building_colour(class: load_census_data::osm_parsing::TagClassifiedBuilding) -> plotters::style::RGBColor {
+fn building_colour(
+    class: load_census_data::osm_parsing::TagClassifiedBuilding,
+) -> plotters::style::RGBColor {
     let index = match class {
-        TagClassifiedBuilding::Shop => { 1 }
-        TagClassifiedBuilding::School => { 2 }
-        TagClassifiedBuilding::Hospital => { 3 }
-        TagClassifiedBuilding::Household => { 4 }
-        TagClassifiedBuilding::WorkPlace => { 5 }
-        TagClassifiedBuilding::Unknown => { 6 }
+        TagClassifiedBuilding::Shop => 1,
+        TagClassifiedBuilding::School => 2,
+        TagClassifiedBuilding::Hospital => 3,
+        TagClassifiedBuilding::Household => 4,
+        TagClassifiedBuilding::WorkPlace => 5,
+        TagClassifiedBuilding::Unknown => 6,
     };
     let c = &Palette99::COLORS[index];
     plotters::style::RGBColor(c.0, c.1, c.2)
 }
 
-pub fn draw_buildings(filename: String, buildings: Vec<load_census_data::osm_parsing::RawBuilding>) -> DrawingResult<()> {
+pub fn draw_buildings(
+    filename: String,
+    buildings: Vec<load_census_data::osm_parsing::RawBuilding>,
+) -> DrawingResult<()> {
     let start_time = Instant::now();
     info!("Drawing output areas on map...");
     // TODO Did we fuck up the lat and lon somewhere?
@@ -58,18 +66,27 @@ pub fn draw_buildings(filename: String, buildings: Vec<load_census_data::osm_par
 
     for (index, building) in buildings.iter().enumerate() {
         let colour = building_colour(building.classification());
-        let size = ((building.size().max(1) / scale as isize) as f64).sqrt().ceil() as i32;
+        let size = ((building.size().max(1) / scale as isize) as f64)
+            .sqrt()
+            .ceil() as i32;
         let side_length = size / 2;
-        let top_left = ((building.center().x() as i32 / scale) - side_length, (building.center().y() as i32) / scale - side_length);
-        let bottom_right = ((building.center().x() as i32 / scale) + side_length, (building.center().y() as i32 / scale) + side_length);
+        let top_left = (
+            (building.center().x() as i32 / scale) - side_length,
+            (building.center().y() as i32) / scale - side_length,
+        );
+        let bottom_right = (
+            (building.center().x() as i32 / scale) + side_length,
+            (building.center().y() as i32 / scale) + side_length,
+        );
         let rect = plotters::element::Rectangle::new([top_left, bottom_right], colour);
-
 
         if index % 1000000 == 0 {
             debug!(
                 "  Drawing the {} rect ({:?},{:?}) with colour {:?} at time {:?}",
                 index,
-                top_left,bottom_right,colour,
+                top_left,
+                bottom_right,
+                colour,
                 start_time.elapsed()
             );
         }
@@ -113,8 +130,25 @@ impl From<(String, Polygon<isize>, Option<f64>)> for DrawingRecord {
     fn from(data: (String, Polygon<isize>, Option<f64>)) -> Self {
         DrawingRecord {
             code: data.0,
-            polygon: geo_types::Polygon::new(data.1.exterior().0.iter().map(|p| (p.x as f64, p.y as f64).into()).collect::<Vec<geo_types::Coordinate<f64>>>().into(),
-                                             data.1.interiors().iter().map(|l| l.0.iter().map(|p| (p.x as f64, p.y as f64).into()).collect::<Vec<geo_types::Coordinate<f64>>>().into()).collect()),
+            polygon: geo_types::Polygon::new(
+                data.1
+                    .exterior()
+                    .0
+                    .iter()
+                    .map(|p| (p.x as f64, p.y as f64).into())
+                    .collect::<Vec<geo_types::Coordinate<f64>>>()
+                    .into(),
+                data.1
+                    .interiors()
+                    .iter()
+                    .map(|l| {
+                        l.0.iter()
+                            .map(|p| (p.x as f64, p.y as f64).into())
+                            .collect::<Vec<geo_types::Coordinate<f64>>>()
+                            .into()
+                    })
+                    .collect(),
+            ),
             percentage_highlighting: data.2,
             label: None,
         }
