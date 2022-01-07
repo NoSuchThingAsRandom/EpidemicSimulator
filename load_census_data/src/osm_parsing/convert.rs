@@ -69,9 +69,6 @@ pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
     latitude: f64,
     longitude: f64,
 ) -> (isize, isize) {
-    return (((longitude + 6.5) * 50000.0) as isize, ((latitude - 48.5) * 50000.0) as isize);
-
-
     let (x, y, z) = lat_lon_to_cartesian(latitude, longitude, Ellipsoid::GRS80_zone_30());
     let (x, y, z) = helmert_wgs84_to_osbg36((x, y, z));
     let (lat, lon) = cartesian_to_lat_lon(x, y, z, Ellipsoid::airy());

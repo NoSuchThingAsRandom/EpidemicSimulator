@@ -274,7 +274,6 @@ impl PolygonContainer<String> {
                     index * 10000,
                     start_time.elapsed().as_secs_f64()
                 );
-                    println!("{:?}", polygon.rings()[0].points());
                 }
                 assert!(!polygon.rings().is_empty());
                 let rings: Vec<geo_types::Coordinate<isize>>;
@@ -340,9 +339,6 @@ impl PolygonContainer<String> {
                     },
                 });
             };
-            if index % 50000 == 0 {
-                println!("{:?}", polygon.exterior().0);
-            }
 
             // Retrieve the area code:
             let code_record =

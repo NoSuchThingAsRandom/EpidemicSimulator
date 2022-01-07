@@ -51,10 +51,10 @@ impl Scaling {
     }
     pub const fn yorkshire_national_grid() -> Scaling {
         Scaling {
-            x_offset: 0000,
-            x_scale: 1,
+            x_offset: 0,
+            x_scale: 16,
             y_offset: 0,
-            y_scale: 1,
+            y_scale: 16,
         }
     }
     /// Converts a coordinate to fit on the grid

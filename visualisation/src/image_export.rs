@@ -47,7 +47,7 @@ pub struct DrawingRecord {
     pub percentage_highlighting: Option<f64>,
     /// If a label should be placed on the image
     pub label: Option<String>,
-    pub filled: bool
+    pub filled: bool,
 }
 
 impl DrawingRecord {
@@ -63,7 +63,7 @@ impl From<(String, Polygon<f64>)> for DrawingRecord {
             polygon: data.1,
             percentage_highlighting: None,
             label: None,
-            filled: false
+            filled: false,
         }
     }
 }
@@ -94,7 +94,7 @@ impl From<(String, &Polygon<isize>, Option<f64>)> for DrawingRecord {
             ),
             percentage_highlighting: data.2,
             label: None,
-            filled: false
+            filled: false,
         }
     }
 }
@@ -154,7 +154,7 @@ impl From<(String, Polygon<isize>, Option<f64>)> for DrawingRecord {
             ),
             percentage_highlighting: data.2,
             label: None,
-            filled: false
+            filled: false,
         }
     }
 }
@@ -166,21 +166,21 @@ impl From<(&String, &Polygon<f64>)> for DrawingRecord {
             polygon: data.1.clone(),
             percentage_highlighting: None,
             label: None,
-            filled: false
+            filled: false,
         }
     }
 }
 
-fn draw_polygon_ring(
+fn draw_polygon_ring_filled(
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
     points: &[Coordinate<f64>],
-    filled: bool,
     colour: plotters::style::RGBColor,
 ) -> DrawingResult<()> {
     let points = points
         .iter()
         .map(|p| convert_geo_point_to_pixel(*p))
         .collect::<DrawingResult<Vec<(i32, i32)>>>()?;
+    // Draw Outline
     chart
         .draw_series(std::iter::once(plotters::prelude::PathElement::new(
             points.clone(), ShapeStyle {
@@ -190,17 +190,33 @@ fn draw_polygon_ring(
             },
         )))
         .unwrap();
-    if filled {
-        chart
-            .draw_series(std::iter::once(plotters::prelude::Polygon::new(
-                points, ShapeStyle {
-                    color: RED.to_rgba(),
-                    filled: true,
-                    stroke_width: 1,
-                },
-            )))
-            .unwrap();
-    }
+    // Draw fill
+    chart
+        .draw_series(std::iter::once(plotters::prelude::Polygon::new(
+            points, ShapeStyle {
+                color: RED.to_rgba(),
+                filled: true,
+                stroke_width: 1,
+            },
+        )))
+        .unwrap();
+
+    Ok(())
+}
+
+fn draw_polygon_ring(
+    draw_backend: &DrawingArea<BitMapBackend, Shift>,
+    points: &[Coordinate<f64>],
+    colour: plotters::style::RGBColor,
+) -> DrawingResult<()> {
+    let points = points
+        .iter()
+        .map(|p| convert_geo_point_to_pixel(geo_types::Coordinate::from(
+            (p.x as f64,
+             ((p.y as isize - GRID_SIZE as isize).abs() as f64)))))
+        .collect::<DrawingResult<Vec<(i32, i32)>>>()?;
+    let polygon = plotters::element::Polygon::new(points, colour);
+    draw_backend.draw(&polygon);
     Ok(())
 }
 
@@ -216,11 +232,20 @@ fn render_output_areas(data: Vec<DrawingRecord>, draw_backend: &DrawingArea<BitM
 
         // Draw exterior ring
         let c = (area.percentage_highlighting.unwrap_or(1.0) * 255.0).ceil() as u8;
-        let colour = plotters::style::RGBColor(0, 0, 0);
-        draw_polygon_ring(chart, &area.polygon.exterior().0, area.filled, colour)?;
-        for p in area.polygon.interiors() {
-            draw_polygon_ring(chart, &p.0, area.filled, colour)?;
+        let mut colour = plotters::style::RGBColor(0, 0, 0);
+        if area.filled {
+            colour = RED;
+            /*draw_polygon_ring_filled(chart, &area.polygon.exterior().0, colour)?;
+            for p in area.polygon.interiors() {
+                draw_polygon_ring_filled(chart, &area.polygon.exterior().0, colour)?;
+            }
+        } else {*/
         }
+        draw_polygon_ring(draw_backend, &area.polygon.exterior().0, colour)?;
+        for p in area.polygon.interiors() {
+            draw_polygon_ring(draw_backend, &p.0, colour)?;
+        }
+
 
         if index % 1000 == 0 {
             debug!(
@@ -320,8 +345,8 @@ pub fn draw_buildings_and_output_areas(filename: String, data: Vec<DrawingRecord
     draw_backend.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&draw_backend)
         .build_cartesian_2d(0..(PIXEL_SIZE as i32), 0..(PIXEL_SIZE as i32))?;
-    render_buildings(buildings, &draw_backend)?;
     render_output_areas(data, &draw_backend, &mut chart)?;
+    render_buildings(buildings, &draw_backend)?;
     draw_backend.present().unwrap();
     info!("Finished drawing in {:?}", start_time.elapsed());
     Ok(())
