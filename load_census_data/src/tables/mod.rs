@@ -89,8 +89,9 @@ impl CensusTableNames {
         match &self {
             CensusTableNames::PopulationDensity => "ks101ew_population_144.csv",
             CensusTableNames::OccupationCount => "ks608uk_occupation_count_NM_1518_1.csv",
+            // TODO Fix this
             CensusTableNames::OutputAreaMap => {
-                "data/census_map_areas/England_oa_2011/england_oa_2011.shp"
+                "data/census_map_areas_converted/TestOutputAreas.shp"
             }
             CensusTableNames::ResidentialAreaVsWorkplaceArea => {
                 "wf01bew_residential_vs_workplace_NM_1228_1.csv"

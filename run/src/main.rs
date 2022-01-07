@@ -158,7 +158,6 @@ async fn main() -> anyhow::Result<()> {
         "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
         area, use_cache, !allow_downloads
     );
-
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
         CensusData::load_all_tables_async(
@@ -244,6 +243,7 @@ async fn main() -> anyhow::Result<()> {
                     code.to_string(),
                     (area),
                     None,
+                    false
                 ))
             })
             .collect();
@@ -393,6 +393,12 @@ async fn load_data_and_init_sim_with_debug_images(
 ) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
     let (census_data, osm_buildings, output_area_polygons) = load_data(area, census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
+    let old_polygons = output_area_polygons.polygons.clone();
+    let old_buildings: Vec<RawBuilding> = osm_buildings.building_locations.clone().drain()
+        .map(|(_, b)| b)
+        .flatten()
+        .collect();
+    ;
     let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
@@ -407,7 +413,20 @@ async fn load_data_and_init_sim_with_debug_images(
         .assign_buildings_to_output_areas()
         .context("Failed to assign buildings to output areas")?;
 
-    draw_output_areas(String::from("images/OutputAreasWithBuildings.png"), &sim.output_areas)?;
+    let polygon_data: Vec<visualisation::image_export::DrawingRecord> = old_polygons
+        .iter()
+        .map(|(code, area)| {
+            DrawingRecord::from((
+                code.to_string(),
+                (area)
+                , None,
+                !sim.output_areas.contains_key(&OutputAreaID::from_code(code.to_string()))
+            ))
+        })
+        .collect();
+    draw_buildings_and_output_areas(String::from("images/OutputAreasWithBuildings.png"), polygon_data, old_buildings)?;
+    panic!("Sonde");
+
     let mut citizens = sim
         .generate_citizens(&mut rng, &mut possible_buildings_per_area)
         .context("Failed to generate Citizens")?;
@@ -480,6 +499,7 @@ pub fn draw_census_data(
                 polygon: output_areas_polygons.get(code)?.clone(),
                 percentage_highlighting: Some(0.25),
                 label: None,
+                filled: false,
             })
         })
         .collect();
@@ -494,6 +514,7 @@ pub fn draw_census_data(
                 polygon: output_areas_polygons.get(code)?.clone(),
                 percentage_highlighting: Some(0.6),
                 label: None,
+                filled: false,
             })
         })
         .collect();
@@ -508,6 +529,7 @@ pub fn draw_census_data(
                 polygon: output_areas_polygons.get(code)?.clone(),
                 percentage_highlighting: Some(1.0),
                 label: None,
+                filled: false,
             })
         })
         .collect();

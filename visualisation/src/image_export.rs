@@ -47,6 +47,7 @@ pub struct DrawingRecord {
     pub percentage_highlighting: Option<f64>,
     /// If a label should be placed on the image
     pub label: Option<String>,
+    pub filled: bool
 }
 
 impl DrawingRecord {
@@ -62,6 +63,7 @@ impl From<(String, Polygon<f64>)> for DrawingRecord {
             polygon: data.1,
             percentage_highlighting: None,
             label: None,
+            filled: false
         }
     }
 }
@@ -92,6 +94,37 @@ impl From<(String, &Polygon<isize>, Option<f64>)> for DrawingRecord {
             ),
             percentage_highlighting: data.2,
             label: None,
+            filled: false
+        }
+    }
+}
+
+impl From<(String, &Polygon<isize>, Option<f64>, bool)> for DrawingRecord {
+    fn from(data: (String, &Polygon<isize>, Option<f64>, bool)) -> Self {
+        DrawingRecord {
+            code: data.0,
+            polygon: geo_types::Polygon::new(
+                data.1
+                    .exterior()
+                    .0
+                    .iter()
+                    .map(|p| (p.x as f64, p.y as f64).into())
+                    .collect::<Vec<geo_types::Coordinate<f64>>>()
+                    .into(),
+                data.1
+                    .interiors()
+                    .iter()
+                    .map(|l| {
+                        l.0.iter()
+                            .map(|p| (p.x as f64, p.y as f64).into())
+                            .collect::<Vec<geo_types::Coordinate<f64>>>()
+                            .into()
+                    })
+                    .collect(),
+            ),
+            percentage_highlighting: data.2,
+            label: None,
+            filled: data.3,
         }
     }
 }
@@ -121,6 +154,7 @@ impl From<(String, Polygon<isize>, Option<f64>)> for DrawingRecord {
             ),
             percentage_highlighting: data.2,
             label: None,
+            filled: false
         }
     }
 }
@@ -132,6 +166,7 @@ impl From<(&String, &Polygon<f64>)> for DrawingRecord {
             polygon: data.1.clone(),
             percentage_highlighting: None,
             label: None,
+            filled: false
         }
     }
 }
@@ -139,6 +174,7 @@ impl From<(&String, &Polygon<f64>)> for DrawingRecord {
 fn draw_polygon_ring(
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
     points: &[Coordinate<f64>],
+    filled: bool,
     colour: plotters::style::RGBColor,
 ) -> DrawingResult<()> {
     let points = points
@@ -147,13 +183,24 @@ fn draw_polygon_ring(
         .collect::<DrawingResult<Vec<(i32, i32)>>>()?;
     chart
         .draw_series(std::iter::once(plotters::prelude::PathElement::new(
-            points, ShapeStyle {
+            points.clone(), ShapeStyle {
                 color: colour.to_rgba(),
                 filled: false,
-                stroke_width: 2,
+                stroke_width: 1,
             },
         )))
         .unwrap();
+    if filled {
+        chart
+            .draw_series(std::iter::once(plotters::prelude::Polygon::new(
+                points, ShapeStyle {
+                    color: RED.to_rgba(),
+                    filled: true,
+                    stroke_width: 1,
+                },
+            )))
+            .unwrap();
+    }
     Ok(())
 }
 
@@ -170,12 +217,12 @@ fn render_output_areas(data: Vec<DrawingRecord>, draw_backend: &DrawingArea<BitM
         // Draw exterior ring
         let c = (area.percentage_highlighting.unwrap_or(1.0) * 255.0).ceil() as u8;
         let colour = plotters::style::RGBColor(0, 0, 0);
-        draw_polygon_ring(chart, &area.polygon.exterior().0, colour)?;
+        draw_polygon_ring(chart, &area.polygon.exterior().0, area.filled, colour)?;
         for p in area.polygon.interiors() {
-            draw_polygon_ring(chart, &p.0, colour)?;
+            draw_polygon_ring(chart, &p.0, area.filled, colour)?;
         }
 
-        if index % 100 == 0 {
+        if index % 1000 == 0 {
             debug!(
                 "  Drawing the {} output area at time {:?}",
                 index,

@@ -141,7 +141,9 @@ impl RawBuilding {
         Some(RawBuilding {
             classification,
             center: boundary.centroid().map(|p| {
-                geo_types::Point::from((p.x().round() as isize, p.y().round() as isize))
+                // TODO Find out where Y coordinate is being offset
+                // TODO Remove this hacky workaround to "fix" the offset
+                geo_types::Point::from((p.x().round() as isize, (p.y().round()) as isize))
             })?,
             size,
         })

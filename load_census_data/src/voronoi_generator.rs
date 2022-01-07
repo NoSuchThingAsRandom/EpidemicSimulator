@@ -69,7 +69,7 @@ impl Scaling {
         );
         assert!(
             0 <= point.1 as isize,
-            "X scaling cannot be done, as it is negative: {}",
+            "Y scaling cannot be done, as it is negative: {}",
             point.1
         );
         let x = (point.0 as isize - self.x_offset) / self.x_scale;

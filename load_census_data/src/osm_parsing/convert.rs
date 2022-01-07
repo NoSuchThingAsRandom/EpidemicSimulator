@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -69,6 +69,9 @@ pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
     latitude: f64,
     longitude: f64,
 ) -> (isize, isize) {
+    return (((longitude + 6.5) * 50000.0) as isize, ((latitude - 48.5) * 50000.0) as isize);
+
+
     let (x, y, z) = lat_lon_to_cartesian(latitude, longitude, Ellipsoid::GRS80_zone_30());
     let (x, y, z) = helmert_wgs84_to_osbg36((x, y, z));
     let (lat, lon) = cartesian_to_lat_lon(x, y, z, Ellipsoid::airy());
@@ -87,6 +90,7 @@ fn f64_trimmed_to_isize(position: (f64, f64)) -> (isize, isize) {
 
 pub fn degrees_to_decimal(_coord: String) -> f64 {
     //https://support.goldensoftware.com/hc/en-us/articles/228362688-Convert-Degrees-Minutes-Seconds-To-Decimal-Degrees-in-Strater
+
     todo!()
 }
 
@@ -229,10 +233,7 @@ fn helmert_wgs84_to_osbg36(point: (f64, f64, f64)) -> (f64, f64, f64) {
 
 #[cfg(test)]
 mod tests {
-    use crate::osm_parsing::convert::{
-        cartesian_to_lat_lon, Ellipsoid, helmert_wgs84_to_osbg36, lat_lon_to_cartesian,
-        lat_lon_to_eastings,
-    };
+    use crate::osm_parsing::convert::{cartesian_to_lat_lon, decimal_latitude_and_longitude_to_northing_and_eastings, Ellipsoid, helmert_wgs84_to_osbg36, lat_lon_to_cartesian, lat_lon_to_eastings};
 
     #[test]
     pub fn test_wgs84_to_osbg36() {
@@ -395,6 +396,35 @@ mod tests {
         let diff_easting = (easting - expected_easting).abs();
         assert!(
             diff_easting < desired_accuracy,
+            "Easting Coordinate is incorrect, actual: {}, expected: {}, difference: {}",
+            easting,
+            expected_easting,
+            diff_easting
+        );
+    }
+
+    #[test]
+    fn test_decimal_latitude_and_longitude_to_northing_and_eastings() {
+        let desired_accuracy = 0;
+        let lat = 53.61199; // 53 36 43.1653 N
+        let lon = -1.664442; // 001 39 51.9920 W
+        println!("Starting Lat/Lon: {}, {}", lat, lon);
+        let (easting, northing) = decimal_latitude_and_longitude_to_northing_and_eastings(lat, lon);
+        println!("Northings/Eastings: {}, {}", northing, easting);
+        let expected_northing = 412878;
+        let diff_northing = (northing - expected_northing);
+        assert_eq!(
+            diff_northing, desired_accuracy,
+            "Northing Coordinate is incorrect, actual: {}, expected: {}, difference: {}",
+            northing,
+            expected_northing,
+            diff_northing
+        );
+
+        let expected_easting = 422297;
+        let diff_easting = (easting - expected_easting);
+        assert_eq!(
+            diff_easting, desired_accuracy,
             "Easting Coordinate is incorrect, actual: {}, expected: {}, difference: {}",
             easting,
             expected_easting,

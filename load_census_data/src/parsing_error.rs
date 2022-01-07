@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, write};
 use std::num::{ParseFloatError, ParseIntError};
 
 use osmpbf::Error;
@@ -129,6 +129,9 @@ pub enum DataLoadingError {
     OSMError {
         source: osmpbf::Error,
     },
+    ShapeFileError {
+        source: shapefile::Error,
+    },
     /// An error occurs fetching via reqwest
     NetworkError {
         source: reqwest::Error,
@@ -163,6 +166,7 @@ impl std::error::Error for DataLoadingError {
             DataLoadingError::IOError { ref source, .. } => source.source(),
             DataLoadingError::Misc { .. } => None,
             DataLoadingError::OSMError { ref source } => Some(source),
+            DataLoadingError::ShapeFileError { ref source } => { Some(source) }
         }
     }
 }
@@ -240,6 +244,12 @@ impl Debug for DataLoadingError {
         write!(f, "{}", self)
     }
 }
+
+impl From<shapefile::Error> for DataLoadingError {
+    fn from(e: shapefile::Error) -> Self {
+        DataLoadingError::ShapeFileError { source: e }
+    }
+}
 /*
 impl Debug for ParsingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -276,6 +286,9 @@ impl Display for DataLoadingError {
             }
             DataLoadingError::OSMError { source } => {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: OSM Error\n        Source: {} ", source)
+            }
+            DataLoadingError::ShapeFileError { source } => {
+                write!(f, "\nAn error occured loading a shapefile: {}", source)
             }
         }
     }

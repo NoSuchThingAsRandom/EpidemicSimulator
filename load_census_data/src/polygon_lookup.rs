@@ -48,10 +48,12 @@ use geo_types::{CoordNum, LineString};
 use log::{debug, info, warn};
 use num_traits::PrimInt;
 use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
 use crate::DataLoadingError;
+use crate::osm_parsing::convert::decimal_latitude_and_longitude_to_northing_and_eastings;
 use crate::osm_parsing::GRID_SIZE;
 use crate::parsing_error::ParseErrorType;
 use crate::parsing_error::ParseErrorType::{MathError, MissingKey};
@@ -262,14 +264,18 @@ impl PolygonContainer<String> {
                 context: format!("Shape File '{}' doesn't exist!", filename),
             })?;
         let mut start_time = Instant::now();
-        let mut data = HashMap::new();
-        info!("Loading map data from file...");
-        for (index, shape_record) in reader.iter_shapes_and_records().enumerate() {
-            let (shape, mut record) = shape_record.map_err(|e| DataLoadingError::IOError {
-                source: Box::new(e),
-                context: "Failed to read shape record!".to_string(),
-            })?;
+        //let mut data = HashMap::new();
+        info!("Loading map data from file {}",filename);
+        let mut data = reader.read()?.par_iter().enumerate().map(|(index, (shape, record))| {
             let polygon = if let Shape::Polygon(polygon) = shape {
+                if index % 50000 == 0 {
+                    debug!(
+                    "Built {} polygons in time: {}",
+                    index * 10000,
+                    start_time.elapsed().as_secs_f64()
+                );
+                    println!("{:?}", polygon.rings()[0].points());
+                }
                 assert!(!polygon.rings().is_empty());
                 let rings: Vec<geo_types::Coordinate<isize>>;
                 let mut interior_ring;
@@ -278,9 +284,16 @@ impl PolygonContainer<String> {
                         .points()
                         .iter()
                         .map(|p| {
+                            // TODO Reenable this if using old system
+                            // TODO Reenable this if using old system
+                            /*
                             geo_types::Coordinate::from((
                                 p.x.round() as isize,
                                 p.y.round() as isize,
+                            ))*/
+                            geo_types::Coordinate::from(decimal_latitude_and_longitude_to_northing_and_eastings(
+                                p.y,
+                                p.x,
                             ))
                         })
                         .collect();
@@ -294,10 +307,16 @@ impl PolygonContainer<String> {
                                 r.points()
                                     .iter()
                                     .map(|p| {
+                                        geo_types::Coordinate::from(decimal_latitude_and_longitude_to_northing_and_eastings(
+                                            p.y,
+                                            p.x,
+                                        ))
+                                        // TODO Reenable this if using old system
+                                        /*
                                         geo_types::Coordinate::from((
                                             p.x.round() as isize,
                                             p.y.round() as isize,
-                                        ))
+                                        ))*/
                                     })
                                     .collect::<Vec<geo_types::Coordinate<isize>>>(),
                             )
@@ -321,11 +340,14 @@ impl PolygonContainer<String> {
                     },
                 });
             };
+            if index % 50000 == 0 {
+                println!("{:?}", polygon.exterior().0);
+            }
 
             // Retrieve the area code:
             let code_record =
                 record
-                    .remove("code")
+                    .get("code")
                     .ok_or_else(|| DataLoadingError::ValueParsingError {
                         source: MissingKey {
                             context: "Output Area is missing it's code".to_string(),
@@ -335,11 +357,15 @@ impl PolygonContainer<String> {
             let code: String;
             match code_record {
                 FieldValue::Character(value) => {
-                    code = value.ok_or_else(|| DataLoadingError::ValueParsingError {
-                        source: ParseErrorType::IsEmpty {
-                            message: "The code for an Output Area is empty".to_string(),
-                        },
-                    })?;
+                    if let Some(value) = value {
+                        code = value.to_string()
+                    } else {
+                        return Err(DataLoadingError::ValueParsingError {
+                            source: ParseErrorType::IsEmpty {
+                                message: "The code for an Output Area is empty".to_string(),
+                            }
+                        });
+                    }
                 }
                 _ => {
                     return Err(DataLoadingError::ValueParsingError {
@@ -350,16 +376,9 @@ impl PolygonContainer<String> {
                     });
                 }
             }
-            if index % 50000 == 0 {
-                debug!(
-                    "Built {} polygons in time: {}",
-                    index * 10000,
-                    start_time.elapsed().as_secs_f64()
-                );
-                start_time = Instant::now();
-            }
-            data.insert(code, polygon);
-        }
+
+            Ok((code, polygon))
+        }).collect::<Result<HashMap<String, geo_types::Polygon<isize>>, DataLoadingError>>()?;
         info!("Finished loading map data in {:?}", start_time.elapsed());
         let scaling = Scaling::output_areas();
         PolygonContainer::new(data, scaling, GRID_SIZE as f64)
