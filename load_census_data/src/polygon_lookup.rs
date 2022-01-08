@@ -39,11 +39,12 @@
  *
  */
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::time::Instant;
 
-use geo::prelude::{BoundingRect, Contains};
+use geo::prelude::{BoundingRect, Intersects};
 use geo_types::{CoordNum, LineString};
 use log::{debug, info, warn};
 use num_traits::PrimInt;
@@ -110,24 +111,29 @@ fn geo_point_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default
     Ok(area)
 }
 
+/// A lookup table for finding the closest `seed` to a given point
+///
+/// T Represents the Data Type used as the index of the `seed`
 #[derive(Debug)]
 pub struct PolygonContainer<T: Debug + Clone + Eq + Ord + Hash> {
-    pub lookup: Quadtree<isize, T>,
+    pub lookup: Quadtree<i32, T>,
     /// The polygon and it's ID
-    pub polygons: HashMap<T, geo_types::Polygon<isize>>,
+    ///
+    /// Has to be i32, for the geo::Intersects function
+    pub polygons: HashMap<T, geo_types::Polygon<i32>>,
     pub scaling: Scaling,
-    pub grid_size: f64,
+    pub grid_size: i32,
 }
 
 impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
     ///
     pub fn new(
-        polygons: HashMap<T, geo_types::Polygon<isize>>,
+        polygons: HashMap<T, geo_types::Polygon<i32>>,
         scaling: Scaling,
-        grid_size: f64,
+        grid_size: i32,
     ) -> Result<PolygonContainer<T>, DataLoadingError> {
         // Build Quadtree, with Coords of isize and values of seed points
-        let mut lookup: Quadtree<isize, T> = Quadtree::new((grid_size).log2().ceil() as usize);
+        let mut lookup: Quadtree<i32, T> = Quadtree::new((f64::from(grid_size)).log2().ceil() as usize);
         for (id, polygon) in &polygons {
             let bounds =
                 polygon
@@ -137,14 +143,14 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                             context: "Failed to generate bounding box for polygon".to_string(),
                         },
                     })?;
-            let mut bounds = scaling.scale_rect(bounds, grid_size as isize);
+            let mut bounds = scaling.scale_rect(bounds, grid_size);
             if bounds.width() == 0 {
                 bounds.set_max((bounds.max().x + 1, bounds.max().y));
             }
             if bounds.height() == 0 {
                 bounds.set_max((bounds.max().x, bounds.max().y + 1));
             }
-            if (grid_size as isize) < bounds.max().x {
+            if (grid_size) < bounds.max().x {
                 return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::OutOfBounds {
                         context: "Max X Coordinate is outside bounding rect".to_string(),
@@ -153,7 +159,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                     },
                 });
             }
-            if (grid_size as isize) < bounds.max().y {
+            if (grid_size) < bounds.max().y {
                 return Err(DataLoadingError::ValueParsingError {
                     source: ParseErrorType::OutOfBounds {
                         context: "Max Y Coordinate is outside bounding rect".to_string(),
@@ -207,24 +213,63 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         })
     }
 
-    /// Finds the polygon that contains the given point
+    /// Finds the index ofpolygon that contains the given point
+    ///
+    /// Note the point needs to be scaled
+    pub fn find_polygons_containing_polygon(
+        &self,
+        polygon: &geo_types::Polygon<i32>,
+    ) -> Result<Vec<&T>, DataLoadingError> {
+        // TODO Move this scaling
+        let scaled_polygon: geo_types::Polygon<i32> = self
+            .scaling.scale_polygon(polygon, self.grid_size)
+            .into();
+        let res = self.lookup.query(geo_polygon_to_quad_area(&scaled_polygon)?);
+        let mut results = Vec::new();
+        for entry in res {
+            let id = entry.value_ref();
+            let test_polygon =
+                self.polygons
+                    .get(id)
+                    .ok_or_else(|| DataLoadingError::ValueParsingError {
+                        source: ParseErrorType::MissingKey {
+                            context: "Can't find polygon with id".to_string(),
+                            key: format!("{:?}", id),
+                        },
+                    })?;
+            if test_polygon.intersects(polygon) {
+                results.push(id);
+            }
+        }
+        if results.is_empty() {
+            Err(DataLoadingError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: "Can't find nearest seed for polygon".to_string(),
+                    key: String::new(),
+                },
+            })
+        } else {
+            Ok(results)
+        }
+    }
+    /// Finds index of the polygon that contains the given point
     ///
     /// Note the point needs to be scaled
     pub fn find_polygon_for_point(
         &self,
-        point: &geo_types::Point<isize>,
+        point: &geo_types::Point<i32>,
     ) -> Result<&T, DataLoadingError> {
         // TODO Move this scaling
-        let scaled_point: geo_types::Point<isize> = self
+        let scaled_point: geo_types::Point<i32> = self
             .scaling
-            .scale_point((point.x(), point.y()), self.grid_size as isize)
+            .scale_point((point.x(), point.y()), self.grid_size)
             .into();
         assert!(
-            scaled_point.x() < self.grid_size as isize,
+            scaled_point.x() < self.grid_size,
             "X Coordinate is out of range!"
         );
         assert!(
-            scaled_point.y() < self.grid_size as isize,
+            scaled_point.y() < self.grid_size,
             "Y Coordinate is out of range!"
         );
         let res = self.lookup.query(geo_point_to_quad_area(&scaled_point)?);
@@ -236,10 +281,10 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                     .ok_or_else(|| DataLoadingError::ValueParsingError {
                         source: ParseErrorType::MissingKey {
                             context: "Can't find polygon with id".to_string(),
-                            key: format!("{:?}", point),
+                            key: format!("{:?}", id),
                         },
                     })?;
-            if poly.contains(point) {
+            if poly.intersects(point) {
                 return Ok(id);
             }
         }
@@ -276,14 +321,13 @@ impl PolygonContainer<String> {
                 );
                 }
                 assert!(!polygon.rings().is_empty());
-                let rings: Vec<geo_types::Coordinate<isize>>;
+                let rings: Vec<geo_types::Coordinate<i32>>;
                 let mut interior_ring;
                 if polygon.rings().len() == 1 {
                     rings = polygon.rings()[0]
                         .points()
                         .iter()
                         .map(|p| {
-                            // TODO Reenable this if using old system
                             // TODO Reenable this if using old system
                             /*
                             geo_types::Coordinate::from((
@@ -317,7 +361,7 @@ impl PolygonContainer<String> {
                                             p.y.round() as isize,
                                         ))*/
                                     })
-                                    .collect::<Vec<geo_types::Coordinate<isize>>>(),
+                                    .collect::<Vec<geo_types::Coordinate<i32>>>(),
                             )
                         })
                         .collect();
@@ -374,10 +418,10 @@ impl PolygonContainer<String> {
             }
 
             Ok((code, polygon))
-        }).collect::<Result<HashMap<String, geo_types::Polygon<isize>>, DataLoadingError>>()?;
+        }).collect::<Result<HashMap<String, geo_types::Polygon<i32>>, DataLoadingError>>()?;
         info!("Finished loading map data in {:?}", start_time.elapsed());
         let scaling = Scaling::output_areas();
-        PolygonContainer::new(data, scaling, GRID_SIZE as f64)
+        PolygonContainer::new(data, scaling, i32::try_from(GRID_SIZE).expect(format!("GRID SIZE {} is bigger than an i32", GRID_SIZE).as_str()))
     }
     /*    pub fn remove_polygon(&mut self, output_area_id: T) {
         let poly=self.polygons.remove(&output_area_id).unwrap();

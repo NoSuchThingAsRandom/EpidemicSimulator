@@ -15,6 +15,7 @@ geo-types = { version = "0.7.2", features = ["serde"] }
 lazy_static = "1.4.0"
 log = "0.4.14"
 lonlat_bng = "0.3.8"
+num = "0.4.0"
 num-traits = "0.2.14"
 ndarray = "0.15.4"
 osmpbf = "0.2.6"
@@ -34,4 +35,5 @@ shapefile = { version = "0.3.0", features = ["geo-types"] }
 strum = "0.23"
 strum_macros = "0.23"
 syn = "=1.0.82"
+uuid = { version = "0.8", features = ["v4", "serde"] }
 voronoice = { git = "https://github.com/NoSuchThingAsRandom/voronoice" }

@@ -19,11 +19,14 @@
  */
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::fmt::Display;
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
-use geo_types::{LineString, Point};
+use geo_types::{Coordinate, CoordNum, LineString, Point};
 use log::{debug, info, trace};
+use num_traits::NumCast;
 use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
@@ -61,27 +64,27 @@ impl Scaling {
     ///
     /// Used to represent a smaller grid, reducing RAM size
     #[inline]
-    pub fn scale_point(&self, point: (isize, isize), grid_size: isize) -> (isize, isize) {
+    pub fn scale_point<T: CoordNum + Display>(&self, point: (T, T), grid_size: T) -> (T, T) {
         assert!(
-            0 <= point.0 as isize,
+            T::zero() <= point.0,
             "X scaling cannot be done, as it is negative: {}",
             point.0
         );
         assert!(
-            0 <= point.1 as isize,
+            T::zero() <= point.1,
             "Y scaling cannot be done, as it is negative: {}",
             point.1
         );
-        let x = (point.0 as isize - self.x_offset) / self.x_scale;
-        let y = (point.1 as isize - self.y_offset) / self.y_scale;
-        assert!(0 <= x, "X Coord {} is less than zero", x);
+        let x = (point.0 - T::from(self.x_offset).expect("Couldn't represent `x_offset` in generic type ")) / T::from(self.x_scale).expect("Couldn't represent `x_scale` in generic type ");
+        let y = (point.1 - T::from(self.y_offset).expect("Couldn't represent `y_offset` in generic type ")) / T::from(self.y_scale).expect("Couldn't represent `y_scale` in generic type ");
+        assert!(T::zero() <= x, "X Coord {} is less than zero", x);
         assert!(
             x < grid_size,
             "X Coord {} is greater than the grid size {}",
             x,
             grid_size
         );
-        assert!(0 <= y, "Y Coord {} is less than zero", y);
+        assert!(T::zero() <= y, "Y Coord {} is less than zero", y);
         assert!(
             y < grid_size,
             "Y Coord {} is greater than the grid size {}",
@@ -90,32 +93,38 @@ impl Scaling {
         );
         (x, y)
     }
-    pub fn scale_polygon(
+
+    pub fn scale_points<T: CoordNum + Display>(&self, points: &Vec<(Coordinate<T>)>, grid_size: T) -> Vec<(Coordinate<T>)> {
+        points.iter()
+            .map(|p| {
+                assert!(T::zero() <= p.x, "X Coord ({}) is less than zero!", p.x);
+                assert!(T::zero() <= p.y, "Y Coord ({}) is less than zero!", p.y);
+                let x = self.scale_point((p.x, p.y), grid_size);
+                let p: geo_types::Coordinate<T> = x.into();
+                return p;
+            })
+            .collect()
+    }
+    #[inline]
+    pub fn scale_polygon<T: CoordNum + Display>(
         &self,
-        polygon: &geo_types::Polygon<isize>,
-        grid_size: isize,
-    ) -> geo_types::Polygon<isize> {
+        polygon: &geo_types::Polygon<T>,
+        grid_size: T,
+    ) -> geo_types::Polygon<T> {
         geo_types::Polygon::new(
-            polygon
-                .exterior()
-                .0
-                .iter()
-                .map(|p| {
-                    assert!(0 <= p.x, "X Coord ({}) is less than zero!", p.x);
-                    assert!(0 <= p.y, "Y Coord ({}) is less than zero!", p.y);
-                    let x = self.scale_point((p.x, p.y), grid_size);
-                    let p: geo_types::Coordinate<isize> = x.into();
-                    return p;
-                })
-                .collect(),
-            vec![],
+            self.scale_points(
+                &polygon
+                    .exterior()
+                    .0, grid_size).into(),
+            polygon.interiors().iter().map(|interior| self.scale_points(
+                &interior.0, grid_size).into()).collect(),
         )
     }
-    pub fn scale_rect(
+    pub fn scale_rect<T: CoordNum + Display>(
         &self,
-        rect: geo_types::Rect<isize>,
-        grid_size: isize,
-    ) -> geo_types::Rect<isize> {
+        rect: geo_types::Rect<T>,
+        grid_size: T,
+    ) -> geo_types::Rect<T> {
         geo_types::Rect::new(
             self.scale_point(rect.min().x_y(), grid_size),
             self.scale_point(rect.max().x_y(), grid_size),
@@ -156,13 +165,15 @@ fn get_random_point_inside_polygon(
     Some(start)
 }
 
-fn voronoi_cell_to_polygon(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<isize> {
+fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<T> {
     //points.push(points.first().expect("Polygon has too many points, Vec is out of space!"));
     // Convert to ints and build the exterior line
+    let a: f64 = 1.0;
+    let b: T = T::from(a).unwrap();
     let points = cell
         .iter_vertices()
-        .map(|point| geo_types::Point::new(point.x.round() as isize, point.y.round() as isize))
-        .collect::<Vec<geo_types::Point<isize>>>();
+        .map(|point| geo_types::Point::new(T::from(point.x.round()).expect("Failed to represent f64 x coordinate as T"), T::from(point.y.round()).expect("Failed to represent f64 y coordinate as T")))
+        .collect::<Vec<geo_types::Point<T>>>();
     geo_types::Polygon::new(LineString::from(points), Vec::new())
 }
 
@@ -192,8 +203,9 @@ pub fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T,
 
 #[derive(Debug)]
 pub struct Voronoi {
-    pub grid_size: usize,
-    pub seeds: Vec<(usize, usize)>,
+    pub grid_size: i32,
+    pub seeds: Vec<(i32, i32)>,
+    // The polygon id?
     pub polygons: PolygonContainer<usize>,
 
     pub scaling: Scaling,
@@ -204,8 +216,8 @@ impl Voronoi {
     ///
     /// Size represents the grid size to represent
     pub fn new(
-        size: usize,
-        seeds: Vec<(usize, usize)>,
+        size: i32,
+        seeds: Vec<(i32, i32)>,
         scaling: Scaling,
     ) -> Result<Voronoi, DataLoadingError> {
         info!(
@@ -219,7 +231,7 @@ impl Voronoi {
         let voronoi_seeds: Vec<voronoice::Point> = seeds
             .iter()
             .map(|p| {
-                let (x, y) = scaling.scale_point((p.0 as isize, p.1 as isize), size as isize);
+                let (x, y) = scaling.scale_point((p.0, p.1), size);
                 voronoice::Point {
                     x: x as f64,
                     y: y as f64,
@@ -232,12 +244,12 @@ impl Voronoi {
         let boundary = find_seed_bounds(
             &voronoi_seeds
                 .iter()
-                .map(|p| (p.x as isize, p.y as isize))
-                .collect::<Vec<(isize, isize)>>(),
+                .map(|p| ((p.x.round() as i32), (p.y.round() as i32)))
+                .collect::<Vec<(i32, i32)>>(),
         );
         trace!("Voronoi Boundary: {:?}", boundary);
         // The size must be even, otherwise we get a negative bounding box
-        let mut size = boundary.1.0.max(boundary.1.1) as usize;
+        let mut size = boundary.1.0.max(boundary.1.1);
         if size % 2 != 0 {
             size += 1;
         }
@@ -263,7 +275,7 @@ impl Voronoi {
                 polygons.cells().len()
             );
             // Convert to a lazy iterator of geo polygons
-            let polygons: HashMap<usize, geo_types::Polygon<isize>> = polygons
+            let polygons: HashMap<usize, geo_types::Polygon<i32>> = polygons
                 .iter_cells()
                 .enumerate()
                 .map(|(index, p)| (index, voronoi_cell_to_polygon(&p)))
@@ -279,7 +291,7 @@ impl Voronoi {
             });
         };
 
-        let container = PolygonContainer::new(polygons, Scaling::output_areas(), GRID_SIZE as f64)?;
+        let container = PolygonContainer::new(polygons, Scaling::output_areas(), GRID_SIZE as i32)?;
         debug!("Built quad tree");
 
         Ok(Voronoi {
@@ -292,11 +304,11 @@ impl Voronoi {
     /// Attempts to find the closest seed to the given point
     pub fn find_seed_for_point(
         &self,
-        point: geo_types::Point<isize>,
-    ) -> Result<(usize, usize), DataLoadingError> {
+        point: geo_types::Point<i32>,
+    ) -> Result<(i32, i32), DataLoadingError> {
         let point = self
             .scaling
-            .scale_point(point.x_y(), self.grid_size as isize);
+            .scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(&point)?;
         Ok(*self
@@ -321,8 +333,8 @@ mod tests {
     #[test]
     fn voronoi_seed_generation_and_retrieval() {
         let mut rng = thread_rng();
-        let grid_size: usize = 10000;
-        let seeds: Vec<(usize, usize)> = (0..100)
+        let grid_size: i32 = 10000;
+        let seeds: Vec<(i32, i32)> = (0..100)
             .map(|_| (rng.gen_range(0..grid_size), rng.gen_range(0..grid_size)))
             .collect();
         let diagram = Voronoi::new(grid_size, seeds.clone(), Scaling::default());
@@ -334,20 +346,20 @@ mod tests {
         let diagram = diagram.unwrap();
         for seed in seeds {
             let result = diagram
-                .find_seed_for_point(geo_types::Point::new(seed.0 as isize, seed.1 as isize));
+                .find_seed_for_point(seed.into());
             assert!(result.is_ok(), "{:?}", result);
             assert_eq!(result.unwrap(), (seed.0, seed.1))
         }
     }
 
     fn line_string_to_polygon_container(
-        points: geo_types::LineString<isize>,
+        points: geo_types::LineString<i32>,
     ) -> Result<PolygonContainer<i32>, DataLoadingError> {
         let polygon = geo_types::Polygon::new(points, vec![]);
         PolygonContainer::new(
             [(0, polygon)].iter().cloned().collect(),
             Scaling::default(),
-            100.0,
+            100,
         )
     }
 

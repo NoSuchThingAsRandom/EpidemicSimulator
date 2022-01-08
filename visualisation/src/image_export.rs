@@ -69,8 +69,8 @@ impl From<(String, Polygon<f64>)> for DrawingRecord {
 }
 
 
-impl From<(String, &Polygon<isize>, Option<f64>)> for DrawingRecord {
-    fn from(data: (String, &Polygon<isize>, Option<f64>)) -> Self {
+impl From<(String, &Polygon<i32>, Option<f64>)> for DrawingRecord {
+    fn from(data: (String, &Polygon<i32>, Option<f64>)) -> Self {
         DrawingRecord {
             code: data.0,
             polygon: geo_types::Polygon::new(
@@ -99,8 +99,8 @@ impl From<(String, &Polygon<isize>, Option<f64>)> for DrawingRecord {
     }
 }
 
-impl From<(String, &Polygon<isize>, Option<f64>, bool)> for DrawingRecord {
-    fn from(data: (String, &Polygon<isize>, Option<f64>, bool)) -> Self {
+impl From<(String, &Polygon<i32>, Option<f64>, bool)> for DrawingRecord {
+    fn from(data: (String, &Polygon<i32>, Option<f64>, bool)) -> Self {
         DrawingRecord {
             code: data.0,
             polygon: geo_types::Polygon::new(
@@ -129,8 +129,8 @@ impl From<(String, &Polygon<isize>, Option<f64>, bool)> for DrawingRecord {
     }
 }
 
-impl From<(String, Polygon<isize>, Option<f64>)> for DrawingRecord {
-    fn from(data: (String, Polygon<isize>, Option<f64>)) -> Self {
+impl From<(String, Polygon<i32>, Option<f64>)> for DrawingRecord {
+    fn from(data: (String, Polygon<i32>, Option<f64>)) -> Self {
         DrawingRecord {
             code: data.0,
             polygon: geo_types::Polygon::new(
@@ -213,7 +213,7 @@ fn draw_polygon_ring(
         .iter()
         .map(|p| convert_geo_point_to_pixel(geo_types::Coordinate::from(
             (p.x as f64,
-             ((p.y as isize - GRID_SIZE as isize).abs() as f64)))))
+             ((p.y as i32 - GRID_SIZE as i32).abs() as f64)))))
         .collect::<DrawingResult<Vec<(i32, i32)>>>()?;
     let polygon = plotters::element::Polygon::new(points, colour);
     draw_backend.draw(&polygon);
@@ -293,14 +293,14 @@ fn render_buildings(buildings: Vec<load_census_data::osm_parsing::RawBuilding>, 
     let start_time = Instant::now();
     for (index, building) in buildings.iter().enumerate() {
         let colour = building_colour(building.classification());
-        let size = ((building.size().max(1) / SCALE as isize) as f64)
+        let size = ((building.size().max(1) / SCALE) as f64)
             .sqrt()
             .ceil() as i32;
         let side_length = size / 2;
 
         let p = convert_geo_point_to_pixel(geo_types::Coordinate::from(
             (building.center().x() as f64,
-             ((building.center().y() as isize - GRID_SIZE as isize).abs() as f64))))?;
+             ((building.center().y() as i32 - GRID_SIZE as i32).abs() as f64))))?;
         let top_left = (p.0 - side_length, p.1 - side_length);
         let bottom_right = (p.0 + side_length, p.1 + side_length);
         let rect = plotters::element::Rectangle::new([top_left, bottom_right], colour);

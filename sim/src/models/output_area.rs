@@ -69,7 +69,7 @@ pub struct OutputArea {
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
     pub buildings: HashMap<BuildingID, Box<dyn Building>>,
     /// A polygon for drawing this output area
-    pub polygon: geo_types::Polygon<isize>,
+    pub polygon: geo_types::Polygon<i32>,
     pub total_residents: u32,
     /// The distribution to use to determine whether a Citizen is wearing a mask\
     /// Is stored as a distribution to increase speed
@@ -82,7 +82,7 @@ impl OutputArea {
     /// Builds the citizens and households for this area
     pub fn new(
         output_area_id: OutputAreaID,
-        polygon: geo_types::Polygon<isize>,
+        polygon: geo_types::Polygon<i32>,
         mask_compliance_ratio: f64,
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {

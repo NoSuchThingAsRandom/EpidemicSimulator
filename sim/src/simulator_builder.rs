@@ -23,13 +23,13 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use anyhow::Context;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use load_census_data::CensusData;
-use load_census_data::osm_parsing::{OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
+use load_census_data::osm_parsing::{BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::occupation_count::OccupationType;
@@ -100,6 +100,7 @@ impl SimulatorBuilder {
         );
         // Assign possible buildings to output areas
         let possible_buildings_per_area = parallel_assign_buildings_to_output_areas(
+            &self.osm_data.building_boundaries,
             &self.osm_data.building_locations,
             &self.output_areas_polygons,
         );
@@ -503,6 +504,7 @@ impl SimulatorBuilder {
 
 /// On csgpu2 with 20? threads took 11 seconds as oppose to 57 seconds for single threaded version
 fn parallel_assign_buildings_to_output_areas(
+    building_boundaries: &HashMap<BuildingBoundaryID, geo_types::Polygon<i32>>,
     building_locations: &HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
     output_area_lookup: &PolygonContainer<String>,
 ) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
@@ -510,38 +512,39 @@ fn parallel_assign_buildings_to_output_areas(
         {
             // Try find Area Codes for the given building
             let area_codes = possible_building_locations.into_par_iter().filter_map(|building| {
-                if let Ok(area_code) = output_area_lookup.find_polygon_for_point(&building.center()) {
-                    let area_id = OutputAreaID::from_code(area_code.to_string());
-                    return Some((area_id, vec![building]));
+                let boundary = building_boundaries.get(&building.boundary_id());
+                if let Some(boundary) = boundary {
+                    if let Ok(areas) = output_area_lookup.find_polygons_containing_polygon(boundary) {
+                        let f = areas.iter().map(|area|
+                            OutputAreaID::from_code(area.to_string()))
+                            .zip(std::iter::repeat(vec![*building]))
+                            .collect::<HashMap<OutputAreaID, Vec<RawBuilding>>>();
+                        return Some(f);
+                    }
+                } else {
+                    warn!("Raw Building is missing Boundary with id: {:?}",building.boundary_id());
                 }
                 None
-            }
-                                                                                    // Group By Area Code
-            ).fold(HashMap::new, |mut a: HashMap<OutputAreaID, Vec<RawBuilding>>, b| {
-                let area_entry = a.entry(b.0.clone()).or_default();
-                area_entry.extend(b.1);
-                a
-                // Combine into single hashmap
-            }).reduce(HashMap::new, |mut a, b| {
+            });
+            // Group By Area Code
+            let area_codes = area_codes.reduce(HashMap::new, |mut a, b| {
                 for (area, area_buildings) in b {
                     let area_entry = a.entry(area).or_default();
                     area_entry.extend(area_buildings)
                 }
                 a
             });
-            (building_type, area_codes)
-        }).
-        // Group buildings per area, by Classification code
-        fold(HashMap::new, |mut a: HashMap<
-            OutputAreaID,
-            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>, b| {
-            for (area_code, buildings) in b.1 {
-                let area_entry = a.entry(area_code).or_default();
-                let class_entry = area_entry.entry(*b.0).or_default();
-                class_entry.extend(buildings);
-            }
-            a
-        }).
+            (*building_type, area_codes)
+        }).fold(HashMap::new, |mut a: HashMap<
+        OutputAreaID,
+        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>, b: (TagClassifiedBuilding, HashMap<OutputAreaID, Vec<RawBuilding>>)| {
+        for (area_code, buildings) in b.1 {
+            let area_entry = a.entry(area_code).or_default();
+            let class_entry = area_entry.entry(b.0).or_default();
+            class_entry.extend(buildings);
+        }
+        a
+    }).
         // Reduce to a single hashmap
         reduce(HashMap::new, |mut a, b| {
             for (area, classed_buildings) in b {

@@ -68,7 +68,7 @@ impl Ellipsoid {
 pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
     latitude: f64,
     longitude: f64,
-) -> (isize, isize) {
+) -> (i32, i32) {
     let (x, y, z) = lat_lon_to_cartesian(latitude, longitude, Ellipsoid::GRS80_zone_30());
     let (x, y, z) = helmert_wgs84_to_osbg36((x, y, z));
     let (lat, lon) = cartesian_to_lat_lon(x, y, z, Ellipsoid::airy());
@@ -77,11 +77,11 @@ pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
 }
 
 /// Trims f64 coordinates to an isize
-fn f64_trimmed_to_isize(position: (f64, f64)) -> (isize, isize) {
+fn f64_trimmed_to_isize(position: (f64, f64)) -> (i32, i32) {
     // TODO Do we need to keep decimal precision?
     (
-        (position.0 * 10.0).round() as isize / 10,
-        (position.1 * 10.0).round() as isize / 10,
+        (position.0 * 10.0).round() as i32 / 10,
+        (position.1 * 10.0).round() as i32 / 10,
     )
 }
 

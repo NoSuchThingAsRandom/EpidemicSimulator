@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -29,13 +29,13 @@ use crate::osm_parsing::GRID_SIZE;
 
 fn draw_polygon_ring(
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
-    points: &LineString<isize>,
+    points: &LineString<i32>,
     colour: plotters::style::RGBAColor,
 ) {
     let points: Vec<(i32, i32)> = points
         .0
         .iter()
-        .map(|p| (p.x as i32 / 25, p.y as i32 / 25))
+        .map(|p| (p.x / 25, p.y / 25))
         .collect();
     chart
         .draw_series(std::iter::once(plotters::prelude::Polygon::new(
@@ -72,7 +72,7 @@ pub fn draw_osm_buildings_polygons(
 
 pub fn draw_voronoi_polygons(
     filename: String,
-    polygons: &[&geo_types::Polygon<isize>],
+    polygons: &[&geo_types::Polygon<i32>],
     grid_size: u32,
 ) {
     println!("Drawing at: {}", filename);
