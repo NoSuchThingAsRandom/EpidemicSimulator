@@ -27,7 +27,10 @@ use plotters::chart::ChartContext;
 use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordi32;
 use plotters::drawing::DrawingArea;
-use plotters::prelude::{BitMapBackend, Cartesian2d, ChartBuilder, Color, IntoDrawingArea, IntoFont, Palette, Palette99, RED, ShapeStyle, WHITE};
+use plotters::prelude::{
+    BitMapBackend, Cartesian2d, ChartBuilder, Color, IntoDrawingArea, IntoFont, Palette, Palette99,
+    RED, ShapeStyle, WHITE,
+};
 use plotters::style::TextStyle;
 use polylabel::polylabel;
 
@@ -67,7 +70,6 @@ impl From<(String, Polygon<f64>)> for DrawingRecord {
         }
     }
 }
-
 
 impl From<(String, &Polygon<i32>, Option<f64>)> for DrawingRecord {
     fn from(data: (String, &Polygon<i32>, Option<f64>)) -> Self {
@@ -183,7 +185,8 @@ fn draw_polygon_ring_filled(
     // Draw Outline
     chart
         .draw_series(std::iter::once(plotters::prelude::PathElement::new(
-            points.clone(), ShapeStyle {
+            points.clone(),
+            ShapeStyle {
                 color: colour.to_rgba(),
                 filled: false,
                 stroke_width: 1,
@@ -193,7 +196,8 @@ fn draw_polygon_ring_filled(
     // Draw fill
     chart
         .draw_series(std::iter::once(plotters::prelude::Polygon::new(
-            points, ShapeStyle {
+            points,
+            ShapeStyle {
                 color: RED.to_rgba(),
                 filled: true,
                 stroke_width: 1,
@@ -211,16 +215,23 @@ fn draw_polygon_ring(
 ) -> DrawingResult<()> {
     let points = points
         .iter()
-        .map(|p| convert_geo_point_to_pixel(geo_types::Coordinate::from(
-            (p.x as f64,
-             ((p.y as i32 - GRID_SIZE as i32).abs() as f64)))))
+        .map(|p| {
+            convert_geo_point_to_pixel(geo_types::Coordinate::from((
+                p.x as f64,
+                ((p.y as i32 - GRID_SIZE as i32).abs() as f64),
+            )))
+        })
         .collect::<DrawingResult<Vec<(i32, i32)>>>()?;
     let polygon = plotters::element::Polygon::new(points, colour);
     draw_backend.draw(&polygon);
     Ok(())
 }
 
-fn render_output_areas(data: Vec<DrawingRecord>, draw_backend: &DrawingArea<BitMapBackend, Shift>, chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>) -> DrawingResult<()> {
+fn render_output_areas(
+    data: Vec<DrawingRecord>,
+    draw_backend: &DrawingArea<BitMapBackend, Shift>,
+    chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
+) -> DrawingResult<()> {
     let start_time = Instant::now();
     let style = TextStyle::from(("sans-serif", 20).into_font()).color(&RED);
     for (index, area) in data.iter().enumerate() {
@@ -236,16 +247,15 @@ fn render_output_areas(data: Vec<DrawingRecord>, draw_backend: &DrawingArea<BitM
         if area.filled {
             colour = RED;
             /*draw_polygon_ring_filled(chart, &area.polygon.exterior().0, colour)?;
-            for p in area.polygon.interiors() {
-                draw_polygon_ring_filled(chart, &area.polygon.exterior().0, colour)?;
-            }
-        } else {*/
+                for p in area.polygon.interiors() {
+                    draw_polygon_ring_filled(chart, &area.polygon.exterior().0, colour)?;
+                }
+            } else {*/
         }
         draw_polygon_ring(draw_backend, &area.polygon.exterior().0, colour)?;
         for p in area.polygon.interiors() {
             draw_polygon_ring(draw_backend, &p.0, colour)?;
         }
-
 
         if index % 1000 == 0 {
             debug!(
@@ -272,7 +282,6 @@ pub fn draw_output_areas(filename: String, data: Vec<DrawingRecord>) -> DrawingR
     Ok(())
 }
 
-
 #[inline]
 fn building_colour(
     class: load_census_data::osm_parsing::TagClassifiedBuilding,
@@ -289,18 +298,20 @@ fn building_colour(
     plotters::style::RGBColor(c.0, c.1, c.2)
 }
 
-fn render_buildings(buildings: Vec<load_census_data::osm_parsing::RawBuilding>, draw_backend: &DrawingArea<BitMapBackend, Shift>) -> DrawingResult<()> {
+fn render_buildings(
+    buildings: Vec<load_census_data::osm_parsing::RawBuilding>,
+    draw_backend: &DrawingArea<BitMapBackend, Shift>,
+) -> DrawingResult<()> {
     let start_time = Instant::now();
     for (index, building) in buildings.iter().enumerate() {
         let colour = building_colour(building.classification());
-        let size = ((building.size().max(1) / SCALE) as f64)
-            .sqrt()
-            .ceil() as i32;
+        let size = ((building.size().max(1) / SCALE) as f64).sqrt().ceil() as i32;
         let side_length = size / 2;
 
-        let p = convert_geo_point_to_pixel(geo_types::Coordinate::from(
-            (building.center().x() as f64,
-             ((building.center().y() as i32 - GRID_SIZE as i32).abs() as f64))))?;
+        let p = convert_geo_point_to_pixel(geo_types::Coordinate::from((
+            building.center().x() as f64,
+            ((building.center().y() as i32 - GRID_SIZE as i32).abs() as f64),
+        )))?;
         let top_left = (p.0 - side_length, p.1 - side_length);
         let bottom_right = (p.0 + side_length, p.1 + side_length);
         let rect = plotters::element::Rectangle::new([top_left, bottom_right], colour);
@@ -336,9 +347,12 @@ pub fn draw_buildings(
     Ok(())
 }
 
-
 /// Creates a png at the given filename, from the List of Output Areas
-pub fn draw_buildings_and_output_areas(filename: String, data: Vec<DrawingRecord>, buildings: Vec<load_census_data::osm_parsing::RawBuilding>) -> DrawingResult<()> {
+pub fn draw_buildings_and_output_areas(
+    filename: String,
+    data: Vec<DrawingRecord>,
+    buildings: Vec<load_census_data::osm_parsing::RawBuilding>,
+) -> DrawingResult<()> {
     let start_time = Instant::now();
     info!("Drawing output areas and buildings on map");
     let draw_backend = BitMapBackend::new(&filename, (PIXEL_SIZE, PIXEL_SIZE)).into_drawing_area();

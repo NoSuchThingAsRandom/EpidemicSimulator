@@ -133,7 +133,8 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         grid_size: i32,
     ) -> Result<PolygonContainer<T>, DataLoadingError> {
         // Build Quadtree, with Coords of isize and values of seed points
-        let mut lookup: Quadtree<i32, T> = Quadtree::new((f64::from(grid_size)).log2().ceil() as usize);
+        let mut lookup: Quadtree<i32, T> =
+            Quadtree::new((f64::from(grid_size)).log2().ceil() as usize);
         for (id, polygon) in &polygons {
             let bounds =
                 polygon
@@ -221,10 +222,11 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         polygon: &geo_types::Polygon<i32>,
     ) -> Result<Vec<&T>, DataLoadingError> {
         // TODO Move this scaling
-        let scaled_polygon: geo_types::Polygon<i32> = self
-            .scaling.scale_polygon(polygon, self.grid_size)
-            .into();
-        let res = self.lookup.query(geo_polygon_to_quad_area(&scaled_polygon)?);
+        let scaled_polygon: geo_types::Polygon<i32> =
+            self.scaling.scale_polygon(polygon, self.grid_size).into();
+        let res = self
+            .lookup
+            .query(geo_polygon_to_quad_area(&scaled_polygon)?);
         let mut results = Vec::new();
         for entry in res {
             let id = entry.value_ref();
@@ -310,7 +312,7 @@ impl PolygonContainer<String> {
             })?;
         let mut start_time = Instant::now();
         //let mut data = HashMap::new();
-        info!("Loading map data from file {}",filename);
+        info!("Loading map data from file {}", filename);
         let mut data = reader.read()?.par_iter().enumerate().map(|(index, (shape, record))| {
             let polygon = if let Shape::Polygon(polygon) = shape {
                 if index % 50000 == 0 {
@@ -421,7 +423,12 @@ impl PolygonContainer<String> {
         }).collect::<Result<HashMap<String, geo_types::Polygon<i32>>, DataLoadingError>>()?;
         info!("Finished loading map data in {:?}", start_time.elapsed());
         let scaling = Scaling::output_areas();
-        PolygonContainer::new(data, scaling, i32::try_from(GRID_SIZE).expect(format!("GRID SIZE {} is bigger than an i32", GRID_SIZE).as_str()))
+        PolygonContainer::new(
+            data,
+            scaling,
+            i32::try_from(GRID_SIZE)
+                .expect(format!("GRID SIZE {} is bigger than an i32", GRID_SIZE).as_str()),
+        )
     }
     /*    pub fn remove_polygon(&mut self, output_area_id: T) {
         let poly=self.polygons.remove(&output_area_id).unwrap();

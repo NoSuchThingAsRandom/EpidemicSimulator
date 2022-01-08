@@ -55,28 +55,38 @@ pub const GRID_SIZE: usize = 50000;
 const DUMP_TO_FILE: bool = false;
 const DRAW_VORONOI_DIAGRAMS: bool = false;
 
-
-fn convert_points_to_floats<T: CoordNum, U: CoordFloat>(points: &Vec<(geo_types::Coordinate<T>)>) -> Vec<(geo_types::Coordinate<U>)> {
-    points.iter()
+fn convert_points_to_floats<T: CoordNum, U: CoordFloat>(
+    points: &Vec<(geo_types::Coordinate<T>)>,
+) -> Vec<(geo_types::Coordinate<U>)> {
+    points
+        .iter()
         .map(|p| {
-            let p: geo_types::Coordinate<U> = (U::from(p.x).expect(format!("Failed to convert X coordinate ({:?}) to float", p.x).as_str()),
-                                               U::from(p.y).expect(format!("Failed to convert Y coordinate ({:?}) to float", p.y).as_str())).into();
+            let p: geo_types::Coordinate<U> = (
+                U::from(p.x).expect(
+                    format!("Failed to convert X coordinate ({:?}) to float", p.x).as_str(),
+                ),
+                U::from(p.y).expect(
+                    format!("Failed to convert Y coordinate ({:?}) to float", p.y).as_str(),
+                ),
+            )
+                .into();
             return p;
         })
         .collect()
 }
 
-pub fn convert_polygon_to_float<T: CoordNum, U: CoordFloat>(polygon: &geo_types::Polygon<T>) -> geo_types::Polygon<U> {
+pub fn convert_polygon_to_float<T: CoordNum, U: CoordFloat>(
+    polygon: &geo_types::Polygon<T>,
+) -> geo_types::Polygon<U> {
     geo_types::Polygon::new(
-        convert_points_to_floats(
-            &polygon
-                .exterior()
-                .0).into(),
-        polygon.interiors().iter().map(|interior| convert_points_to_floats(
-            &interior.0).into()).collect(),
+        convert_points_to_floats(&polygon.exterior().0).into(),
+        polygon
+            .interiors()
+            .iter()
+            .map(|interior| convert_points_to_floats(&interior.0).into())
+            .collect(),
     )
 }
-
 
 /// The type of buildings that are supported from the OSM Tag lists
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -156,7 +166,6 @@ pub struct BuildingBoundaryID {
     id: uuid::Uuid,
 }
 
-
 /// This is a representation of an OSM building
 ///
 /// It has a type, given by the OSM Tags, as well as a center point, and an approximate size
@@ -183,9 +192,9 @@ impl RawBuilding {
         let size = float_boundary.unsigned_area().round() as i32;
         Some(RawBuilding {
             classification,
-            center: float_boundary.centroid().map(|p| {
-                geo_types::Point::from((p.x().round() as i32, (p.y().round()) as i32))
-            })?,
+            center: float_boundary
+                .centroid()
+                .map(|p| geo_types::Point::from((p.x().round() as i32, (p.y().round()) as i32)))?,
             boundary_id,
             size,
         })
@@ -258,7 +267,7 @@ pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(
 pub struct OSMRawBuildings {
     /// A hashmap for referencing a buildings outline/boundaries
     ///
-    /// Stored in a Hashmap to attempt to reduce copies of the same Polygons, as multiple [`RawBuilding`]s can share the same 
+    /// Stored in a Hashmap to attempt to reduce copies of the same Polygons, as multiple [`RawBuilding`]s can share the same
     pub building_boundaries: HashMap<BuildingBoundaryID, Polygon<i32>>,
     pub building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
     pub building_voronois: HashMap<TagClassifiedBuilding, Voronoi>,
@@ -267,7 +276,13 @@ pub struct OSMRawBuildings {
 impl OSMRawBuildings {
     fn read_cached_osm_data(
         cache_filename: String,
-    ) -> Result<(HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, HashMap<BuildingBoundaryID, Polygon<i32>>), DataLoadingError> {
+    ) -> Result<
+        (
+            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+            HashMap<BuildingBoundaryID, Polygon<i32>>,
+        ),
+        DataLoadingError,
+    > {
         debug!("Reading cached parsing data");
         let mut file =
             File::open(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
@@ -288,7 +303,13 @@ impl OSMRawBuildings {
     fn load_and_write_cache(
         raw_filename: String,
         cache_filename: String,
-    ) -> Result<(HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, HashMap<BuildingBoundaryID, Polygon<i32>>), DataLoadingError> {
+    ) -> Result<
+        (
+            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+            HashMap<BuildingBoundaryID, Polygon<i32>>,
+        ),
+        DataLoadingError,
+    > {
         debug!("Parsing data from raw OSM file");
         let building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
         let mut file =
@@ -393,7 +414,13 @@ impl OSMRawBuildings {
 
     fn read_buildings_from_osm(
         filename: String,
-    ) -> Result<(HashMap<TagClassifiedBuilding, Vec<RawBuilding>>, HashMap<BuildingBoundaryID, Polygon<i32>>), DataLoadingError> {
+    ) -> Result<
+        (
+            HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+            HashMap<BuildingBoundaryID, Polygon<i32>>,
+        ),
+        DataLoadingError,
+    > {
         use osmpbf::{Element, ElementReader};
         info!("Reading OSM data from file: {}", filename);
         let reader = ElementReader::from_path(filename)?;
@@ -465,7 +492,9 @@ impl OSMRawBuildings {
             let building_id = BuildingBoundaryID::default();
             let mut building_exists = false;
             for classification in building_classification {
-                if let Some(building) = RawBuilding::new(classification, &building_shape, building_id) {
+                if let Some(building) =
+                RawBuilding::new(classification, &building_shape, building_id)
+                {
                     let building_entry = buildings.entry(classification).or_default();
                     building_entry.push(building);
                     building_exists = true;
@@ -474,7 +503,15 @@ impl OSMRawBuildings {
                 }
             }
             if building_exists {
-                building_boundaries.insert(building_id, building_shape).expect(format!("Building ID {:?}, has multiple entries which shouldn't be possible! ", building_id).as_str());
+                building_boundaries
+                    .insert(building_id, building_shape)
+                    .expect(
+                        format!(
+                            "Building ID {:?}, has multiple entries which shouldn't be possible! ",
+                            building_id
+                        )
+                            .as_str(),
+                    );
             }
         }
         debug!(
@@ -492,7 +529,9 @@ impl OSMRawBuildings {
                         .into(),
                     vec![],
                 );
-                if let Some(building) = RawBuilding::new(node.classification, &building_shape, building_boundary_id) {
+                if let Some(building) =
+                RawBuilding::new(node.classification, &building_shape, building_boundary_id)
+                {
                     let building_entry = buildings.entry(node.classification).or_default();
                     building_entry.push(building);
                     building_boundaries.insert(building_boundary_id, building_shape).expect(format!("Building ID {:?}, has multiple entries which shouldn't be possible! ", building_boundary_id).as_str());

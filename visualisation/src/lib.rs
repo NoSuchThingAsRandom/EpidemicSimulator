@@ -33,7 +33,7 @@ pub const PIXEL_SIZE: u32 = 32800;
 pub const SCALE: i32 = ((GRID_SIZE / PIXEL_SIZE) as i32) + 1;
 const X_OFFSET: i32 = 0;
 //75000;
-const Y_OFFSET: i32 = 0;// 1000;
+const Y_OFFSET: i32 = 0; // 1000;
 
 /// Converts a geo_types::Coordinate to a Pixel Mapping on the GRID
 fn convert_geo_point_to_pixel(coords: Coordinate<f64>) -> DrawingResult<(i32, i32)> {

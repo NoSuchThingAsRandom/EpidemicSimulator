@@ -29,7 +29,9 @@ use rand::prelude::{IteratorRandom, SliceRandom};
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use load_census_data::CensusData;
-use load_census_data::osm_parsing::{BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
+use load_census_data::osm_parsing::{
+    BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding,
+};
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::occupation_count::OccupationType;

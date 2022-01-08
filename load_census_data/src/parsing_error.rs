@@ -166,7 +166,7 @@ impl std::error::Error for DataLoadingError {
             DataLoadingError::IOError { ref source, .. } => source.source(),
             DataLoadingError::Misc { .. } => None,
             DataLoadingError::OSMError { ref source } => Some(source),
-            DataLoadingError::ShapeFileError { ref source } => { Some(source) }
+            DataLoadingError::ShapeFileError { ref source } => Some(source),
         }
     }
 }

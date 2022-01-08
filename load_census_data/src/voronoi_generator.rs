@@ -75,8 +75,12 @@ impl Scaling {
             "Y scaling cannot be done, as it is negative: {}",
             point.1
         );
-        let x = (point.0 - T::from(self.x_offset).expect("Couldn't represent `x_offset` in generic type ")) / T::from(self.x_scale).expect("Couldn't represent `x_scale` in generic type ");
-        let y = (point.1 - T::from(self.y_offset).expect("Couldn't represent `y_offset` in generic type ")) / T::from(self.y_scale).expect("Couldn't represent `y_scale` in generic type ");
+        let x = (point.0
+            - T::from(self.x_offset).expect("Couldn't represent `x_offset` in generic type "))
+            / T::from(self.x_scale).expect("Couldn't represent `x_scale` in generic type ");
+        let y = (point.1
+            - T::from(self.y_offset).expect("Couldn't represent `y_offset` in generic type "))
+            / T::from(self.y_scale).expect("Couldn't represent `y_scale` in generic type ");
         assert!(T::zero() <= x, "X Coord {} is less than zero", x);
         assert!(
             x < grid_size,
@@ -94,8 +98,13 @@ impl Scaling {
         (x, y)
     }
 
-    pub fn scale_points<T: CoordNum + Display>(&self, points: &Vec<(Coordinate<T>)>, grid_size: T) -> Vec<(Coordinate<T>)> {
-        points.iter()
+    pub fn scale_points<T: CoordNum + Display>(
+        &self,
+        points: &Vec<(Coordinate<T>)>,
+        grid_size: T,
+    ) -> Vec<(Coordinate<T>)> {
+        points
+            .iter()
             .map(|p| {
                 assert!(T::zero() <= p.x, "X Coord ({}) is less than zero!", p.x);
                 assert!(T::zero() <= p.y, "Y Coord ({}) is less than zero!", p.y);
@@ -112,12 +121,12 @@ impl Scaling {
         grid_size: T,
     ) -> geo_types::Polygon<T> {
         geo_types::Polygon::new(
-            self.scale_points(
-                &polygon
-                    .exterior()
-                    .0, grid_size).into(),
-            polygon.interiors().iter().map(|interior| self.scale_points(
-                &interior.0, grid_size).into()).collect(),
+            self.scale_points(&polygon.exterior().0, grid_size).into(),
+            polygon
+                .interiors()
+                .iter()
+                .map(|interior| self.scale_points(&interior.0, grid_size).into())
+                .collect(),
         )
     }
     pub fn scale_rect<T: CoordNum + Display>(
@@ -172,7 +181,12 @@ fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> geo_ty
     let b: T = T::from(a).unwrap();
     let points = cell
         .iter_vertices()
-        .map(|point| geo_types::Point::new(T::from(point.x.round()).expect("Failed to represent f64 x coordinate as T"), T::from(point.y.round()).expect("Failed to represent f64 y coordinate as T")))
+        .map(|point| {
+            geo_types::Point::new(
+                T::from(point.x.round()).expect("Failed to represent f64 x coordinate as T"),
+                T::from(point.y.round()).expect("Failed to represent f64 y coordinate as T"),
+            )
+        })
         .collect::<Vec<geo_types::Point<T>>>();
     geo_types::Polygon::new(LineString::from(points), Vec::new())
 }
@@ -306,9 +320,7 @@ impl Voronoi {
         &self,
         point: geo_types::Point<i32>,
     ) -> Result<(i32, i32), DataLoadingError> {
-        let point = self
-            .scaling
-            .scale_point(point.x_y(), self.grid_size);
+        let point = self.scaling.scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(&point)?;
         Ok(*self
@@ -345,8 +357,7 @@ mod tests {
         );
         let diagram = diagram.unwrap();
         for seed in seeds {
-            let result = diagram
-                .find_seed_for_point(seed.into());
+            let result = diagram.find_seed_for_point(seed.into());
             assert!(result.is_ok(), "{:?}", result);
             assert_eq!(result.unwrap(), (seed.0, seed.1))
         }

@@ -235,17 +235,13 @@ async fn main() -> anyhow::Result<()> {
             census_directory,
             use_cache,
             allow_downloads,
-            false).await?;
-        let polygon_data: Vec<visualisation::image_export::DrawingRecord> = polygons.polygons
+            false,
+        )
+            .await?;
+        let polygon_data: Vec<visualisation::image_export::DrawingRecord> = polygons
+            .polygons
             .iter()
-            .map(|(code, area)| {
-                DrawingRecord::from((
-                    code.to_string(),
-                    (area),
-                    None,
-                    false
-                ))
-            })
+            .map(|(code, area)| DrawingRecord::from((code.to_string(), (area), None, false)))
             .collect();
         let osm_buildings = osm
             .building_locations
@@ -253,7 +249,11 @@ async fn main() -> anyhow::Result<()> {
             .map(|(_, b)| b)
             .flatten()
             .collect();
-        visualisation::image_export::draw_buildings_and_output_areas(String::from("images/BuildingsAndOutputAreas.png"), polygon_data, osm_buildings)?;
+        visualisation::image_export::draw_buildings_and_output_areas(
+            String::from("images/BuildingsAndOutputAreas.png"),
+            polygon_data,
+            osm_buildings,
+        )?;
         Ok(())
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
@@ -270,7 +270,6 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data and Initialising  simulator in {:?}",
             total_time.elapsed()
         );
-
 
         return Ok(());
         /*if let Err(e) = sim.simulate() {
@@ -289,28 +288,28 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-fn draw_output_areas(filename: String, sim: &HashMap<OutputAreaID, OutputArea>) -> anyhow::Result<()> {
-    info!("Drawing Output Areas to: {}",filename);
+fn draw_output_areas(
+    filename: String,
+    sim: &HashMap<OutputAreaID, OutputArea>,
+) -> anyhow::Result<()> {
+    info!("Drawing Output Areas to: {}", filename);
     let data: Vec<visualisation::image_export::DrawingRecord> = sim
         .iter()
         .map(|(_, area)| {
-            DrawingRecord::from((
-                area.output_area_id.code().to_string(),
-                &area.polygon,
-                None,
-            ))
+            DrawingRecord::from((area.output_area_id.code().to_string(), &area.polygon, None))
         })
         .collect();
     visualisation::image_export::draw_output_areas(filename, data)?;
     Ok(())
 }
 
-
-async fn load_data(area: String,
-                   census_directory: String,
-                   use_cache: bool,
-                   allow_downloads: bool,
-                   visualise_building_boundaries: bool) -> anyhow::Result<(CensusData, OSMRawBuildings, PolygonContainer<String>)> {
+async fn load_data(
+    area: String,
+    census_directory: String,
+    use_cache: bool,
+    allow_downloads: bool,
+    visualise_building_boundaries: bool,
+) -> anyhow::Result<(CensusData, OSMRawBuildings, PolygonContainer<String>)> {
     let mut census_data: Option<anyhow::Result<CensusData>> = None;
     let mut osm_buildings: Option<anyhow::Result<OSMRawBuildings>> = None;
     let mut output_area_polygons: Option<anyhow::Result<PolygonContainer<String>>> = None;
@@ -375,14 +374,20 @@ async fn load_data_and_init_sim(
     visualise_building_boundaries: bool,
 ) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
-    let (census_data, osm_buildings, output_area_polygons) = load_data(area, census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
+    let (census_data, osm_buildings, output_area_polygons) = load_data(
+        area,
+        census_directory,
+        use_cache,
+        allow_downloads,
+        visualise_building_boundaries,
+    )
+        .await?;
     let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
     sim.build().context("Failed to initialise sim").unwrap();
     Ok(Simulator::from(sim))
 }
-
 
 async fn load_data_and_init_sim_with_debug_images(
     area: String,
@@ -392,13 +397,22 @@ async fn load_data_and_init_sim_with_debug_images(
     visualise_building_boundaries: bool,
 ) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
-    let (census_data, osm_buildings, output_area_polygons) = load_data(area, census_directory, use_cache, allow_downloads, visualise_building_boundaries).await?;
+    let (census_data, osm_buildings, output_area_polygons) = load_data(
+        area,
+        census_directory,
+        use_cache,
+        allow_downloads,
+        visualise_building_boundaries,
+    )
+        .await?;
     let old_polygons = output_area_polygons.polygons.clone();
-    let old_buildings: Vec<RawBuilding> = osm_buildings.building_locations.clone().drain()
+    let old_buildings: Vec<RawBuilding> = osm_buildings
+        .building_locations
+        .clone()
+        .drain()
         .map(|(_, b)| b)
         .flatten()
         .collect();
-    ;
     let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
@@ -418,34 +432,40 @@ async fn load_data_and_init_sim_with_debug_images(
         .map(|(code, area)| {
             DrawingRecord::from((
                 code.to_string(),
-                (area)
-                , None,
-                !sim.output_areas.contains_key(&OutputAreaID::from_code(code.to_string()))
+                (area),
+                None,
+                !sim.output_areas
+                    .contains_key(&OutputAreaID::from_code(code.to_string())),
             ))
         })
         .collect();
-    draw_buildings_and_output_areas(String::from("images/OutputAreasWithBuildings.png"), polygon_data, old_buildings)?;
+    draw_buildings_and_output_areas(
+        String::from("images/OutputAreasWithBuildings.png"),
+        polygon_data,
+        old_buildings,
+    )?;
     panic!("Sonde");
 
     let mut citizens = sim
         .generate_citizens(&mut rng, &mut possible_buildings_per_area)
         .context("Failed to generate Citizens")?;
 
-    draw_output_areas(String::from("images/OutputAreasWithHouseholds.png"), &sim.output_areas)?;
+    draw_output_areas(
+        String::from("images/OutputAreasWithHouseholds.png"),
+        &sim.output_areas,
+    )?;
     // TODO Currently any buildings remaining are treated as Workplaces
-    let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> =
-        possible_buildings_per_area
-            .drain()
-            .filter_map(|(area, mut classified_buildings)| {
-                let buildings: Vec<RawBuilding> =
-                    classified_buildings.drain().flat_map(|(_, a)| a).collect();
-                if buildings.is_empty() {
-                    return None;
-                }
-                Some((area, buildings))
-            })
-            .collect();
-
+    let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> = possible_buildings_per_area
+        .drain()
+        .filter_map(|(area, mut classified_buildings)| {
+            let buildings: Vec<RawBuilding> =
+                classified_buildings.drain().flat_map(|(_, a)| a).collect();
+            if buildings.is_empty() {
+                return None;
+            }
+            Some((area, buildings))
+        })
+        .collect();
 
     let output_area_ref = Rc::new(RefCell::new(&mut sim.output_areas));
     let citizens_ref = &mut sim.citizens;
@@ -462,7 +482,10 @@ async fn load_data_and_init_sim_with_debug_images(
             true
         }
     });
-    draw_output_areas(String::from("images/OutputAreasWithWorkplaces.png"), &sim.output_areas)?;
+    draw_output_areas(
+        String::from("images/OutputAreasWithWorkplaces.png"),
+        &sim.output_areas,
+    )?;
     info!("Starting to build workplaces");
     sim.build_workplaces(&mut rng, possible_workplaces)
         .context("Failed to build workplaces")?;

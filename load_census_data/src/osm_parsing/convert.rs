@@ -230,7 +230,10 @@ fn helmert_wgs84_to_osbg36(point: (f64, f64, f64)) -> (f64, f64, f64) {
 
 #[cfg(test)]
 mod tests {
-    use crate::osm_parsing::convert::{cartesian_to_lat_lon, decimal_latitude_and_longitude_to_northing_and_eastings, Ellipsoid, helmert_wgs84_to_osbg36, lat_lon_to_cartesian, lat_lon_to_eastings};
+    use crate::osm_parsing::convert::{
+        cartesian_to_lat_lon, decimal_latitude_and_longitude_to_northing_and_eastings,
+        Ellipsoid, helmert_wgs84_to_osbg36, lat_lon_to_cartesian, lat_lon_to_eastings,
+    };
 
     #[test]
     pub fn test_wgs84_to_osbg36() {
@@ -413,9 +416,7 @@ mod tests {
         assert_eq!(
             diff_northing, desired_accuracy,
             "Northing Coordinate is incorrect, actual: {}, expected: {}, difference: {}",
-            northing,
-            expected_northing,
-            diff_northing
+            northing, expected_northing, diff_northing
         );
 
         let expected_easting = 422297;
@@ -423,9 +424,7 @@ mod tests {
         assert_eq!(
             diff_easting, desired_accuracy,
             "Easting Coordinate is incorrect, actual: {}, expected: {}, difference: {}",
-            easting,
-            expected_easting,
-            diff_easting
+            easting, expected_easting, diff_easting
         );
     }
 }

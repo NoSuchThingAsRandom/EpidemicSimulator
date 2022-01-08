@@ -280,7 +280,9 @@ mod tests {
     use geo_types::Polygon;
     use strum::IntoEnumIterator;
 
-    use load_census_data::osm_parsing::{BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding};
+    use load_census_data::osm_parsing::{
+        BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding,
+    };
     use load_census_data::tables::employment_densities::EmploymentDensities;
     use load_census_data::tables::occupation_count::OccupationType;
 
@@ -293,25 +295,21 @@ mod tests {
     #[test]
     fn minimum_one_occupant() {
         let building_size = geo_types::Polygon::new(
-            geo_types::LineString::from(vec![
-                (0, 0),
-                (100, 0),
-                (100, 2),
-                (0, 2),
-                (0, 0),
-            ]),
+            geo_types::LineString::from(vec![(0, 0), (100, 0), (100, 2), (0, 2), (0, 0)]),
             vec![],
         );
         let id = BuildingID::new(
             OutputAreaID::from_code("a".to_string()),
             BuildingType::Workplace,
         );
-        let raw = RawBuilding::new(TagClassifiedBuilding::WorkPlace, &building_size, BuildingBoundaryID::default()).unwrap();
+        let raw = RawBuilding::new(
+            TagClassifiedBuilding::WorkPlace,
+            &building_size,
+            BuildingBoundaryID::default(),
+        )
+            .unwrap();
         let float: Polygon<f64> = convert_polygon_to_float(&building_size);
-        assert_eq!(
-            float.unsigned_area(),
-            MINIMUM_FLOOR_SPACE_SIZE as f64
-        );
+        assert_eq!(float.unsigned_area(), MINIMUM_FLOOR_SPACE_SIZE as f64);
         for occupation_type in OccupationType::iter() {
             println!("Testing: {:?}", occupation_type);
             let mut workplace = Workplace::new(id.clone(), raw, occupation_type);
@@ -327,20 +325,19 @@ mod tests {
     #[test]
     fn minimum_size() {
         let building_size = geo_types::Polygon::new(
-            geo_types::LineString::from(vec![
-                (0, 0),
-                (100, 0),
-                (100, 2),
-                (0, 2),
-                (0, 0),
-            ]),
+            geo_types::LineString::from(vec![(0, 0), (100, 0), (100, 2), (0, 2), (0, 0)]),
             vec![],
         );
         let id = BuildingID::new(
             OutputAreaID::from_code("a".to_string()),
             BuildingType::Workplace,
         );
-        let raw = RawBuilding::new(TagClassifiedBuilding::WorkPlace, &building_size, BuildingBoundaryID::default()).unwrap();
+        let raw = RawBuilding::new(
+            TagClassifiedBuilding::WorkPlace,
+            &building_size,
+            BuildingBoundaryID::default(),
+        )
+            .unwrap();
         let float: Polygon<f64> = convert_polygon_to_float(&building_size);
         assert!(float.unsigned_area() < MINIMUM_FLOOR_SPACE_SIZE as f64);
         let mut workplace = Workplace::new(id.clone(), raw, OccupationType::All);
