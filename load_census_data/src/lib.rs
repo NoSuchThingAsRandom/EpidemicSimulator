@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -117,7 +117,7 @@ impl CensusData {
             .headers()
             .map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
-                context: format!("Failed to read workplace CSV headers"),
+                context: "Failed to read workplace CSV headers".to_string(),
             })?
             .clone();
         let mut workplace_areas: HashMap<String, HashMap<String, u32>> =
@@ -125,7 +125,7 @@ impl CensusData {
         for record in workplace_reader.records() {
             let record = record.map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
-                context: format!("Failed to read record from workplace table"),
+                context: "Failed to read record from workplace table".to_string(),
             })?;
             let mut current_workplace: HashMap<String, u32> = HashMap::with_capacity(headers.len());
             let area = record.get(0).unwrap().to_string();
@@ -208,9 +208,7 @@ impl CensusData {
     pub async fn load_all_tables_async(
         census_directory: String,
         region_code: String,
-        use_cache: bool,
         should_download: bool,
-        visualise_building_boundaries: bool,
     ) -> Result<CensusData, DataLoadingError> {
         let data_fetcher = if should_download {
             Some(DataFetcher::default())
@@ -267,9 +265,7 @@ impl CensusData {
     pub fn load_all_tables(
         census_directory: String,
         region_code: String,
-        use_cache: bool,
         _should_download: bool,
-        visualise_building_boundaries: bool,
     ) -> Result<CensusData, DataLoadingError> {
         // Build population table
         let population_counts = CensusData::read_table_and_generate_filename::<

@@ -35,7 +35,6 @@ use plotters::style::TextStyle;
 use polylabel::polylabel;
 
 use load_census_data::osm_parsing::TagClassifiedBuilding;
-use load_census_data::parsing_error::ParseErrorType::Int;
 
 use crate::{convert_geo_point_to_pixel, GRID_SIZE, PIXEL_SIZE, SCALE};
 use crate::error::DrawingResult;
@@ -223,7 +222,7 @@ fn draw_polygon_ring(
         })
         .collect::<DrawingResult<Vec<(i32, i32)>>>()?;
     let polygon = plotters::element::Polygon::new(points, colour);
-    draw_backend.draw(&polygon);
+    draw_backend.draw(&polygon)?;
     Ok(())
 }
 

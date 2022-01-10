@@ -57,8 +57,9 @@ pub fn draw_osm_buildings_polygons(
     let mut chart = ChartBuilder::on(&draw_backend)
         .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))
         .unwrap();
-    let chosen_vorinni = &data.building_voronois[&building_type];
-    for (index, p) in &chosen_vorinni.polygons.polygons {
+    let voroinoi = data.voronoi();
+    let chosen_voronoi = &voroinoi[&building_type];
+    for (index, p) in &chosen_voronoi.polygons.polygons {
         let c = &Palette99::COLORS[index % 20];
         let c = &RGBColor(c.0, c.1, c.2);
         draw_polygon_ring(&mut chart, p.exterior(), c.to_rgba());

@@ -163,9 +163,7 @@ async fn main() -> anyhow::Result<()> {
         CensusData::load_all_tables_async(
             census_directory,
             area.to_string(),
-            use_cache,
             allow_downloads,
-            visualise_building_boundaries,
         )
             .await
             .context("Failed to load census data")
@@ -230,7 +228,7 @@ async fn main() -> anyhow::Result<()> {
 
         Ok(())
     } else if matches.is_present("visualise") {
-        let (census, mut osm, polygons) = load_data(
+        let (_census, mut osm, polygons) = load_data(
             area.to_string(),
             census_directory,
             use_cache,
@@ -258,7 +256,7 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("simulate") {
         info!("Using mode simulate for area '{}'", area);
         let total_time = Instant::now();
-        let sim = load_data_and_init_sim_with_debug_images(
+        let mut sim = load_data_and_init_sim(
             area.to_string(),
             census_directory,
             use_cache,
@@ -270,9 +268,7 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data and Initialising  simulator in {:?}",
             total_time.elapsed()
         );
-
-        return Ok(());
-        /*if let Err(e) = sim.simulate() {
+        if let Err(e) = sim.simulate() {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
         } else {
@@ -280,7 +276,6 @@ async fn main() -> anyhow::Result<()> {
         }
 
         info!("Finished in {:?}", total_time.elapsed());
-         */
         Ok(())
     } else {
         error!("No runtime option specified\nQuitting...");
@@ -317,44 +312,40 @@ async fn load_data(
         // Load census data
         let filename = census_directory.clone();
         s.spawn(|_| {
-            let census_closure = (move || -> anyhow::Result<CensusData> {
+            let census_closure = move || -> anyhow::Result<CensusData> {
                 let census_data = CensusData::load_all_tables(
                     filename.to_string(),
                     area.to_string(),
-                    use_cache,
                     allow_downloads,
-                    visualise_building_boundaries,
                 );
                 census_data.context("Failed to load census data")
-            });
+            };
             census_data = Some(census_closure());
         });
 
         // Load OSM Buildings
         s.spawn(|_| {
             let filename = census_directory.clone();
-            let buildings = (move || -> anyhow::Result<OSMRawBuildings> {
-                let osm_buildings = OSMRawBuildings::build_osm_data(
+            let buildings = move || -> anyhow::Result<OSMRawBuildings> {
+                OSMRawBuildings::build_osm_data(
                     filename.to_string() + OSM_FILENAME,
                     filename + OSM_CACHE_FILENAME,
                     use_cache,
                     visualise_building_boundaries,
                 )
-                    .context("Failed to load OSM map");
-                osm_buildings
-            });
+                    .context("Failed to load OSM map")
+            };
             osm_buildings = Some(buildings());
         });
 
         // Build output area polygons
         s.spawn(|_| {
-            let polygon = (move || -> anyhow::Result<PolygonContainer<String>> {
-                let output_area_polygons = PolygonContainer::load_polygons_from_file(
+            let polygon = move || -> anyhow::Result<PolygonContainer<String>> {
+                PolygonContainer::load_polygons_from_file(
                     CensusTableNames::OutputAreaMap.get_filename(),
                 )
-                    .context("Loading polygons for output areas");
-                output_area_polygons
-            });
+                    .context("Loading polygons for output areas")
+            };
             output_area_polygons = Some(polygon());
         });
     });
@@ -444,9 +435,8 @@ async fn load_data_and_init_sim_with_debug_images(
         polygon_data,
         old_buildings,
     )?;
-    panic!("Sonde");
 
-    let mut citizens = sim
+    sim
         .generate_citizens(&mut rng, &mut possible_buildings_per_area)
         .context("Failed to generate Citizens")?;
 
@@ -505,7 +495,7 @@ pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
     );
     println!("There are {} connected groups", connected_groups(&graph));
     if save_to_file {
-        let graph_viz = draw_graph("tiny_graphviz_no_label.dot".to_string(), graph);
+        draw_graph("tiny_graphviz_no_label.dot".to_string(), graph).expect("Failed to draw graph viz");
     }
 }
 

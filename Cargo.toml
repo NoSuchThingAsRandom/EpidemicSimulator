@@ -11,3 +11,7 @@ incremental = true
 lto = "thin"
 debug-assertions = false
 codegen-units = 128
+
+
+[patch.crates-io]
+quadtree_rs = { git = "https://github.com/NoSuchThingAsRandom/quadtree/" }

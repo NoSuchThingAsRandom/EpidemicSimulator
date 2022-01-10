@@ -33,7 +33,7 @@ use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::building::{Building, BuildingID};
+use crate::models::building::BuildingID;
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};

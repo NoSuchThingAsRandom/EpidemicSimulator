@@ -18,7 +18,7 @@
  *
  */
 
-use std::fmt::{Debug, Display, Formatter, write};
+use std::fmt::{Debug, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
 use osmpbf::Error;
@@ -288,7 +288,7 @@ impl Display for DataLoadingError {
                 write!(f, "\nAn error occurred loading Census Data\n     Type: OSM Error\n        Source: {} ", source)
             }
             DataLoadingError::ShapeFileError { source } => {
-                write!(f, "\nAn error occured loading a shapefile: {}", source)
+                write!(f, "\nAn error occurred loading a shapefile: {}", source)
             }
         }
     }

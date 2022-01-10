@@ -19,14 +19,12 @@
  */
 
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::fmt::Display;
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, CoordNum, LineString, Point};
 use log::{debug, info, trace};
-use num_traits::NumCast;
 use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
@@ -44,14 +42,7 @@ pub struct Scaling {
 }
 
 impl Scaling {
-    pub const fn output_areas() -> Scaling {
-        Scaling {
-            x_offset: 0,
-            x_scale: 16,
-            y_offset: 0,
-            y_scale: 16,
-        }
-    }
+    /// Factor of 16 reduction, with no offsets
     pub const fn yorkshire_national_grid() -> Scaling {
         Scaling {
             x_offset: 0,
@@ -100,17 +91,16 @@ impl Scaling {
 
     pub fn scale_points<T: CoordNum + Display>(
         &self,
-        points: &Vec<(Coordinate<T>)>,
+        points: &[Coordinate<T>],
         grid_size: T,
-    ) -> Vec<(Coordinate<T>)> {
+    ) -> Vec<Coordinate<T>> {
         points
             .iter()
             .map(|p| {
                 assert!(T::zero() <= p.x, "X Coord ({}) is less than zero!", p.x);
                 assert!(T::zero() <= p.y, "Y Coord ({}) is less than zero!", p.y);
-                let x = self.scale_point((p.x, p.y), grid_size);
-                let p: geo_types::Coordinate<T> = x.into();
-                return p;
+                let scaled = self.scale_point((p.x, p.y), grid_size);
+                scaled.into()
             })
             .collect()
     }
@@ -177,8 +167,6 @@ fn get_random_point_inside_polygon(
 fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<T> {
     //points.push(points.first().expect("Polygon has too many points, Vec is out of space!"));
     // Convert to ints and build the exterior line
-    let a: f64 = 1.0;
-    let b: T = T::from(a).unwrap();
     let points = cell
         .iter_vertices()
         .map(|point| {
@@ -192,7 +180,7 @@ fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> geo_ty
 }
 
 /// Returns the minimum and maximum grid size required for the seeds
-pub fn find_seed_bounds<T: num_traits::PrimInt + Copy>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
+pub fn find_seed_bounds<T: num_traits::PrimInt + Copy + Clone>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
     let mut min_x = T::max_value();
     let mut max_x = T::zero();
     let mut min_y = T::max_value();
@@ -305,7 +293,7 @@ impl Voronoi {
             });
         };
 
-        let container = PolygonContainer::new(polygons, Scaling::output_areas(), GRID_SIZE as i32)?;
+        let container = PolygonContainer::new(polygons, Scaling::yorkshire_national_grid(), GRID_SIZE as i32)?;
         debug!("Built quad tree");
 
         Ok(Voronoi {
