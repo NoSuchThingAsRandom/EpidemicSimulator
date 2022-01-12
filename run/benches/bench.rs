@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -24,7 +24,10 @@ use cpuprofiler::PROFILER;
 use criterion::{Criterion, criterion_group, criterion_main, SamplingMode};
 use criterion::profiler::Profiler;
 
-use load_census_data::CensusData;
+use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
+use load_census_data::osm_parsing::OSMRawBuildings;
+use load_census_data::polygon_lookup::PolygonContainer;
+use load_census_data::tables::CensusTableNames;
 use sim::simulator::Simulator;
 
 struct MyProfiler {}
@@ -40,21 +43,35 @@ impl Profiler for MyProfiler {
     }
 }
 
-fn load_data(c: &mut Criterion) {
-    let directory = "../data/copy/tables/".to_string();
-    let mut group = c.benchmark_group("bench-group");
+fn load_census_data(c: &mut Criterion) {
+    let directory = "../data/".to_string();
+    let mut group = c.benchmark_group("census_tables");
     group.sampling_mode(SamplingMode::Flat);
-    //let area = "1946157112TYPE299".to_string();
-    let area = "2013265923TYPE299".to_string();
-    let census_data = CensusData::load_all_tables(directory, area, false).unwrap();
-    let mut sim = Simulator::new(census_data).expect("Failed to initialise sim");
-    for _ in 0..540 {
-        sim.step().expect("Sim step failed!");
-    }
-    println!("Starting benchmarks at: {}", sim.statistics);
-    group.bench_function("Time Step", |b| b.iter(|| sim.step()));
+    group.sample_size(10);
+    let area = "1946157112TYPE299".to_string();
+    //let area = "2013265923TYPE299".to_string();
+
+    group.bench_function("Load Census Tables", |b| b.iter(|| CensusData::load_all_tables(directory.clone(), area.clone(), false).unwrap()));
+    // Load OSM Buildings
+    group.bench_function("Load OSM Data", |b| b.iter(||
+        OSMRawBuildings::build_osm_data(
+            directory.to_string() + OSM_FILENAME,
+            directory.to_string() + OSM_CACHE_FILENAME,
+            false,
+            false,
+        )
+    ));
+
+    // Build output area polygons
+    group.bench_function("Load Output Area Polygons", |b| b.iter(||
+        PolygonContainer::load_polygons_from_file(
+            CensusTableNames::OutputAreaMap.get_filename(),
+        )
+    ));
+
     group.finish();
 }
+
 
 fn profiled() -> Criterion {
     Criterion::default().with_profiler(MyProfiler {})
@@ -62,6 +79,6 @@ fn profiled() -> Criterion {
 criterion_group! {
     name=benches;
     config=profiled();
-    targets=load_data
+    targets=load_census_data
 }
 criterion_main!(benches);

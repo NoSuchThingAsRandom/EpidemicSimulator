@@ -1,1 +1,1 @@
-cargo run --release -- 2013265923TYPE299 --directory=data --disallow-download --simulate --use-cache
+cargo run --release -- 1946157112TYPE299 --directory=data --simulate

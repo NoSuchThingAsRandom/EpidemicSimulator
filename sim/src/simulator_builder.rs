@@ -214,8 +214,11 @@ impl SimulatorBuilder {
         let mut citizens_to_allocate: HashMap<OutputAreaID, (Vec<CitizenID>, Vec<RawBuilding>)> =
             HashMap::new();
         let mut failed_output_areas = Vec::new();
-        // Assign workplace areas to each Citizen, per Output area
 
+
+        let mut dead_output_areas = 0;
+        let mut no_buildings_per_output_area = 0;
+        // Assign workplace areas to each Citizen, per Output area
         for (household_output_area_code, household_output_area) in &self.output_areas {
             // Retrieve the census data for the household output area
             let household_census_data = self
@@ -228,6 +231,8 @@ impl SimulatorBuilder {
                     },
                 })?;
 
+
+            // For each Citizen, assign a workplace area
             for citizen_id in household_output_area.get_residents() {
                 // Generate a workplace Output Area, and ensure it exists!
                 let mut attempt_index = 0;
@@ -240,8 +245,14 @@ impl SimulatorBuilder {
                     workplace_output_area_code = OutputAreaID::from_code(
                         household_census_data
                             .get_random_workplace_area(rng)
-                            .context("Selecting a random workplace")?,
+                            .context("Failed to select a random workplace")?,
                     );
+                    if !possible_buildings_per_area.contains_key(&workplace_output_area_code) {
+                        no_buildings_per_output_area += 1;
+                    }
+                    if !self.output_areas.contains_key(&workplace_output_area_code) {
+                        dead_output_areas += 1;
+                    }
                     attempt_index += 1;
                     if attempt_index == 10 {
                         workplace_output_area_code = OutputAreaID::from_code("".to_string());
@@ -281,8 +292,8 @@ impl SimulatorBuilder {
             }
         }
         error!(
-            "Failed to find workplace buildings for {} output areas",
-            failed_output_areas.len()
+            "Failed to find workplace buildings for {} output areas. {} areas don't exist, and {} areas don't have workplaces",
+            failed_output_areas.len(),dead_output_areas,no_buildings_per_output_area
         );
         debug!("Creating workplace buildings");
         // Create buildings for each Workplace output area
@@ -478,11 +489,13 @@ impl SimulatorBuilder {
                 true
             }
         });
-        info!("Starting to build workplaces");
+        info!("Starting to build workplaces for {} areas",self.output_areas.len());
         self.build_workplaces(&mut rng, possible_workplaces)
             .context("Failed to build workplaces")?;
         timer.code_block_finished("Generated workplaces for {} Output Areas")?;
 
+        let work_from_home_count: u32 = self.citizens.par_iter().map(|(_, citizen)| if citizen.household_code.eq(&citizen.workplace_code) { 1 } else { 0 }).sum();
+        debug!("{} out of {} Citizens, are working from home.",work_from_home_count,self.citizens.len());
         // Infect random citizens
         self.apply_initial_infections(&mut rng)
             .context("Failed to create initial infections")?;

@@ -20,8 +20,10 @@
 //! Used to load in building types and locations from an OSM file
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
+use std::fmt::Formatter;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::str::FromStr;
 
 use geo::area::Area;
 use geo::centroid::Centroid;
@@ -30,6 +32,8 @@ use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{Error, Visitor};
+use serde::ser::SerializeStruct;
 
 use crate::DataLoadingError;
 use crate::osm_parsing::draw_voronoi::draw_voronoi_polygons;
@@ -156,9 +160,33 @@ struct RawOSMNode {
 /// We create a global hashmap, and use this Struct as an ID
 ///
 /// This Struct exists, solely so we don't get confused which uuid is which
-#[derive(Debug, Clone, Copy, Deserialize, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct BuildingBoundaryID {
+    //#[serde("serialize_with = uuid_serialize")]
     pub id: uuid::Uuid,
+}
+
+// For some reason, need to extract the ID out of the Wrapper Struct as it is not Serialized as a String, which breaks JSON Hashmaps?
+impl Serialize for BuildingBoundaryID {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        self.id.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for BuildingBoundaryID {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        struct IdVisitor;
+        impl<'de> Visitor<'de> for IdVisitor {
+            type Value = String;
+
+            fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+                formatter.write_str("ID String does not exist!")
+            }
+        }
+        let id = deserializer.deserialize_str(IdVisitor)?;
+        let id = uuid::Uuid::from_str(&id).unwrap_or_else(|_| panic!("Cannot convert id ('{}') to UUID", id));
+        Ok(Self { id })
+    }
 }
 
 impl Default for BuildingBoundaryID {
@@ -166,13 +194,6 @@ impl Default for BuildingBoundaryID {
         Self {
             id: uuid::Uuid::new_v4(),
         }
-    }
-}
-
-// For some reason, need to extract the ID out of the Wrapper Struct as it is not Serialized as a String, which breaks JSON Hashmaps?
-impl Serialize for BuildingBoundaryID {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        self.id.serialize(serializer)
     }
 }
 
@@ -385,32 +406,7 @@ impl OSMRawBuildings {
         };
 
         debug!("Loaded OSM data");
-
-        let building_voronoi: HashMap<TagClassifiedBuilding, Voronoi> = osm_data.building_locations
-            .par_iter()
-            .filter_map(|(building_type, locations)| {
-                info!(
-                    "Building voronoi diagram for {:?} with {} buildings",
-                    building_type,
-                    locations.len()
-                );
-                return match Voronoi::new(
-                    GRID_SIZE as i32,
-                    locations
-                        .iter()
-                        .map(|p| (p.center.x(), p.center.y()))
-                        .collect(),
-                    Scaling::yorkshire_national_grid(),
-                ) {
-                    Ok(voronoi) => Some((*building_type, voronoi)),
-                    Err(e) => {
-                        error!("{}", e);
-                        None
-                    }
-                };
-            })
-            .collect();
-        osm_data.building_voronoi = Some(building_voronoi);
+        osm_data.construct_voronoi_diagrams();
         if visualise_building_boundaries {
             debug!("Starting drawing");
             for (k, p) in osm_data.voronoi().iter() {
@@ -577,6 +573,37 @@ impl OSMRawBuildings {
         );
 
         Ok(OSMRawBuildings::from(building_boundaries, buildings))
+    }
+
+    /// Constructs Voronoi diagrams for each building type
+    ///
+    /// This constructs a polygon map, for each building, where each point inside a polygon means that building is the closest one
+    fn construct_voronoi_diagrams(&mut self) {
+        let voronoi = self.building_locations
+            .par_iter()
+            .filter_map(|(building_type, locations)| {
+                info!(
+                    "Building voronoi diagram for {:?} with {} buildings",
+                    building_type,
+                    locations.len()
+                );
+                return match Voronoi::new(
+                    GRID_SIZE as i32,
+                    locations
+                        .iter()
+                        .map(|p| (p.center.x(), p.center.y()))
+                        .collect(),
+                    Scaling::yorkshire_national_grid(),
+                ) {
+                    Ok(voronoi) => Some((*building_type, voronoi)),
+                    Err(e) => {
+                        error!("{}", e);
+                        None
+                    }
+                };
+            })
+            .collect();
+        self.building_voronoi = Some(voronoi)
     }
 }
 

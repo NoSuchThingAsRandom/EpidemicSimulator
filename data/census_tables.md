@@ -28,7 +28,9 @@ Yorkshire And The Humber Census Tables:\
 
 ## Areas:
 
-2013265923TYPE299 - All Output Areas within Yorkshire and the Humber
+2013265923TYPE299 - All Output Areas within Yorkshire and the Humber 1946157112TYPE299 - All Output Areas within York
+
+https://www.nomisweb.co.uk/api/v01/dataset/NM_144_1.data.csv?date=latest&geography=1254162148...1254162748,1254262205...1254262240,1237321401...1237321422&rural_urban=0&cell=0&measures=20100
 
 # OSM Data
 

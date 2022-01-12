@@ -25,6 +25,8 @@ extern crate enum_map;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::string::String;
+use std::thread::sleep;
+use std::time::Duration;
 
 use log::{debug, info, warn};
 use rand::{Rng, RngCore};
@@ -67,6 +69,7 @@ impl<'a> CensusDataEntry<'a> {
     pub fn total_population_size(&self) -> u16 {
         self.population_count.population_size
     }
+    // TODO IS THIS FUCKED?
     pub fn get_random_workplace_area(
         &self,
         rng: &mut dyn RngCore,
@@ -250,6 +253,7 @@ impl CensusData {
             &data_fetcher,
         )
             .await?;
+        println!("Built {} residential workplace areas with {} records", residents_workplace.len(), residents_workplace.iter().map(|(_, v)| v.workplace_count.len()).sum::<usize>());
 
         let mut census_data = CensusData {
             valid_areas: HashSet::with_capacity(population_counts.len()),
@@ -296,6 +300,7 @@ impl CensusData {
             &region_code,
             CensusTableNames::ResidentialAreaVsWorkplaceArea,
         )?;
+        sleep(Duration::from_secs(2));
 
         let mut census_data = CensusData {
             valid_areas: HashSet::with_capacity(population_counts.len()),
@@ -346,8 +351,7 @@ impl CensusData {
         // TODO Is this the most optimal way?
         let mut valid_areas = HashSet::with_capacity(self.population_counts.len());
         for key in self.population_counts.keys() {
-            if self.occupation_counts.contains_key(key)
-                && self.residents_workplace.contains_key(key)
+            if self.occupation_counts.contains_key(key) && self.residents_workplace.contains_key(key)
             {
                 valid_areas.insert(key.to_string());
             }
@@ -366,18 +370,23 @@ impl CensusData {
             .retain(|area, _| valid_areas.contains(area));
         self.residents_workplace
             .retain(|area, _| valid_areas.contains(area));
+        let mut removed = 0;
+        let mut new_size = 0;
         for record in self.residents_workplace.values_mut() {
             let mut total = 0;
             record.workplace_count.retain(|code, count| {
                 if valid_areas.contains(code) {
+                    new_size += 1;
                     total += *count;
                     true
                 } else {
+                    removed += 1;
                     false
                 }
             });
             record.total_workplace_count = total;
         }
+        debug!("Removed {} workplace areas. {} work areas out of {} home remaining",removed,new_size,self.residents_workplace.len());
         self.valid_areas = valid_areas;
         debug!("There are {} complete output areas", self.valid_areas.len());
     }

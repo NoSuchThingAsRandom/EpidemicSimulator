@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -29,11 +29,11 @@ use crate::parsing_error::ParseErrorType;
 #[serde(rename_all = "UPPERCASE")]
 pub struct PreProcessingWorkplaceResidentialRecord {
     pub currently_residing_in_code: String,
-    place_of_work_type: String,
-    place_of_work_name: String,
+    //place_of_work_type: String,
+    place_of_work_code: String,
     obs_value: String,
-    record_offset: u32,
-    record_count: u32,
+    //record_offset: u32,
+    //record_count: u32,
 }
 
 impl PreProcessingTable for PreProcessingWorkplaceResidentialRecord {
@@ -62,7 +62,7 @@ for WorkplaceResidentalRecord
             return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {
                     message: String::from(
-                        "PreProcessingRecord list is empty, can't build a OccupationCountRecord!",
+                        "PreProcessingRecord list is empty, can't build a Residential Workplace Record!",
                     ),
                 },
             });
@@ -82,13 +82,13 @@ for WorkplaceResidentalRecord
                     },
                 });
             }
-            if record.place_of_work_type == "2011 output areas" {
+            //if record.place_of_work_type == "2011 output areas" {
                 let count = record.obs_value.parse()?;
                 if count > 0 {
                     total += count;
-                    workplace_count.insert(record.place_of_work_name.to_string(), count);
+                    workplace_count.insert(record.place_of_work_code.to_string(), count);
                 }
-            }
+            //}
         }
         Ok(WorkplaceResidentalRecord {
             workplace_count,
