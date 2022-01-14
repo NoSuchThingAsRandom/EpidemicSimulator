@@ -205,9 +205,11 @@ impl RawBuilding {
             size,
         })
     }
+    /// The approximate center of this building
     pub fn center(&self) -> Point<i32> {
         self.center
     }
+    /// The floor space of this building, approximated from the polygon
     pub fn size(&self) -> i32 {
         self.size
     }

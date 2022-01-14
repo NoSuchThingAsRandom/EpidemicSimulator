@@ -25,7 +25,7 @@ use std::rc::Rc;
 
 use anyhow::Context;
 use log::{debug, error, info, warn};
-use rand::{RngCore, thread_rng};
+use rand::{Rng, RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 
@@ -35,6 +35,7 @@ use load_census_data::osm_parsing::{
 };
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
 use load_census_data::polygon_lookup::PolygonContainer;
+use load_census_data::tables::employment_densities::EmploymentDensities;
 use load_census_data::tables::occupation_count::OccupationType;
 
 use crate::config::STARTING_INFECTED_COUNT;
@@ -303,9 +304,78 @@ impl SimulatorBuilder {
     }
 
     fn assign_buildings_per_output_area(&mut self, workplace_area_code: OutputAreaID, mut citizens: Vec<CitizenID>, possible_buildings: &mut Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
+        let mut rng = thread_rng();
+        // This is the amount to increase bin capacity to ensure it meets the minimum required size
+        const building_per_occupation_overcapacity: f64 = 0.2;
+
         // Randomise the order of the citizens, to reduce the number of Citizens sharing household and Workplace output areas
-        citizens.shuffle(&mut thread_rng());
+        citizens.shuffle(&mut rng);
+
+
+        // Extract the Citizen Struct
+        // TODO Fix the borrow of self
+        let citizens: Vec<&mut Citizen> = citizens.iter().map(|citizen_id| self.citizens.get_mut(citizen_id).ok_or_else(|| {
+            DataLoadingError::ValueParsingError {
+                source: ParseErrorType::MissingKey {
+                    context: "Cannot retrieve Citizen to assign Workplace ".to_string(),
+                    key: citizen_id.to_string(),
+                },
+            }
+        })).collect::<Result<Vec<&mut Citizen>, DataLoadingError>>()?;
+
+
         let total_building_count = possible_buildings.len();
+
+
+        // Calculate how much space we have
+        let available_space: usize = possible_buildings.iter().map(|building| building.size()).sum::<i32>() as usize;
+
+        // Calculate how much space we need
+        let required_space_per_occupation: HashMap<OccupationType, usize> = citizens.iter().map(|citizen| {
+            let occupation = citizen.occupation();
+            let size = EmploymentDensities::get_density_for_occupation(occupation);
+            (occupation, size)
+        }).fold(HashMap::new(), |mut a, b| {
+            let entry = a.entry(b.0).or_default();
+            *entry += b.1 as usize;
+            a
+        });
+        let required_space: usize = required_space_per_occupation.values().sum();
+
+
+        // Calculate how much we need to scale buildings to meet the targets
+        let scale = (((required_space as f64) / (available_space as f64)) * building_per_occupation_overcapacity).ceil() as usize;
+
+        // Allocate buildings using first fit
+        let mut building_per_occupation: HashMap<OccupationType, (usize, Vec<RawBuilding>)> = HashMap::new();
+
+        // Shuffle to ensure buildings are distrubuted accross the area
+        possible_buildings.shuffle(&mut rng);
+        for building in possible_buildings.into_iter() {
+            let mut added = false;
+            for (occupation, (current_size, buildings)) in &mut building_per_occupation {
+
+                // If adding the building doesn't exceed the bin size, do it!
+                if *current_size + (building.size() as usize * scale) < *required_space_per_occupation.get(occupation).expect("Occupation type is missing!") {
+                    *current_size += (building.size() as usize * scale);
+                    buildings.push(*building);
+                    added = true;
+                }
+            }
+            // TODO Make this nicer/figure out what to do here
+            if !added {
+                error!("Failed to add building of size: {}, current capacities: {:?}",building.size(),building_per_occupation.iter().map(| (occupation_type,(size,_))|(occupation_type,size)).collect());
+            }
+        }
+        // Ensure we have meant the minimum requirements OR TODO Allow some overflow to remote work?
+        for (occupation_type, (size, buildings)) in &building_per_occupation {
+            let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
+            assert!(size > required, "Occupation: {:?}, has a size {} smaller than required {}", occupation_type, size, required);
+        }
+
+        // TODO Assign Citizens to each building per Occupation Count
+        // TODO Maybe parrelise this?
+        return Ok(HashMap::new());/*
         let mut possible_buildings = possible_buildings.into_iter();
         let total_workers = citizens.len();
 
@@ -317,14 +387,8 @@ impl SimulatorBuilder {
 
 
         for (index, citizen_id) in citizens.iter_mut().enumerate() {
-            let citizen = self.citizens.get_mut(citizen_id).ok_or_else(|| {
-                DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::MissingKey {
-                        context: "Cannot retrieve Citizen to assign Workplace ".to_string(),
-                        key: citizen_id.to_string(),
-                    },
-                }
-            })?;
+            let building_index = rng.gen_range(0..possible_buildings.len());
+
 
             // 3 Cases
             // Work place exists and Citizen can be added:
@@ -352,7 +416,7 @@ impl SimulatorBuilder {
                                         workplace_area_code.clone(),
                                         BuildingType::Workplace,
                                     ),
-                                    *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces{} to assign workers{}/{} to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
+                                    *possible_buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces {} to assign workers ({}/{}) to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
                                     citizen.occupation());
                                 workplace.add_citizen(citizen.id()).context(
                                     "Cannot add Citizen to freshly generated Workplace!",
@@ -395,7 +459,7 @@ impl SimulatorBuilder {
             .for_each(|(_, workplace)| {
                 workplace_buildings.insert(workplace.id().clone(), Box::new(workplace));
             });
-        Ok(workplace_buildings)
+        Ok(workplace_buildings)*/
     }
 
 
