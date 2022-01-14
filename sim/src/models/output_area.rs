@@ -20,6 +20,7 @@
 
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 
 use anyhow::Context;
 use log::error;
@@ -36,7 +37,7 @@ use load_census_data::tables::population_and_density_per_output_area::{
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct OutputAreaID {
     code: String,
 }
@@ -53,6 +54,20 @@ impl OutputAreaID {
 impl Display for OutputAreaID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "ID: {}", self.code)
+    }
+}
+
+impl Hash for OutputAreaID {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.code.hash(state)
+    }
+}
+
+impl Eq for OutputAreaID {}
+
+impl PartialEq for OutputAreaID {
+    fn eq(&self, other: &Self) -> bool {
+        self.code.eq(other.code())
     }
 }
 

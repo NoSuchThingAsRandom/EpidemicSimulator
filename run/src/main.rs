@@ -28,7 +28,6 @@ use log::{error, info};
 use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use load_census_data::osm_parsing::OSMRawBuildings;
 use load_census_data::tables::CensusTableNames;
-use visualisation::citizen_connections::draw_graph;
 use visualisation::image_export::DrawingRecord;
 
 use crate::load_data::load_data;
@@ -54,7 +53,7 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv::dotenv().ok();
+    dotenv::dotenv().expect("Failed to load dot env");
     pretty_env_logger::init_timed();
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
@@ -142,6 +141,7 @@ async fn main() -> anyhow::Result<()> {
                 .requires_all(&["table", "area"])
                 .conflicts_with_all(&["simulate", "render", "download"]),
         )
+        .arg(Arg::with_name("grid-size").require_equals(true).long("grid-size").takes_value(true).help("Specifies the size of the Voronoi Lookup Grids").required(true))
         .get_matches();
 
     let directory = matches
@@ -152,23 +152,11 @@ async fn main() -> anyhow::Result<()> {
     let use_cache = matches.is_present("use-cache");
     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
     let allow_downloads = !matches.is_present("disallow-download");
-
+    let grid_size = matches.value_of("grid-size").expect("Missing grid-size argument").parse().expect("grid-size is not an integer!");
     info!(
         "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
         area, use_cache, !allow_downloads
     );
-
-
-    let data = load_data(
-        area.to_string(),
-        census_directory.clone(),
-        use_cache,
-        allow_downloads,
-        false,
-    ).await?;
-    let graph = visualisation::citizen_connections::build_workplace_output_area_graph(data.0.residents_workplace);
-    draw_graph("area_workplace.dot".to_string(), graph).expect("Failed to draw graph viz");
-
 
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
@@ -201,7 +189,7 @@ async fn main() -> anyhow::Result<()> {
             census_directory.to_string() + OSM_FILENAME,
             census_directory + OSM_CACHE_FILENAME,
             use_cache,
-            visualise_building_boundaries,
+            visualise_building_boundaries, grid_size,
         )?
             .building_locations
             .drain()
@@ -220,7 +208,7 @@ async fn main() -> anyhow::Result<()> {
             census_directory,
             use_cache,
             allow_downloads,
-            false,
+            false, grid_size,
         )
             .await?;
 
@@ -242,7 +230,7 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("visualise") {
         let (_census, mut osm, polygons) = load_data(
             area.to_string(),
-            census_directory,
+            census_directory, grid_size,
             use_cache,
             allow_downloads,
             false,
@@ -273,7 +261,7 @@ async fn main() -> anyhow::Result<()> {
             census_directory,
             use_cache,
             allow_downloads,
-            visualise_building_boundaries,
+            visualise_building_boundaries, grid_size,
         )
             .await?;
         info!(

@@ -40,6 +40,7 @@ use crate::visualise::draw_output_areas;
 pub async fn load_data(
     area: String,
     census_directory: String,
+    grid_size: i32,
     use_cache: bool,
     allow_downloads: bool,
     visualise_building_boundaries: bool,
@@ -76,6 +77,7 @@ pub async fn load_data(
                     filename + OSM_CACHE_FILENAME,
                     use_cache,
                     visualise_building_boundaries,
+                    grid_size,
                 )
                     .context("Failed to load OSM map")
             };
@@ -86,7 +88,7 @@ pub async fn load_data(
         s.spawn(|_| {
             let polygon = move || -> anyhow::Result<PolygonContainer<String>> {
                 PolygonContainer::load_polygons_from_file(
-                    CensusTableNames::OutputAreaMap.get_filename(),
+                    CensusTableNames::OutputAreaMap.get_filename(), grid_size,
                 )
                     .context("Loading polygons for output areas")
             };
@@ -106,12 +108,12 @@ pub async fn load_data_and_init_sim(
     census_directory: String,
     use_cache: bool,
     allow_downloads: bool,
-    visualise_building_boundaries: bool,
+    visualise_building_boundaries: bool, grid_size: i32,
 ) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
     let (census_data, osm_buildings, output_area_polygons) = load_data(
         area,
-        census_directory,
+        census_directory, grid_size,
         use_cache,
         allow_downloads,
         visualise_building_boundaries,
@@ -130,11 +132,13 @@ pub async fn load_data_and_init_sim_with_debug_images(
     use_cache: bool,
     allow_downloads: bool,
     visualise_building_boundaries: bool,
+    grid_size: i32,
 ) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
     let (census_data, osm_buildings, output_area_polygons) = load_data(
         area,
         census_directory,
+        grid_size,
         use_cache,
         allow_downloads,
         visualise_building_boundaries,

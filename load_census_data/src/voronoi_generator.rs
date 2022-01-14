@@ -19,7 +19,7 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
@@ -29,9 +29,10 @@ use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
 use crate::DataLoadingError;
-use crate::osm_parsing::GRID_SIZE;
 use crate::parsing_error::ParseErrorType;
 use crate::polygon_lookup::PolygonContainer;
+
+const MAX_SIZE: i32 = 700000;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Scaling {
@@ -43,12 +44,13 @@ pub struct Scaling {
 
 impl Scaling {
     /// Factor of 16 reduction, with no offsets
-    pub const fn yorkshire_national_grid() -> Scaling {
+    pub const fn yorkshire_national_grid(grid_size: i32) -> Scaling {
+        let scale = (MAX_SIZE / grid_size) + 1;
         Scaling {
             x_offset: 0,
-            x_scale: 16,
+            x_scale: scale as isize,
             y_offset: 0,
-            y_scale: 16,
+            y_scale: scale as isize,
         }
     }
     /// Converts a coordinate to fit on the grid
@@ -180,12 +182,16 @@ fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> geo_ty
 }
 
 /// Returns the minimum and maximum grid size required for the seeds
-pub fn find_seed_bounds<T: num_traits::PrimInt + Copy + Clone>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
+pub fn find_seed_bounds<T: num_traits::PrimInt + Copy + Clone + Debug>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
     let mut min_x = T::max_value();
     let mut max_x = T::zero();
     let mut min_y = T::max_value();
     let mut max_y = T::zero();
     for seed in seeds {
+        assert!(seed.0 > T::zero(), "X part of Seed {:?} is less than zero!", seed);
+        assert!(seed.0 < T::max_value(), "X part of Seed {:?} is greater than the max value!", seed);
+        assert!(seed.1 > T::zero(), "Y part of Seed {:?} is less than zero!", seed);
+        assert!(seed.1 < T::max_value(), "Y part of Seed {:?} is greater than the max value!", seed);
         if seed.0 < min_x {
             min_x = seed.0;
         }
@@ -251,20 +257,20 @@ impl Voronoi {
         );
         trace!("Voronoi Boundary: {:?}", boundary);
         // The size must be even, otherwise we get a negative bounding box
-        let mut size = boundary.1.0.max(boundary.1.1);
-        if size % 2 != 0 {
-            size += 1;
+        let mut grid_size = boundary.1.0.max(boundary.1.1);
+        if grid_size % 2 != 0 {
+            grid_size += 1;
         }
         // Build the Voronoi polygons
         let bounding_box = voronoice::BoundingBox::new(
             voronoice::Point {
-                x: ((size / 2) as f64).floor(),
-                y: ((size / 2) as f64).floor(),
+                x: ((grid_size / 2) as f64).floor(),
+                y: ((grid_size / 2) as f64).floor(),
             },
-            size as f64,
-            size as f64,
+            grid_size as f64,
+            grid_size as f64,
         );
-        debug!("Voronoi boundary box size: {} -> {:?}", size, bounding_box);
+        debug!("Voronoi boundary box size: {} -> {:?}", grid_size, bounding_box);
         let polygons = VoronoiBuilder::default()
             .set_sites(voronoi_seeds)
             .set_bounding_box(bounding_box)
@@ -293,11 +299,11 @@ impl Voronoi {
             });
         };
 
-        let container = PolygonContainer::new(polygons, Scaling::yorkshire_national_grid(), GRID_SIZE as i32)?;
+        let container = PolygonContainer::new(polygons, Scaling::yorkshire_national_grid(grid_size), grid_size)?;
         debug!("Built quad tree");
 
         Ok(Voronoi {
-            grid_size: size,
+            grid_size,
             seeds,
             polygons: container,
             scaling,

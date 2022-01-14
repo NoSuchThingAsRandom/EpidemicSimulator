@@ -20,10 +20,7 @@
 //! Used to load in building types and locations from an OSM file
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
-use std::fmt::Formatter;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::str::FromStr;
+use std::fs::read;
 
 use geo::area::Area;
 use geo::centroid::Centroid;
@@ -31,9 +28,7 @@ use geo_types::{CoordFloat, CoordNum, Point, Polygon};
 use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde::de::{Error, Visitor};
-use serde::ser::SerializeStruct;
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::DataLoadingError;
 use crate::osm_parsing::draw_voronoi::draw_voronoi_polygons;
@@ -55,7 +50,7 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
 );
 
 /// The size of grids to use
-pub const GRID_SIZE: usize = 50000;
+//pub const GRID_SIZE: usize = 40000;
 const DUMP_TO_FILE: bool = false;
 const DRAW_VORONOI_DIAGRAMS: bool = false;
 
@@ -65,9 +60,13 @@ fn convert_points_to_floats<T: CoordNum, U: CoordFloat>(
     points
         .iter()
         .map(|p| {
-            (
-                U::from(p.x).unwrap_or_else(|| panic!("Failed to convert X coordinate ({:?}) to float", p.x)),
-                U::from(p.y).unwrap_or_else(|| panic!("Failed to convert Y coordinate ({:?}) to float", p.y)),
+            let x = U::from(p.x).unwrap_or_else(|| panic!("Failed to convert X coordinate ({:?}) to float", p.x));
+            debug_assert!(x > U::zero(), "X int to float conversion ({:?} -> {:?}) failed, as it is less than zero", p.x, x);
+            let y = U::from(p.y).unwrap_or_else(|| panic!("Failed to convert Y coordinate ({:?}) to float", p.y));
+            debug_assert!(y > U::zero(), "Y int to float conversion ({:?} -> {:?}) failed, as it is less than zero", p.y, y);
+            (x
+             , y
+             ,
             )
                 .into()
         })
@@ -160,33 +159,9 @@ struct RawOSMNode {
 /// We create a global hashmap, and use this Struct as an ID
 ///
 /// This Struct exists, solely so we don't get confused which uuid is which
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BuildingBoundaryID {
-    //#[serde("serialize_with = uuid_serialize")]
     pub id: uuid::Uuid,
-}
-
-// For some reason, need to extract the ID out of the Wrapper Struct as it is not Serialized as a String, which breaks JSON Hashmaps?
-impl Serialize for BuildingBoundaryID {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        self.id.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for BuildingBoundaryID {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        struct IdVisitor;
-        impl<'de> Visitor<'de> for IdVisitor {
-            type Value = String;
-
-            fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-                formatter.write_str("ID String does not exist!")
-            }
-        }
-        let id = deserializer.deserialize_str(IdVisitor)?;
-        let id = uuid::Uuid::from_str(&id).unwrap_or_else(|_| panic!("Cannot convert id ('{}') to UUID", id));
-        Ok(Self { id })
-    }
 }
 
 impl Default for BuildingBoundaryID {
@@ -254,7 +229,8 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
                 node.lat(),
                 node.lon(),
             );
-            //let position = geo_types::Coordinate::from(position);
+            debug_assert!(position.0 >= 0, "Raw Node X coordinate conversion ({} -> {}) is less than zero!", node.lat(), position.0);
+            debug_assert!(position.0 >= 0, "Raw Node Y coordinate conversion ({} -> {}) is less than zero!", node.lon(), position.1);
             let position: Point<i32> = position.into(); //geo_types::Point::from(position);
             return Ok(RawOSMNode {
                 id: node.id,
@@ -329,19 +305,12 @@ impl OSMRawBuildings {
     fn read_cached_osm_data(
         cache_filename: String,
     ) -> Result<OSMRawBuildings, DataLoadingError> {
-        debug!("Reading cached parsing data");
-        let mut file =
-            File::open(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
-                source: Box::new(e),
-                context: format!("File '{}' doesn't exist!", cache_filename),
-            })?;
-        let mut data = String::with_capacity(1000);
-        file.read_to_string(&mut data)
-            .map_err(|e| DataLoadingError::IOError {
-                source: Box::new(e),
-                context: "Failed to read data!".to_string(),
-            })?;
-        serde_json::from_str(&data).map_err(|e| DataLoadingError::IOError {
+        debug!("Reading cached parsing data from: {}",cache_filename);
+        let bytes = read(&cache_filename).map_err(|e| DataLoadingError::IOError {
+            source: Box::new(e),
+            context: format!("Reading File '{}'  failed!", cache_filename),
+        })?;
+        bincode::deserialize(&bytes).map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
             context: "Failed to parse OSM cached data with serde!".to_string(),
         })
@@ -352,25 +321,16 @@ impl OSMRawBuildings {
     ) -> Result<OSMRawBuildings, DataLoadingError> {
         debug!("Parsing data from raw OSM file");
         let building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
-        let mut file =
-            File::create(cache_filename.to_string()).map_err(|e| DataLoadingError::IOError {
-                source: Box::new(e),
-                context: format!("Failed to create file '{}'", cache_filename),
-            })?;
-        file.write_all(&serde_json::to_vec(&building_locations).map_err(|e| {
+        std::fs::write(cache_filename, bincode::serialize(&building_locations).map_err(|e| {
             DataLoadingError::IOError {
                 source: Box::new(e),
-                context: "Failed to serialize OSM data with serde!".to_string(),
+                context: "Failed to serialize OSM data with bincode!".to_string(),
             }
         })?)
             .map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
-                context: "Failed to write serde data to file!".to_string(),
+                context: "Failed to write bincode OSM data to file!".to_string(),
             })?;
-        file.flush().map_err(|e| DataLoadingError::IOError {
-            source: Box::new(e),
-            context: "Failed to flush data to file!".to_string(),
-        })?;
         debug!("Completed and saved parsing data");
         Ok(building_locations)
     }
@@ -386,6 +346,7 @@ impl OSMRawBuildings {
         cache_filename: String,
         use_cache: bool,
         visualise_building_boundaries: bool,
+        grid_size: i32,
     ) -> Result<OSMRawBuildings, DataLoadingError> {
         info!("Building OSM Data...");
         debug!("Starting to read data from file");
@@ -406,7 +367,7 @@ impl OSMRawBuildings {
         };
 
         debug!("Loaded OSM data");
-        osm_data.construct_voronoi_diagrams();
+        osm_data.construct_voronoi_diagrams(grid_size);
         if visualise_building_boundaries {
             debug!("Starting drawing");
             for (k, p) in osm_data.voronoi().iter() {
@@ -507,14 +468,12 @@ impl OSMRawBuildings {
                 }
             }
             if building_exists {
-                if let Some(b) =
+                if let Some(duplicate_building) =
                 building_boundaries.insert(building_boundary_id, building_shape.clone())
                 {
-                    // TODO THIS IS FUCKED
-                    assert_eq!(b, building_shape, "This shouldn't be possible!");
                     panic!(
                         "Building ID {:?}, has multiple entries which shouldn't be possible!\nOriginal: {:?}\nNew:      {:?}",
-                        building_boundary_id, b, building_shape
+                        building_boundary_id, duplicate_building, building_shape
                     )
                 }
             }
@@ -578,7 +537,7 @@ impl OSMRawBuildings {
     /// Constructs Voronoi diagrams for each building type
     ///
     /// This constructs a polygon map, for each building, where each point inside a polygon means that building is the closest one
-    fn construct_voronoi_diagrams(&mut self) {
+    fn construct_voronoi_diagrams(&mut self, grid_size: i32) {
         let voronoi = self.building_locations
             .par_iter()
             .filter_map(|(building_type, locations)| {
@@ -588,12 +547,12 @@ impl OSMRawBuildings {
                     locations.len()
                 );
                 return match Voronoi::new(
-                    GRID_SIZE as i32,
+                    grid_size,
                     locations
                         .iter()
                         .map(|p| (p.center.x(), p.center.y()))
                         .collect(),
-                    Scaling::yorkshire_national_grid(),
+                    Scaling::yorkshire_national_grid(grid_size),
                 ) {
                     Ok(voronoi) => Some((*building_type, voronoi)),
                     Err(e) => {
@@ -620,6 +579,7 @@ mod tests {
             census_directory + OSM_CACHE_FILENAME,
             false,
             false,
+            50000
         );
         //assert!(osm_buildings.is_ok());
         let osm_buildings = osm_buildings.unwrap();

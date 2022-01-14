@@ -39,7 +39,6 @@
  *
  */
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::time::Instant;
@@ -55,7 +54,6 @@ use shapefile::Shape;
 
 use crate::DataLoadingError;
 use crate::osm_parsing::convert::decimal_latitude_and_longitude_to_northing_and_eastings;
-use crate::osm_parsing::GRID_SIZE;
 use crate::parsing_error::ParseErrorType;
 use crate::parsing_error::ParseErrorType::{MathError, MissingKey};
 use crate::voronoi_generator::Scaling;
@@ -304,6 +302,7 @@ impl PolygonContainer<String> {
     /// Generates the polygons for each output area contained in the given file
     pub fn load_polygons_from_file(
         filename: &str,
+        grid_size: i32,
     ) -> Result<PolygonContainer<String>, DataLoadingError> {
         let mut reader =
             shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
@@ -422,12 +421,10 @@ impl PolygonContainer<String> {
             Ok((code, polygon))
         }).collect::<Result<HashMap<String, geo_types::Polygon<i32>>, DataLoadingError>>()?;
         info!("Finished loading map data in {:?}", start_time.elapsed());
-        let scaling = Scaling::yorkshire_national_grid();
+        let scaling = Scaling::yorkshire_national_grid(grid_size);
         PolygonContainer::new(
             data,
-            scaling,
-            i32::try_from(GRID_SIZE)
-                .unwrap_or_else(|_| panic!("GRID SIZE {} is bigger than an i32", GRID_SIZE)),
+            scaling, grid_size,
         )
     }
     /*    pub fn remove_polygon(&mut self, output_area_id: T) {

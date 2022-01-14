@@ -25,7 +25,6 @@ use plotters::prelude::{BitMapBackend, Cartesian2d, Color, IntoDrawingArea, Pale
 use plotters::style::{RGBColor, WHITE};
 
 use crate::{OSMRawBuildings, TagClassifiedBuilding};
-use crate::osm_parsing::GRID_SIZE;
 
 fn draw_polygon_ring(
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
@@ -48,14 +47,14 @@ fn draw_polygon_ring(
 pub fn draw_osm_buildings_polygons(
     filename: String,
     data: &OSMRawBuildings,
-    building_type: TagClassifiedBuilding,
+    building_type: TagClassifiedBuilding, grid_size: i32,
 ) {
     println!("Drawing at: {}", filename);
     let draw_backend =
-        BitMapBackend::new(&filename, (GRID_SIZE as u32, GRID_SIZE as u32)).into_drawing_area();
+        BitMapBackend::new(&filename, (grid_size as u32, grid_size as u32)).into_drawing_area();
     draw_backend.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&draw_backend)
-        .build_cartesian_2d(0..(GRID_SIZE as i32), 0..(GRID_SIZE as i32))
+        .build_cartesian_2d(0..grid_size, 0..grid_size)
         .unwrap();
     let voroinoi = data.voronoi();
     let chosen_voronoi = &voroinoi[&building_type];

@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -22,6 +22,7 @@ pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per Workplace building
 pub const WORKPLACE_BUILDING_SIZE: u16 = 1000;
 pub const HOUSEHOLD_SIZE: u16 = 4;
+pub const MIN_WORKPLACE_OCCUPANT_COUNT: u32 = 20;
 
 /// How often to print debug statements
 pub const DEBUG_ITERATION_PRINT: usize = 10;

@@ -23,6 +23,8 @@
 extern crate enum_map;
 
 use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 use std::string::String;
 use std::thread::sleep;
@@ -53,7 +55,7 @@ pub mod tables;
 pub mod voronoi_generator;
 
 pub const OSM_FILENAME: &str = "OSM/england-latest.osm.pbf";
-pub const OSM_CACHE_FILENAME: &str = "OSM/cached.json";
+pub const OSM_CACHE_FILENAME: &str = "OSM/cached";
 
 /// This is a container for all the Records relating to one Output Area for All Census Tables
 pub struct CensusDataEntry<'a> {
@@ -310,6 +312,16 @@ impl CensusData {
             residents_workplace,
         };
         census_data.filter_incomplete_output_areas();
+
+
+        let mut chosen_areas = File::create("debug_dumps/census_resides_workplace.csv").unwrap();
+        for (area, sub_areas) in &census_data.residents_workplace {
+            chosen_areas.write(area.as_ref()).expect("Failed to dump");
+            for a in sub_areas.workplace_count.keys() {
+                chosen_areas.write((", ".to_string() + a).as_ref()).expect("Failed to dump");
+            }
+            chosen_areas.write(("\n").as_ref()).expect("Failed to dump");
+        }
         Ok(census_data)
     }
     pub async fn resume_download(
@@ -416,5 +428,29 @@ impl CensusData {
             }
             data
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::thread_rng;
+
+    use crate::CensusData;
+
+    fn load_census_data() -> CensusData {
+        CensusData::load_all_tables(
+            "../data/".to_string(),
+            "1946157112TYPE299".to_string(),
+            false).expect("Failed to load data")
+    }
+
+    #[test]
+    fn test_workplace_area_distrubution() {
+        let data = load_census_data();
+        let area_data = data.for_output_area_code("E00067299".to_string()).expect("Census area: 'E00067299' doesn't exist");
+        let mut rng = thread_rng();
+        for _ in 0..100 {
+            println!("{}", area_data.get_random_workplace_area(&mut rng).unwrap())
+        }
     }
 }

@@ -120,6 +120,6 @@ pub fn draw_graph<T: Copy + Ord + Hash + Debug, U: Copy + Ord + Hash + Debug, V:
     //writer.write_all(dot.);
     write!(writer, "{:?}", dot)?;
     info!("Dumped to fikle");
-    writer.flush();
+    writer.flush().expect("Failed to flush to file");
     Ok(())
 }

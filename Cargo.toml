@@ -5,13 +5,13 @@ members = ["load_census_data", "sim", "run", "visualisation"]
 resolver = "2"
 
 [profile.dev]
-opt-level = 3
-debug = 1
+opt-level = 2
+debug = true
 incremental = true
 lto = "thin"
 debug-assertions = false
 codegen-units = 128
-
+panic = "unwind"
 
 [patch.crates-io]
 quadtree_rs = { git = "https://github.com/NoSuchThingAsRandom/quadtree/" }
