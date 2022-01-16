@@ -54,6 +54,18 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
 const DUMP_TO_FILE: bool = false;
 const DRAW_VORONOI_DIAGRAMS: bool = false;
 
+
+/// Returns an Err if the coordindate is outside the specified boundaries
+fn check_boundaries(lat: f64, lon: f64) -> Result<(), ()> {
+    if !(53.91..=54.05).contains(&lat) {
+        return Err(());
+    }
+    if !(-1.17..=-0.97).contains(&lon) {
+        return Err(());
+    }
+    Ok(())
+}
+
 fn convert_points_to_floats<T: CoordNum, U: CoordFloat>(
     points: &[geo_types::Coordinate<T>],
 ) -> Vec<geo_types::Coordinate<U>> {
@@ -84,6 +96,24 @@ pub fn convert_polygon_to_float<T: CoordNum, U: CoordFloat>(
             .map(|interior| convert_points_to_floats(&interior.0).into())
             .collect(),
     )
+}
+
+
+/// To avoid storing multiple copies of a buildings outline (as one OSM building, can exist multiple times),
+/// We create a global hashmap, and use this Struct as an ID
+///
+/// This Struct exists, solely so we don't get confused which uuid is which
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct BuildingBoundaryID {
+    pub id: uuid::Uuid,
+}
+
+impl Default for BuildingBoundaryID {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4(),
+        }
+    }
 }
 
 /// The type of buildings that are supported from the OSM Tag lists
@@ -155,23 +185,6 @@ struct RawOSMNode {
     location: Point<i32>,
 }
 
-/// To avoid storing multiple copies of a buildings outline (as one OSM building, can exist multiple times),
-/// We create a global hashmap, and use this Struct as an ID
-///
-/// This Struct exists, solely so we don't get confused which uuid is which
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
-pub struct BuildingBoundaryID {
-    pub id: uuid::Uuid,
-}
-
-impl Default for BuildingBoundaryID {
-    fn default() -> Self {
-        Self {
-            id: uuid::Uuid::new_v4(),
-        }
-    }
-}
-
 /// This is a representation of an OSM building
 ///
 /// It has a type, given by the OSM Tags, as well as a center point, and an approximate size
@@ -227,13 +240,14 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
     fn try_from(node: DenseNode<'a>) -> Result<Self, Self::Error> {
         let visible = node.info().map(|info| info.visible()).unwrap_or(true);
         if visible {
+            check_boundaries(node.lat(), node.lon())?;
             let position = convert::decimal_latitude_and_longitude_to_northing_and_eastings(
                 node.lat(),
                 node.lon(),
             );
-            debug_assert!(position.0 >= 0, "Raw Node X coordinate conversion ({} -> {}) is less than zero!", node.lat(), position.0);
-            debug_assert!(position.0 >= 0, "Raw Node Y coordinate conversion ({} -> {}) is less than zero!", node.lon(), position.1);
-            let position: Point<i32> = position.into(); //geo_types::Point::from(position);
+            assert!(position.0 >= 0, "Raw Node X coordinate conversion ({} -> {}) is less than zero!", node.lat(), position.0);
+            assert!(position.0 >= 0, "Raw Node Y coordinate conversion ({} -> {}) is less than zero!", node.lon(), position.1);
+            let position: Point<i32> = position.into();
             return Ok(RawOSMNode {
                 id: node.id,
                 classification: TagClassifiedBuilding::from(node.tags()),
@@ -451,9 +465,11 @@ impl OSMRawBuildings {
                         child.location.y(),
                     )));
                     building_classification.insert(child.classification);
-                } else {
-                    warn!("Node {} doesn't exist for way {}", child, way.id);
                 }
+            }
+            // If no nodes exist (May not be in the specified area), skip this building
+            if building_polygon.is_empty() {
+                continue;
             }
             let building_shape = geo_types::Polygon::new(building_polygon.into(), vec![]);
             let building_boundary_id = BuildingBoundaryID::default();
@@ -581,7 +597,7 @@ mod tests {
             census_directory + OSM_CACHE_FILENAME,
             false,
             false,
-            50000
+            50000,
         );
         //assert!(osm_buildings.is_ok());
         let osm_buildings = osm_buildings.unwrap();

@@ -19,16 +19,18 @@
  */
 
 use std::cell::RefCell;
+use std::cmp::min;
 use std::collections::HashMap;
 use std::default::Default;
 use std::hash::Hash;
 use std::rc::Rc;
 
 use anyhow::Context;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use rand::{Rng, RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use strum::IntoEnumIterator;
 
 use load_census_data::{CensusData, CensusDataEntry};
 use load_census_data::osm_parsing::{
@@ -205,13 +207,13 @@ impl SimulatorBuilder {
         let output_area_code = OutputAreaID::from_code(code);
 
         if !self.output_areas.contains_key(&output_area_code) {
-            warn!("Output area: {} doesn't exist!",output_area_code);
+            //warn!("Output area: {} doesn't exist!",output_area_code);
             return Ok(None);
         }
 
         let buildings = possible_buildings_per_area.get(&output_area_code);
         if buildings.is_none() {
-            warn!("Buildings don't exist for area: {}",output_area_code);
+            //warn!("Buildings don't exist for area: {}",output_area_code);
             return Ok(None);
         }
         Ok(Some(output_area_code))
@@ -233,8 +235,9 @@ impl SimulatorBuilder {
         // Shuffle the buildings
         possible_buildings_per_area.par_iter_mut().for_each(|(_, buildings)| buildings.shuffle(&mut thread_rng()));
 
-        // Add Workplace Output Areas to Every Citizen
-        let mut citizens_to_allocate: HashMap<OutputAreaID, Vec<CitizenID>> =
+        // Group Citizens by their workplace output area
+        // NOTE This is achieved by removing citizens from self.citizens, because we cannot pass references through
+        let mut citizens_to_allocate: HashMap<OutputAreaID, HashMap<CitizenID, Citizen>> =
             HashMap::new();
         // Assign workplace areas to each Citizen, per Output area
         for (household_output_area_code, household_output_area) in &self.output_areas {
@@ -265,12 +268,13 @@ impl SimulatorBuilder {
                         }
                     };
                 let citizens_to_add = citizens_to_allocate.entry(workplace_output_area_code).or_default();
-                citizens_to_add.push(citizen_id);
+                citizens_to_add.insert(citizen_id, self.citizens.remove(&citizen_id).expect(format!("Citizen {} does not exist!", citizen_id).as_str()));
             }
         }
         debug!("Creating workplace buildings for: {:?} Citizens and {} Output Areas",citizens_to_allocate.iter().map(|(_,citizens)|citizens.len()).sum::<usize>(),citizens_to_allocate.len());
+        assert!(self.citizens.is_empty(), "{} Citizens have not been assigned a workplace area!", self.citizens.len());
         // Create buildings for each Workplace output area
-        'citizen_allocation_loop: for (workplace_area_code, citizens) in citizens_to_allocate {
+        'citizen_allocation_loop: for (workplace_area_code, mut citizens) in citizens_to_allocate {
             // Retrieve the buildings or skip this area
             let possible_buildings = match possible_buildings_per_area.get_mut(&workplace_area_code) {
                 Some(buildings) => buildings,
@@ -280,7 +284,7 @@ impl SimulatorBuilder {
                 }
             };
 
-            match SimulatorBuilder::assign_buildings_per_output_area(workplace_area_code.clone(), self.citizens.drain().map(|(_, c)| c).collect(), possible_buildings)
+            match SimulatorBuilder::assign_buildings_per_output_area(workplace_area_code.clone(), citizens.values_mut().collect(), possible_buildings)
             {
                 Ok(buildings) => {
                     match self
@@ -300,23 +304,33 @@ impl SimulatorBuilder {
                     error!("Failed to assign buildings for Output Area: {}, Error: {}",workplace_area_code,e);
                 }
             }
+            // Add the Citizens back to self
+            citizens.into_iter().for_each(|(id, citizen)| { if self.citizens.insert(id, citizen).is_some() { panic!("Citizen {} has been duplicated", id); } });
         }
         Ok(())
     }
 
     /// Calculates which buildings should be assigned to what occupation, and scales the floor space, to ensure every Citizen can have a workplace
-    fn assign_buildings_per_output_area(workplace_area_code: OutputAreaID, mut citizens: Vec<Citizen>, possible_buildings: &mut Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
+    fn assign_buildings_per_output_area(workplace_area_code: OutputAreaID, mut citizens: Vec<&mut Citizen>, possible_buildings: &mut Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
+        if citizens.len() == 0 {
+            warn!("No buildings can be assigned to area {} as no workers exist: {:?}",workplace_area_code,citizens);
+            return Ok(HashMap::new());
+        }
+        if possible_buildings.len() == 0 {
+            warn!("No buildings can be assigned to area {} as no buildings exist: {:?}",workplace_area_code,possible_buildings);
+            return Ok(HashMap::new());
+        }
         let mut rng = thread_rng();
         // This is the amount to increase bin capacity to ensure it meets the minimum required size
-        const BUILDING_PER_OCCUPATION_OVERCAPACITY: f64 = 1.2;
+        const BUILDING_PER_OCCUPATION_OVERCAPACITY: f64 = 1.1;
 
         // Randomise the order of the citizens, to reduce the number of Citizens sharing household and Workplace output areas
         citizens.shuffle(&mut rng);
-
+        let total_workers = citizens.len();
 
         // Extract the Citizen Struct
         // TODO Fix the borrow of self
-        let mut citizens: HashMap<OccupationType, Vec<Citizen>> = citizens.into_iter().map(|citizen_id| {
+        let mut citizens: HashMap<OccupationType, Vec<&mut Citizen>> = citizens.into_iter().map(|citizen_id| {
             //let citizen = self.citizens.get_mut(&*citizen_id).expect(format!("Citizen with id {} doesn't exist", citizen_id).as_str());
             (citizen_id.occupation(), citizen_id)
         }).fold(HashMap::new(), |mut a, b| {
@@ -333,7 +347,7 @@ impl SimulatorBuilder {
         let available_space: usize = possible_buildings.iter().map(|building| building.size()).sum::<i32>() as usize;
 
         // Calculate how much space we need
-        let required_space_per_occupation: HashMap<OccupationType, usize> = citizens.iter().map(|(occupation, citizens)| {
+        let mut required_space_per_occupation: HashMap<OccupationType, usize> = citizens.iter().map(|(occupation, citizens)| {
             let size = EmploymentDensities::get_density_for_occupation(*occupation);
             (occupation, size * citizens.len() as u32)
         }).fold(HashMap::new(), |mut a, b| {
@@ -341,38 +355,68 @@ impl SimulatorBuilder {
             *entry += b.1 as usize;
             a
         });
+        // Add any missing Occupations
+        OccupationType::iter().for_each(|occupation| if !required_space_per_occupation.contains_key(&occupation) {
+            required_space_per_occupation.insert(occupation, 0);
+        });
         let required_space: usize = required_space_per_occupation.values().sum();
 
 
         // Calculate how much we need to scale buildings to meet the targets
         let scale = (((required_space as f64) / (available_space as f64)) * BUILDING_PER_OCCUPATION_OVERCAPACITY).ceil() as usize;
-
+        //trace!("Scale for Output Area: {} is {} with {} buildings and {} Workers",workplace_area_code,scale,possible_buildings.len(),total_workers);
         // Allocate buildings using first fit
         /// Occupation Type, (Current Total Floor Space, The list of buildings to be generated)
-        let mut building_per_occupation: HashMap<OccupationType, (usize, Vec<RawBuilding>)> = HashMap::new();
-
+        let mut building_per_occupation: HashMap<OccupationType, (usize, Vec<RawBuilding>)> = OccupationType::iter().map(|occupation| (occupation, (0, Vec::with_capacity(1000)))).collect();
+        let mut differences: HashMap<OccupationType, isize> = required_space_per_occupation.iter().map(|(occupation, size)| (*occupation, *size as isize)).collect();
         // Shuffle to ensure buildings are distributed across the area
         possible_buildings.shuffle(&mut rng);
         for building in possible_buildings.into_iter() {
             let mut added = false;
-            for (occupation, (current_size, buildings)) in &mut building_per_occupation {
+            let building_size = building.size() as usize * scale;
+            if building_size == 0 {
+                continue;
+            }
 
+            // Add the building to the first Occupation group, where it won't exceed the required size
+            for (occupation, (current_size, buildings)) in &mut building_per_occupation {
                 // If adding the building doesn't exceed the bin size, do it!
-                if *current_size + (building.size() as usize * scale) < *required_space_per_occupation.get(occupation).expect("Occupation type is missing!") {
-                    *current_size += (building.size() as usize * scale);
+                if *current_size + building_size < *required_space_per_occupation.get(occupation).expect("Occupation type is missing!") {
+                    *current_size += building_size;
                     buildings.push(*building);
+                    *differences.get_mut(occupation).expect("") -= building_size as isize;
                     added = true;
                 }
             }
-            // TODO Make this nicer/figure out what to do here
+            // If cannot be added to any buildings without overflowing the size, then add to occupation that overflows least
             if !added {
-                error!("Failed to add building of size: {}, current capacities: {:?}",building.size(),building_per_occupation.iter().map(| (occupation_type,(size,_))|(*occupation_type,*size)).collect::<HashMap<OccupationType,usize>>());
+                // Find the building that overflows least
+                let mut min_occupation = None;
+                let mut min_diff = isize::MAX;
+                for (occupation, diff) in &differences {
+                    if 0 < *diff && *diff < min_diff {
+                        min_diff = *diff;
+                        min_occupation = Some(*occupation);
+                    }
+                }
+                // Add to that building
+                match min_occupation {
+                    Some(occupation) => {
+                        let (size, buildings) = building_per_occupation.get_mut(&occupation).expect("");
+                        *size += building_size;
+                        buildings.push(*building);
+                        *differences.get_mut(&occupation).expect("") -= building_size as isize;
+                    }
+                    None => {
+                        //error!("Failed to add building of size: {}, \nCurrent Capacities: {:?}\nRequired Sizes: {:?}",building.size()*(scale as i32),building_per_occupation.iter().map(| (occupation_type,(size,_))|(*occupation_type,*size)).collect::<HashMap<OccupationType,usize>>(),required_space_per_occupation);
+                    }
+                }
             }
         }
         // Ensure we have meant the minimum requirements OR TODO Allow some overflow to remote work?
         for (occupation_type, (size, buildings)) in &building_per_occupation {
             let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
-            assert!(size > required, "Occupation: {:?}, has a size {} smaller than required {}", occupation_type, size, required);
+            assert!(size >= required, "Occupation: {:?}, has a size {} smaller than required {}\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", occupation_type, size, required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
         }
 
 
@@ -385,17 +429,22 @@ impl SimulatorBuilder {
         for occupation in keys {
             let citizens = citizens.get_mut(&occupation).expect(format!("Couldn't get Citizens with occupation: {:?}", occupation).as_str());
             let buildings = building_per_occupation.get_mut(&occupation).expect(format!("Couldn't get Citizens with occupation: {:?}", occupation).as_str());
-            let mut workplaces = SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), citizens, &buildings.1).context(format!("Failed to assign workplaces to Citizens for Occupation: {:?}", occupation))?;
+            let mut workplaces = SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), citizens, &buildings.1);
+            if let Err(e) = workplaces {
+                error!("{}",e);
+                return Err(e.context(format!("Failed to assign workplaces to Citizens for Occupation: {:?}", occupation)));
+            }
+            let mut workplaces = workplaces.unwrap();
             workplaces.drain()
                 .for_each(|(id, workplace)| {
-                    workplace_buildings.insert(id, workplace).expect("Two Workplaces exist with the same Building ID!");
+                    if workplace_buildings.insert(id, workplace).is_some() { panic!("Two Workplaces exist with the same Building ID!"); }
                 });
         }
         Ok(workplace_buildings)
     }
 
     /// Assigns Each Citizen to one of the Given RawBuildings and transforms the RawBuildings into Workplaces
-    fn assign_workplaces_to_citizens_per_occupation(workplace_area_code: OutputAreaID, citizens: &mut Vec<Citizen>, buildings: &Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
+    fn assign_workplaces_to_citizens_per_occupation(workplace_area_code: OutputAreaID, citizens: &mut Vec<&mut Citizen>, buildings: &Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
         let total_building_count = buildings.len();
         let total_workers = citizens.len();
         let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
@@ -405,7 +454,7 @@ impl SimulatorBuilder {
                 workplace_area_code.clone(),
                 BuildingType::Workplace,
             ),
-            *buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces {} to assign workers ({}/{}) to in Output Area: {}", total_building_count, 0, total_workers, workplace_area_code) })?,
+            *buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces ({}) to assign workers ({}/{}) to in Output Area: {}", total_building_count, 0, total_workers, workplace_area_code) })?,
             citizens.first().expect("No Citizens to assign to workplaces!").occupation());
         for (index, citizen) in citizens.iter_mut().enumerate() {
             // 2 Cases
@@ -508,9 +557,6 @@ impl SimulatorBuilder {
             "There are {} areas with workplace buildings",
             possible_workplaces.len()
         );
-        for (id, _) in &self.output_areas {
-            println!("{} has {} buildings ", &id, possible_workplaces.get(&id).map(|f| f.len()).unwrap_or(0));
-        }
 
         // Remove any areas that do not have any workplaces
         let output_area_ref = Rc::new(RefCell::new(&mut self.output_areas));

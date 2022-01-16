@@ -227,7 +227,7 @@ impl Workplace {
         }
     }
     fn max_occupant_count(&self) -> u32 {
-        ((self.floor_space) / EmploymentDensities::get_density_for_occupation(self.workplace_occupation_type)).min(MIN_WORKPLACE_OCCUPANT_COUNT)
+        ((self.floor_space) / EmploymentDensities::get_density_for_occupation(self.workplace_occupation_type)).max(MIN_WORKPLACE_OCCUPANT_COUNT)
     }
     pub fn is_at_capacity(&self) -> bool {
         self.max_occupant_count() <= (self.occupants.len() as u32)

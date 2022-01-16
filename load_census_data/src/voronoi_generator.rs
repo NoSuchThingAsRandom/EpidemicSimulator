@@ -289,9 +289,6 @@ impl Voronoi {
                 .map(|(index, p)| (index, voronoi_cell_to_polygon(&p)))
                 .collect();
             trace!("Converted polygons to geo polygons");
-            if polygons.len() < 100 {
-                println!("{:?}", polygons);
-            }
             polygons
         } else {
             return Err(DataLoadingError::Misc {

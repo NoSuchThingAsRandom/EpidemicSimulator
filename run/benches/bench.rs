@@ -37,7 +37,8 @@ struct MyProfiler {}
 
 impl Profiler for MyProfiler {
     fn start_profiling(&mut self, benchmark_id: &str, benchmark_dir: &Path) {
-        let path = format!("./profiling/{:?}/{}", benchmark_dir, benchmark_id);
+        let path = format!("../profiling/profile");
+        println!("Using profiler file: {}", path);
         PROFILER.lock().unwrap().start(path).unwrap();
     }
 
@@ -61,14 +62,14 @@ fn load_census_data(c: &mut Criterion) {
             directory.to_string() + OSM_FILENAME,
             directory.to_string() + OSM_CACHE_FILENAME,
             false,
-            false,
+            false, 30000,
         )
     ));
 
     // Build output area polygons
     group.bench_function("Load Output Area Polygons", |b| b.iter(||
         PolygonContainer::load_polygons_from_file(
-            CensusTableNames::OutputAreaMap.get_filename(),
+            CensusTableNames::OutputAreaMap.get_filename(), 30000,
         )
     ));
 
@@ -87,10 +88,10 @@ fn building_assignment(c: &mut Criterion) {
         directory.to_string() + OSM_FILENAME,
         directory.to_string() + OSM_CACHE_FILENAME,
         false,
-        false,
+        false, 30000,
     ).expect("Failed to load osm data");
     let polygons = PolygonContainer::load_polygons_from_file(
-        CensusTableNames::OutputAreaMap.get_filename(),
+        ("../".to_owned() + CensusTableNames::OutputAreaMap.get_filename()).as_str(), 30000,
     ).unwrap();
     let mut chosen: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
     let mut rng = thread_rng();
