@@ -13,5 +13,8 @@ debug-assertions = false
 codegen-units = 128
 panic = "unwind"
 
+[profile.bench]
+debug = true
+
 [patch.crates-io]
 quadtree_rs = { git = "https://github.com/NoSuchThingAsRandom/quadtree/" }

@@ -31,7 +31,7 @@ use petgraph::{Directed, EdgeType, Undirected};
 use petgraph::dot::Config::{EdgeNoLabel, NodeIndexLabel};
 use petgraph::graphmap::GraphMap;
 
-use load_census_data::tables::resides_vs_workplace::WorkplaceResidentalRecord;
+use load_census_data::tables::resides_vs_workplace::WorkplaceResidentialRecord;
 
 pub fn build_citizen_graph(
     simulation: &sim::simulator::Simulator,
@@ -60,7 +60,7 @@ pub fn build_citizen_graph(
 }
 
 pub fn build_workplace_output_area_graph(
-    residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
+    residents_workplace: HashMap<String, WorkplaceResidentialRecord>,
 ) -> GraphMap<u32, u32, Directed> {
     // Stupid workaround because String doesn't have copy
     let mut area_map_lookup = BiMap::with_capacity(residents_workplace.len());

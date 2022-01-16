@@ -37,6 +37,7 @@ use crate::voronoi_generator::{Scaling, Voronoi};
 pub mod convert;
 pub mod draw_voronoi;
 
+
 // From guesstimating on: https://maps.nls.uk/geo/explore/#zoom=19&lat=53.94849&lon=-1.03067&layers=170&b=1&marker=53.948300,-1.030701
 pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (450000, 400000);
 pub const YORKSHIRE_AND_HUMBER_BOTTOM_LEFT: (u32, u32) = (3500000, 100000);
@@ -54,16 +55,37 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
 const DUMP_TO_FILE: bool = false;
 const DRAW_VORONOI_DIAGRAMS: bool = false;
 
+enum CheckBoundaries {
+    York,
+    YorkshireAndTheHumber,
+}
 
-/// Returns an Err if the coordindate is outside the specified boundaries
-fn check_boundaries(lat: f64, lon: f64) -> Result<(), ()> {
-    if !(53.91..=54.05).contains(&lat) {
-        return Err(());
+impl CheckBoundaries {
+    /// Returns an Err if the coordinate is outside the specified boundaries
+    fn check_boundaries(&self, lat: f64, lon: f64) -> Result<(), ()> {
+        //https://boundingbox.klokantech.com/
+        //-1.223712,53.874567,-0.919671,54.056866
+        match self {
+            CheckBoundaries::York => {
+                if !(53.87..=54.05).contains(&lat) {
+                    return Err(());
+                }
+                if !(-1.23..=-0.91).contains(&lon) {
+                    return Err(());
+                }
+            }
+            //-2.5467,53.3015,0.1498,54.5621
+            CheckBoundaries::YorkshireAndTheHumber => {
+                if !(53.30..=54.56).contains(&lat) {
+                    return Err(());
+                }
+                if !(-2.55..=0.15).contains(&lon) {
+                    return Err(());
+                }
+            }
+        }
+        Ok(())
     }
-    if !(-1.17..=-0.97).contains(&lon) {
-        return Err(());
-    }
-    Ok(())
 }
 
 fn convert_points_to_floats<T: CoordNum, U: CoordFloat>(
@@ -240,13 +262,16 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
     fn try_from(node: DenseNode<'a>) -> Result<Self, Self::Error> {
         let visible = node.info().map(|info| info.visible()).unwrap_or(true);
         if visible {
-            check_boundaries(node.lat(), node.lon())?;
+            // TODO Change this
+            CheckBoundaries::YorkshireAndTheHumber.check_boundaries(node.lat(), node.lon())?;
             let position = convert::decimal_latitude_and_longitude_to_northing_and_eastings(
                 node.lat(),
                 node.lon(),
             );
             assert!(position.0 >= 0, "Raw Node X coordinate conversion ({} -> {}) is less than zero!", node.lat(), position.0);
-            assert!(position.0 >= 0, "Raw Node Y coordinate conversion ({} -> {}) is less than zero!", node.lon(), position.1);
+            assert!(position.0 <= i32::MAX, "Raw Node X coordinate conversion ({} -> {}) is greater than the max value!", node.lat(), position.0);
+            assert!(position.1 >= 0, "Raw Node Y coordinate conversion ({} -> {}) is less than zero!", node.lon(), position.1);
+            assert!(position.1 <= i32::MAX, "Raw Node Y coordinate conversion ({} -> {}) is greater than the max value!", node.lon(), position.1);
             let position: Point<i32> = position.into();
             return Ok(RawOSMNode {
                 id: node.id,

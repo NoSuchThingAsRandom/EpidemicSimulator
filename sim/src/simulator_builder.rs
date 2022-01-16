@@ -262,7 +262,7 @@ impl SimulatorBuilder {
                             break code;
                         }
                         index += 1;
-                        if index > 5 {
+                        if index > 50 {
                             error!("Failed to generate code for Citizen: {}",citizen_id);
                             continue 'citizens;
                         }
@@ -272,7 +272,7 @@ impl SimulatorBuilder {
             }
         }
         debug!("Creating workplace buildings for: {:?} Citizens and {} Output Areas",citizens_to_allocate.iter().map(|(_,citizens)|citizens.len()).sum::<usize>(),citizens_to_allocate.len());
-        assert!(self.citizens.is_empty(), "{} Citizens have not been assigned a workplace area!", self.citizens.len());
+        debug!("{} Citizens have not been assigned a workplace area!", self.citizens.len());
         // Create buildings for each Workplace output area
         'citizen_allocation_loop: for (workplace_area_code, mut citizens) in citizens_to_allocate {
             // Retrieve the buildings or skip this area
@@ -320,6 +320,13 @@ impl SimulatorBuilder {
             warn!("No buildings can be assigned to area {} as no buildings exist: {:?}",workplace_area_code,possible_buildings);
             return Ok(HashMap::new());
         }
+        // TODO Need to fix what happens if not enough buildings
+        if possible_buildings.len() < OccupationType::iter().len() * 2 {
+            warn!("Not enough buildings {} for {} occupations for area: {}",possible_buildings.len(), OccupationType::iter().len(),workplace_area_code);
+            return Ok(HashMap::new());
+        }
+
+
         let mut rng = thread_rng();
         // This is the amount to increase bin capacity to ensure it meets the minimum required size
         const BUILDING_PER_OCCUPATION_OVERCAPACITY: f64 = 1.1;
@@ -355,6 +362,7 @@ impl SimulatorBuilder {
             *entry += b.1 as usize;
             a
         });
+
         // Add any missing Occupations
         OccupationType::iter().for_each(|occupation| if !required_space_per_occupation.contains_key(&occupation) {
             required_space_per_occupation.insert(occupation, 0);
@@ -416,7 +424,10 @@ impl SimulatorBuilder {
         // Ensure we have meant the minimum requirements OR TODO Allow some overflow to remote work?
         for (occupation_type, (size, buildings)) in &building_per_occupation {
             let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
-            assert!(size >= required, "Occupation: {:?}, has a size {} smaller than required {}\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", occupation_type, size, required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
+            if size >= required {
+                error!( "Occupation: {:?}, has a size {} smaller than required {} for area {}\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", occupation_type, size, workplace_area_code, required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
+                return Ok(HashMap::new());
+            }
         }
 
 

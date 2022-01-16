@@ -29,11 +29,11 @@ use crate::parsing_error::ParseErrorType;
 #[serde(rename_all = "UPPERCASE")]
 pub struct PreProcessingWorkplaceResidentialRecord {
     pub currently_residing_in_code: String,
-    //place_of_work_type: String,
-    place_of_work_code: String,
+    place_of_work_type: String,
+    place_of_work_name: String,
     obs_value: String,
-    //record_offset: u32,
-    //record_count: u32,
+    record_offset: u32,
+    record_count: u32,
 }
 
 impl PreProcessingTable for PreProcessingWorkplaceResidentialRecord {
@@ -43,15 +43,15 @@ impl PreProcessingTable for PreProcessingWorkplaceResidentialRecord {
 }
 
 #[derive(Clone, Debug)]
-pub struct WorkplaceResidentalRecord {
+pub struct WorkplaceResidentialRecord {
     pub workplace_count: HashMap<String, u32>,
     pub total_workplace_count: u32,
 }
 
-impl TableEntry<PreProcessingWorkplaceResidentialRecord> for WorkplaceResidentalRecord {}
+impl TableEntry<PreProcessingWorkplaceResidentialRecord> for WorkplaceResidentialRecord {}
 
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingWorkplaceResidentialRecord>>>
-for WorkplaceResidentalRecord
+for WorkplaceResidentialRecord
 {
     type Error = DataLoadingError;
 
@@ -82,15 +82,15 @@ for WorkplaceResidentalRecord
                     },
                 });
             }
-            //if record.place_of_work_type == "2011 output areas" {
+            if record.place_of_work_type == "2011 output areas" {
                 let count = record.obs_value.parse()?;
                 if count > 0 {
                     total += count;
-                    workplace_count.insert(record.place_of_work_code.to_string(), count);
+                    workplace_count.insert(record.place_of_work_name.to_string(), count);
                 }
-            //}
+            }
         }
-        Ok(WorkplaceResidentalRecord {
+        Ok(WorkplaceResidentialRecord {
             workplace_count,
             total_workplace_count: total,
         })

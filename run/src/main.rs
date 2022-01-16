@@ -268,12 +268,12 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data and Initialising  simulator in {:?}",
             total_time.elapsed()
         );
-        /*        if let Err(e) = sim.simulate() {
-                    error!("{}", e);
-                    //sim.error_dump_json().expect("Failed to create core dump!");
-                } else {
-                    //sim.statistics.summarise();
-                }*/
+        if let Err(e) = sim.simulate() {
+            error!("{}", e);
+            //sim.error_dump_json().expect("Failed to create core dump!");
+        } else {
+            //sim.statistics.summarise();
+        }
 
         info!("Finished in {:?}", total_time.elapsed());
         Ok(())

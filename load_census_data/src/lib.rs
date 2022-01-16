@@ -43,7 +43,7 @@ use crate::tables::population_and_density_per_output_area::{
     PopulationRecord, PreProcessingPopulationDensityRecord,
 };
 use crate::tables::resides_vs_workplace::{
-    PreProcessingWorkplaceResidentialRecord, WorkplaceResidentalRecord,
+    PreProcessingWorkplaceResidentialRecord, WorkplaceResidentialRecord,
 };
 
 mod nomis_download;
@@ -63,7 +63,7 @@ pub struct CensusDataEntry<'a> {
     pub population_count: &'a PopulationRecord,
     pub occupation_count: &'a OccupationCountRecord,
 
-    pub resides_workplace_count: &'a WorkplaceResidentalRecord,
+    pub resides_workplace_count: &'a WorkplaceResidentialRecord,
     pub workplace_density: EmploymentDensities,
 }
 
@@ -102,7 +102,7 @@ pub struct CensusData {
     pub occupation_counts: HashMap<String, OccupationCountRecord>,
     pub workplace_density: EmploymentDensities,
     /// Residential Area -> Workplace Area -> Count
-    pub residents_workplace: HashMap<String, WorkplaceResidentalRecord>,
+    pub residents_workplace: HashMap<String, WorkplaceResidentialRecord>,
 }
 
 /// Initialization
@@ -247,7 +247,7 @@ impl CensusData {
         // Build residents workplace table
         let residents_workplace = CensusData::fetch_generic_table::<
             PreProcessingWorkplaceResidentialRecord,
-            WorkplaceResidentalRecord,
+            WorkplaceResidentialRecord,
         >(
             &census_directory,
             &region_code,
@@ -296,7 +296,7 @@ impl CensusData {
         // Build residents workplace table
         let residents_workplace = CensusData::read_table_and_generate_filename::<
             PreProcessingWorkplaceResidentialRecord,
-            WorkplaceResidentalRecord,
+            WorkplaceResidentialRecord,
         >(
             &census_directory,
             &region_code,
