@@ -71,7 +71,7 @@ impl<'a> CensusDataEntry<'a> {
     pub fn total_population_size(&self) -> u16 {
         self.population_count.population_size
     }
-    // TODO IS THIS FUCKED?
+
     pub fn get_random_workplace_area(
         &self,
         rng: &mut dyn RngCore,

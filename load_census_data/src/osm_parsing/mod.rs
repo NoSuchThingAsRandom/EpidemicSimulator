@@ -544,7 +544,7 @@ impl OSMRawBuildings {
                     if let Some(b) =
                     building_boundaries.insert(building_boundary_id, building_shape.clone())
                     {
-                        // TODO THIS IS FUCKED
+                        // TODO THIS IS FUCKED, or has it been fixed?
                         assert_eq!(b, building_shape, "This shouldn't be possible!");
                         panic!("Building ID {:?}, has multiple OSM node entries which shouldn't be possible!\nOriginal: {:?}\nNew:      {:?} ",
                                building_boundary_id, b, building_shape

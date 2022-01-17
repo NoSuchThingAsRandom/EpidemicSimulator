@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -159,7 +159,6 @@ pub fn parse_jsontable_list(json: Value) -> Result<Vec<TableInfo>, DataLoadingEr
     //println!("{:?}", data);
 }
 
-// TODO Clean up this
 pub async fn read_json(filename: String) -> Result<Value, String> {
     let file = File::open(filename).map_err(|e| format!("{:?}", e))?;
     let json: Value = serde_json::from_reader(file).map_err(|e| format!("{:?}", e))?;

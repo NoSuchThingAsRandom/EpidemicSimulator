@@ -204,7 +204,7 @@ impl Display for Statistics {
         write!(
             f,
             "Hour: {: >4}, Total: {: >10}, Susceptible: {: >10}, {:.2}%, Exposed: {: >10}, {:.2}%, Infected: {: >10}, {:.2}%, Recovered: {: >10}, {:.2}% Vaccinated: {: >10}, {:.2}%",
-            self.time_step, self.total(), self.susceptible().to_formatted_string(&NUMBER_FORMATTING), (self.susceptible() as f64 / self.total() as f64) * 100.0, self.exposed().to_formatted_string(&NUMBER_FORMATTING), (self.exposed() as f64 / self.total() as f64) * 100.0, self.infected().to_formatted_string(&NUMBER_FORMATTING), (self.infected() as f64 / self.total() as f64) * 100.0, self.recovered().to_formatted_string(&NUMBER_FORMATTING), (self.recovered() as f64 / self.total() as f64) * 100.0, self.vaccinated().to_formatted_string(&NUMBER_FORMATTING), (self.vaccinated() as f64 / self.total() as f64) * 100.0,
+            self.time_step, self.total().to_formatted_string(&NUMBER_FORMATTING), self.susceptible().to_formatted_string(&NUMBER_FORMATTING), (self.susceptible() as f64 / self.total() as f64) * 100.0, self.exposed().to_formatted_string(&NUMBER_FORMATTING), (self.exposed() as f64 / self.total() as f64) * 100.0, self.infected().to_formatted_string(&NUMBER_FORMATTING), (self.infected() as f64 / self.total() as f64) * 100.0, self.recovered().to_formatted_string(&NUMBER_FORMATTING), (self.recovered() as f64 / self.total() as f64) * 100.0, self.vaccinated().to_formatted_string(&NUMBER_FORMATTING), (self.vaccinated() as f64 / self.total() as f64) * 100.0,
         )
     }
 }

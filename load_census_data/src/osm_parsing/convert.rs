@@ -78,17 +78,10 @@ pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
 
 /// Trims f64 coordinates to an isize
 fn f64_trimmed_to_isize(position: (f64, f64)) -> (i32, i32) {
-    // TODO Do we need to keep decimal precision?
     (
-        (position.0 * 10.0).round() as i32 / 10,
-        (position.1 * 10.0).round() as i32 / 10,
+        position.0.round() as i32,
+        position.1.round() as i32,
     )
-}
-
-pub fn degrees_to_decimal(_coord: String) -> f64 {
-    //https://support.goldensoftware.com/hc/en-us/articles/228362688-Convert-Degrees-Minutes-Seconds-To-Decimal-Degrees-in-Strater
-
-    todo!()
 }
 
 /// Converts an angle in seconds, to radians

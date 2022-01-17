@@ -45,7 +45,7 @@ pub fn draw_output_areas(
 }
 
 
-//TODO Enable when compiler on 2021
+//TODO Enable when uni servers are on rustc 2021
 pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
     let start = Instant::now();
     let graph = visualisation::citizen_connections::build_citizen_graph(sim);

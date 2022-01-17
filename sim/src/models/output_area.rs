@@ -109,26 +109,6 @@ impl OutputArea {
                 .context("Failed to initialise the mask distribution")?,
         })
     }
-    /*    pub fn add_building(&mut self, location: Point<isize>, raw_building_type: RawBuildingTypes) {
-        let building_id = BuildingID::new(self.output_area_id.clone());
-
-        match raw_building_type {
-            RawBuildingTypes::Shop => {}
-            RawBuildingTypes::School => {}
-            RawBuildingTypes::Hospital => {}
-            RawBuildingTypes::Household => {
-                let mut household = Household::new(building_id.clone(), location);
-                self.buildings.insert(building_id, Box::new(household));
-            }
-            RawBuildingTypes::WorkPlace => {
-                let mut household = Workplace::new(building_id.clone(), location);
-                self.buildings.insert(building_id, Box::new(household));
-            }
-            RawBuildingTypes::Unknown => {}
-        }
-
-        todo!()
-    }*/
     /// Generates the Citizens for this Output Area, with households being the provided [`RawBuilding`]
     ///
     /// Note each [`RawBuilding`] must have a classification of [`TagClassifiedBuilding::Household`]
@@ -139,10 +119,10 @@ impl OutputArea {
         possible_buildings: Vec<RawBuilding>,
     ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
-        // TODO Fix this
         let area = AreaClassification::Total;
         let pop_count = &census_data.population_count.population_counts[area];
-        // TODO Currently assigning 4 people per household
+
+        // TODO Fix this
         let household_size = (pop_count[PersonType::All] as usize / possible_buildings.len()) + 1;
         // Should use census data instead
         let mut generated_population = 0;

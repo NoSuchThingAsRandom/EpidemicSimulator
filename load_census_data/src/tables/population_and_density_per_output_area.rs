@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -79,7 +79,7 @@ pub enum PersonType {
     #[serde(alias = "Lives in a communal establishment")]
     LivesInCommunalEstablishment,
     #[serde(
-        alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
+    alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
     )]
     Schoolchild,
 }
@@ -115,31 +115,15 @@ pub struct PopulationRecord {
 }
 
 impl TableEntry<PreProcessingPopulationDensityRecord> for PopulationRecord {}
-/*
-/// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
-///
-/// First iterates through the records, and checks they are all of type `PreProcessingRecord`, then adds them to a hashmap with keys of output areas
-///
-/// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
-///
-/// TODO: THIS IS SO FUCKING CURSED - NEEDS A REWRITE
-fn generate(
-    data: Vec<impl PreProcessingTable + 'static>,
-) -> Result<HashMap<String, Self>, CensusError> {
-    let mut grouped:HashMap<String,Vec<Box<PreProcessingPopulationDensityRecord>>> = PreProcessingPopulationDensityRecord::group_by_area(data)?;
-    // Convert into Population Records
-    TableEntry::generate()
-    let mut output = HashMap::new();
-    for (code, records) in grouped.drain() {
-        output.insert(code.to_string(), PopulationRecord::try_from(records)?);
-    }
-    Ok(output)
-}
-}*/
 
 impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
     type Error = DataLoadingError;
-
+    /// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
+    ///
+    /// First iterates through the records, and checks they are all of type `PreProcessingRecord`, then adds them to a hashmap with keys of output areas
+    ///
+    /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
+    ///
     fn try_from(
         records: &'a Vec<Box<PreProcessingPopulationDensityRecord>>,
     ) -> Result<Self, Self::Error> {
