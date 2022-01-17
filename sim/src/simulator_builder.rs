@@ -27,6 +27,7 @@ use std::rc::Rc;
 
 use anyhow::Context;
 use log::{debug, error, info, trace, warn};
+use num_format::{SystemLocale, ToFormattedString};
 use rand::{Rng, RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
@@ -41,6 +42,7 @@ use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::employment_densities::EmploymentDensities;
 use load_census_data::tables::occupation_count::OccupationType;
 
+use crate::config::NUMBER_FORMATTING;
 use crate::config::STARTING_INFECTED_COUNT;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::error::SimError;
@@ -323,7 +325,6 @@ impl SimulatorBuilder {
         // TODO Need to fix what happens if not enough buildings
         if possible_buildings.len() < OccupationType::iter().len() * 2 {
             warn!("Not enough buildings {} for {} occupations for area: {}",possible_buildings.len(), OccupationType::iter().len(),workplace_area_code);
-            return Ok(HashMap::new());
         }
 
 
@@ -335,20 +336,17 @@ impl SimulatorBuilder {
         citizens.shuffle(&mut rng);
         let total_workers = citizens.len();
 
-        // Extract the Citizen Struct
-        // TODO Fix the borrow of self
-        let mut citizens: HashMap<OccupationType, Vec<&mut Citizen>> = citizens.into_iter().map(|citizen_id| {
-            //let citizen = self.citizens.get_mut(&*citizen_id).expect(format!("Citizen with id {} doesn't exist", citizen_id).as_str());
-            (citizen_id.occupation(), citizen_id)
+        // Group by occupation
+        let mut citizens: HashMap<OccupationType, Vec<&mut Citizen>> = citizens.into_iter().map(|citizen| {
+            (citizen.occupation(), citizen)
         }).fold(HashMap::new(), |mut a, b| {
             let entry = a.entry(b.0).or_default();
             entry.push(b.1);
             a
-        });//.collect::<Result<Vec<&mut Citizen>, DataLoadingError>>()?;
+        });
 
 
         let total_building_count = possible_buildings.len();
-
 
         // Calculate how much space we have
         let available_space: usize = possible_buildings.iter().map(|building| building.size()).sum::<i32>() as usize;
@@ -421,12 +419,13 @@ impl SimulatorBuilder {
                 }
             }
         }
-        // Ensure we have meant the minimum requirements OR TODO Allow some overflow to remote work?
+        // Ensure we have meant the minimum requirements
         for (occupation_type, (size, buildings)) in &building_per_occupation {
             let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
-            if size >= required {
-                error!( "Occupation: {:?}, has a size {} smaller than required {} for area {}\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", occupation_type, size, workplace_area_code, required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
-                return Ok(HashMap::new());
+            if size <= required {
+                warn!( "Occupation: {:?}, has a size {} smaller than required {} for area {}",occupation_type, size, required,  workplace_area_code);
+                //\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", , required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
+                //return Ok(HashMap::new());
             }
         }
 
@@ -441,9 +440,11 @@ impl SimulatorBuilder {
             let citizens = citizens.get_mut(&occupation).expect(format!("Couldn't get Citizens with occupation: {:?}", occupation).as_str());
             let buildings = building_per_occupation.get_mut(&occupation).expect(format!("Couldn't get Citizens with occupation: {:?}", occupation).as_str());
             let mut workplaces = SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), citizens, &buildings.1);
+
+
             if let Err(e) = workplaces {
-                error!("{}",e);
-                return Err(e.context(format!("Failed to assign workplaces to Citizens for Occupation: {:?}", occupation)));
+                error!("Failed to assign workplaces to Citizens for Occupation: {:?},\n\tError: {:?}",occupation,e);
+                continue;
             }
             let mut workplaces = workplaces.unwrap();
             workplaces.drain()
@@ -481,12 +482,21 @@ impl SimulatorBuilder {
                     Err(_) => {
                         workplace_buildings
                             .insert(current_workplace.id().clone(), Box::new(current_workplace));
+
+                        let new_raw_building = match buildings.next() {
+                            Some(building) => *building,
+                            None => {
+                                error!("Ran out of Workplaces {} to assign workers ({}/{}) to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code);
+                                return Ok(workplace_buildings);
+                            }
+                        };
+
                         let mut new_workplace = Workplace::new(
                             BuildingID::new(
                                 workplace_area_code.clone(),
                                 BuildingType::Workplace,
                             ),
-                            *buildings.next().ok_or_else(|| SimError::InitializationError { message: format!("Ran out of Workplaces {} to assign workers ({}/{}) to in Output Area: {}", total_building_count, index, total_workers, workplace_area_code) })?,
+                            new_raw_building,
                             citizen.occupation());
                         new_workplace.add_citizen(citizen.id()).context(
                             "Cannot add Citizen to freshly generated Workplace!",
@@ -591,16 +601,16 @@ impl SimulatorBuilder {
         timer.code_block_finished("Generated workplaces for {} Output Areas")?;
 
         let work_from_home_count: u32 = self.citizens.par_iter().map(|(_, citizen)| if citizen.household_code.eq(&citizen.workplace_code) { 1 } else { 0 }).sum();
-        debug!("{} out of {} Citizens, are working from home.",work_from_home_count,self.citizens.len());
+        debug!("{} out of {} Citizens {:.1}%, are working from home.",work_from_home_count.to_formatted_string(&NUMBER_FORMATTING),self.citizens.len().to_formatted_string(&NUMBER_FORMATTING),(work_from_home_count as f64/self.citizens.len() as f64)*100.0);
         // Infect random citizens
         self.apply_initial_infections(&mut rng)
             .context("Failed to create initial infections")?;
 
-        timer.code_block_finished("Initialization completed wi")?;
+        timer.code_block_finished("Applied initial infections")?;
         debug!(
             "Starting Statistics: There are {} total Citizens, {} Output Areas",
-            self.citizens.len(),
-            self.output_areas.len()
+            self.citizens.len().to_formatted_string(&NUMBER_FORMATTING),
+            self.output_areas.len().to_formatted_string(&NUMBER_FORMATTING)
         );
         assert_eq!(
             self.citizens.len() as u32,

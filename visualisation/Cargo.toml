@@ -21,4 +21,4 @@ gilrs = "=0.8.1"
 petgraph = "0.6"
 plotters = "0.3"
 polylabel = "2.4.0"
-ggez = { version = "0.7", optional = true }
+ggez = { version = "0.6.1", optional = true }

@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -22,7 +22,9 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 use log::error;
+use num_format::ToFormattedString;
 
+use crate::config::NUMBER_FORMATTING;
 use crate::disease::DiseaseStatus;
 use crate::models::building::BuildingID;
 use crate::models::ID;
@@ -201,8 +203,8 @@ impl Display for Statistics {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Hour: {: >4}, Total: {: >8}, Susceptible: {: >8}, Exposed: {: >8}, Infected: {: >8}, Recovered: {: >8} Vaccinated: {: >8}",
-            self.time_step, self.total(), self.susceptible(), self.exposed(), self.infected(), self.recovered(), self.vaccinated()
+            "Hour: {: >4}, Total: {: >10}, Susceptible: {: >10}, {:.2}%, Exposed: {: >10}, {:.2}%, Infected: {: >10}, {:.2}%, Recovered: {: >10}, {:.2}% Vaccinated: {: >10}, {:.2}%",
+            self.time_step, self.total(), self.susceptible().to_formatted_string(&NUMBER_FORMATTING), (self.susceptible() as f64 / self.total() as f64) * 100.0, self.exposed().to_formatted_string(&NUMBER_FORMATTING), (self.exposed() as f64 / self.total() as f64) * 100.0, self.infected().to_formatted_string(&NUMBER_FORMATTING), (self.infected() as f64 / self.total() as f64) * 100.0, self.recovered().to_formatted_string(&NUMBER_FORMATTING), (self.recovered() as f64 / self.total() as f64) * 100.0, self.vaccinated().to_formatted_string(&NUMBER_FORMATTING), (self.vaccinated() as f64 / self.total() as f64) * 100.0,
         )
     }
 }

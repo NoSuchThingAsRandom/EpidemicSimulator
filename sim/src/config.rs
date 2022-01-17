@@ -17,6 +17,10 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+use std::sync::Arc;
+
+use lazy_static::lazy_static;
+use num_format::{Format, Locale, SystemLocale};
 
 pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per Workplace building
@@ -29,6 +33,9 @@ pub const DEBUG_ITERATION_PRINT: usize = 10;
 
 pub const PUBLIC_TRANSPORT_PERCENTAGE: f64 = 0.2;
 pub const BUS_CAPACITY: u32 = 20;
+
+// TODO Figure out how to get global SystemLocale::default()
+pub const NUMBER_FORMATTING: Locale = Locale::en_GB;// SystemLocale::default().expect("Failed to determine the locale format to use for formatting numbers");
 
 pub fn get_memory_usage() -> anyhow::Result<String> {
     Ok(format!(

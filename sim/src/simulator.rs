@@ -119,7 +119,7 @@ impl Simulator {
 
         let intervention_time = start.elapsed().as_secs_f64();
         let total = exposure_time + intervention_time;
-        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",exposure_time,exposure_time/total,intervention_time,intervention_time/total);
+        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",exposure_time,(exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)

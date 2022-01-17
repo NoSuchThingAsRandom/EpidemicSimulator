@@ -158,6 +158,7 @@ async fn main() -> anyhow::Result<()> {
         area, use_cache, !allow_downloads
     );
 
+
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
         CensusData::load_all_tables_async(
@@ -265,8 +266,8 @@ async fn main() -> anyhow::Result<()> {
         )
             .await?;
         info!(
-            "Finished loading data and Initialising  simulator in {:?}",
-            total_time.elapsed()
+            "Finished loading data and Initialising  simulator in {:.2}",
+            total_time.elapsed().as_secs_f64()
         );
         if let Err(e) = sim.simulate() {
             error!("{}", e);

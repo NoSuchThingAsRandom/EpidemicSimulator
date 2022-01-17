@@ -1,1 +1,1 @@
-RUST_LOG="warn,visualisation,sim=trace,run=debug,load_census_data=trace,voronoice=off" RUST_BACKTRACE=1 cargo run --release -- 2013265923TYPE299 --directory=data --grid-size=50000 --simulate
+RUST_LOG="warn,visualisation,sim=trace,run=debug,load_census_data=trace,voronoice=off" RUST_BACKTRACE=1 cargo run --release -- 2013265923TYPE299 --directory=data --grid-size=50000 --simulate --use-cache
