@@ -19,6 +19,7 @@
  */
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -30,12 +31,10 @@ use serde::Serialize;
 
 use load_census_data::CensusDataEntry;
 use load_census_data::osm_parsing::{RawBuilding, TagClassifiedBuilding};
-use load_census_data::tables::population_and_density_per_output_area::{
-    AreaClassification, PersonType,
-};
+use load_census_data::tables::population_and_density_per_output_area::PersonType;
 
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
-use crate::models::citizen::{Citizen, CitizenID};
+use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct OutputAreaID {
@@ -115,12 +114,11 @@ impl OutputArea {
     pub fn generate_citizens_with_households(
         &mut self,
         rng: &mut dyn RngCore,
-        census_data: CensusDataEntry,
+        mut census_data: CensusDataEntry,
         possible_buildings: Vec<RawBuilding>,
     ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
-        let area = AreaClassification::Total;
-        let pop_count = &census_data.population_count.population_counts[area];
+        let pop_count = &census_data.population_count.population_counts;
 
         // TODO Fix this
         let household_size = (pop_count[PersonType::All] as usize / possible_buildings.len()) + 1;
@@ -137,14 +135,14 @@ impl OutputArea {
                 let mut household =
                     Household::new(household_building_id.clone(), location.center());
                 for _ in 0..household_size {
-                    let occupation = census_data
+                    let raw_occupation = census_data
                         .occupation_count
-                        .get_random_occupation(rng)
-                        .context("Cannot generate a random occupation for new Citizen!")?;
+                        .get_random_occupation(rng);
                     let citizen = Citizen::new(
                         household_building_id.clone(),
                         household_building_id.clone(),
-                        occupation,
+                        0,
+                        Occupation::Normal { occupation: OccupationType::try_from(raw_occupation).unwrap_or_else(|_| panic!("Couldn't convert Census Occupation ({:?}), to sim occupation", raw_occupation)) },
                         self.mask_distribution.sample(rng),
                         rng,
                     );

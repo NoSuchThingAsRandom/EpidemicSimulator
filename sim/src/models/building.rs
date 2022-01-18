@@ -28,11 +28,11 @@ use uuid::Uuid;
 
 use load_census_data::osm_parsing::RawBuilding;
 use load_census_data::tables::employment_densities::EmploymentDensities;
-use load_census_data::tables::occupation_count::OccupationType;
 
 use crate::config::MIN_WORKPLACE_OCCUPANT_COUNT;
 use crate::error::SimError;
-use crate::models::citizen::CitizenID;
+use crate::models::citizen::{CitizenID, OccupationType};
+use crate::models::get_density_for_occupation;
 use crate::models::output_area::OutputAreaID;
 
 /// The minimum floor size a building can have
@@ -227,7 +227,7 @@ impl Workplace {
         }
     }
     fn max_occupant_count(&self) -> u32 {
-        ((self.floor_space) / EmploymentDensities::get_density_for_occupation(self.workplace_occupation_type)).max(MIN_WORKPLACE_OCCUPANT_COUNT)
+        ((self.floor_space) / get_density_for_occupation(self.workplace_occupation_type)).max(MIN_WORKPLACE_OCCUPANT_COUNT)
     }
     pub fn is_at_capacity(&self) -> bool {
         self.max_occupant_count() <= (self.occupants.len() as u32)
@@ -289,7 +289,7 @@ mod tests {
     use crate::models::building::{
         Building, BuildingID, BuildingType, MINIMUM_FLOOR_SPACE_SIZE, Workplace,
     };
-    use crate::models::citizen::CitizenID;
+    use crate::models::citizen::{CitizenID, OccupationType};
     use crate::models::output_area::OutputAreaID;
 
     #[test]

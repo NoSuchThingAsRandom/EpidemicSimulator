@@ -94,3 +94,10 @@ Api Code: NM_1228_1
 https://www.nomisweb.co.uk/census/2011/ks608uk
 
 Api Code: NM_1518_1
+
+# Age Structure - qs103ew
+
+https://www.nomisweb.co.uk/census/2011/ks102ew
+Api Code: NM_503_1
+
+https://www.nomisweb.co.uk/api/v01/dataset/NM_503_1.data.csv?date=latest&geography=1254162148&rural_urban=0&c_age=1...101&measures=20100

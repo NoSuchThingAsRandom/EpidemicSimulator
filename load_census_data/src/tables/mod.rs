@@ -32,6 +32,8 @@ pub mod employment_densities;
 pub mod occupation_count;
 pub mod population_and_density_per_output_area;
 pub mod resides_vs_workplace;
+pub mod age_structure;
+
 /// This is used to load in a CSV file, and each row corresponds to one struct
 pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
     fn get_geography_code(&self) -> String;
@@ -75,12 +77,13 @@ Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=DataLoadingError>
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub enum CensusTableNames {
     OccupationCount,
     PopulationDensity,
     OutputAreaMap,
     ResidentialAreaVsWorkplaceArea,
+    AgeStructure,
 }
 
 impl CensusTableNames {
@@ -96,6 +99,7 @@ impl CensusTableNames {
             CensusTableNames::ResidentialAreaVsWorkplaceArea => {
                 "wf01bew_residential_vs_workplace_NM_1228_1.csv"
             }
+            CensusTableNames::AgeStructure => "qs103ew_age_structure_NUM_503_1.csv"
         }
     }
     /// Returns the api code for table
@@ -107,15 +111,17 @@ impl CensusTableNames {
                 "data/census_map_areas/England_oa_2011/england_oa_2011.shp"
             }
             CensusTableNames::ResidentialAreaVsWorkplaceArea => "NM_1228_1",
+            CensusTableNames::AgeStructure => "NM_503_1"
         }
     }
     /// The columns to retrieve from the API
     pub fn get_required_columns<'a>(&self) -> Option<&'a str> {
         match &self {
             CensusTableNames::OccupationCount => { None }
-            CensusTableNames::PopulationDensity => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,RURAL_URBAN_NAME,RURAL_URBAN_TYPECODE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
+            CensusTableNames::PopulationDensity => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,RURAL_URBAN_NAME,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
             CensusTableNames::OutputAreaMap => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,CELL_NAME,MEASURES_NAME,OBS_VALUE,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
             CensusTableNames::ResidentialAreaVsWorkplaceArea => { Some("CURRENTLY_RESIDING_IN_CODE,PLACE_OF_WORK_TYPE,PLACE_OF_WORK_NAME,OBS_VALUE,RECORD_OFFSET,RECORD_COUNT") }
+            CensusTableNames::AgeStructure => { Some("GEOGRAPHY_NAME,GEOGRAPHY_TYPE,C_AGE,OBS_VALUE,RURAL_URBAN_NAME,OBS_STATUS,RECORD_OFFSET,RECORD_COUNT") }
         }
     }
 }

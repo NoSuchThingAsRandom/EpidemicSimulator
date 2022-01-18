@@ -18,7 +18,7 @@
  *
  */
 
-use crate::tables::occupation_count::OccupationType;
+use crate::tables::occupation_count::RawOccupationType;
 
 /// This stores the area in square metres per full time employee
 ///
@@ -42,18 +42,18 @@ impl EmploymentDensities {
     pub const RETAIL_OTHER_SUPERSTORES_RETAIL_WAREHOUSES: u32 = 90;
     pub const RETAIL_FINANCIAL_PROFESSIONAL_SERVICES: u32 = 16;
     pub const RETAIL_RESTAURANTS_CAFES: u32 = 18;
-    pub fn get_density_for_occupation(occupation: OccupationType) -> u32 {
+    pub fn get_density_for_occupation(occupation: RawOccupationType) -> u32 {
         match occupation {
-            OccupationType::Managers => Self::OFFICE_GENERAL_OFFICE,
-            OccupationType::Professional => Self::OFFICE_GENERAL_OFFICE,
-            OccupationType::Technical => Self::OFFICE_SERVICED_OFFICE,
-            OccupationType::Administrative => Self::OFFICE_GENERAL_OFFICE,
-            OccupationType::SkilledTrades => Self::INDUSTRIAL_GENERAL,
-            OccupationType::Caring => Self::INDUSTRIAL_LIGHT_INDUSTRY_BUSINESS_PARK,
-            OccupationType::Sales => Self::RETAIL_HIGH_STREET,
-            OccupationType::MachineOperatives => Self::INDUSTRIAL_GENERAL,
-            OccupationType::Teaching => Self::RETAIL_HIGH_STREET,
-            OccupationType::All => Self::RETAIL_HIGH_STREET,
+            RawOccupationType::Managers => Self::OFFICE_GENERAL_OFFICE,
+            RawOccupationType::Professional => Self::OFFICE_GENERAL_OFFICE,
+            RawOccupationType::Technical => Self::OFFICE_SERVICED_OFFICE,
+            RawOccupationType::Administrative => Self::OFFICE_GENERAL_OFFICE,
+            RawOccupationType::SkilledTrades => Self::INDUSTRIAL_GENERAL,
+            RawOccupationType::Caring => Self::INDUSTRIAL_LIGHT_INDUSTRY_BUSINESS_PARK,
+            RawOccupationType::Sales => Self::RETAIL_HIGH_STREET,
+            RawOccupationType::MachineOperatives => Self::INDUSTRIAL_GENERAL,
+            RawOccupationType::Teaching => Self::RETAIL_HIGH_STREET,
+            RawOccupationType::All => Self::RETAIL_HIGH_STREET,
         }
     }
 }

@@ -17,67 +17,43 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
-//! Intermediary and Post Processing Structs for the NOMIS Census Table 144
-
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
-use enum_map::EnumMap;
 use serde::Deserialize;
 
 use crate::parsing_error::{DataLoadingError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
-#[derive(Deserialize, Debug, Enum)]
-pub enum PersonType {
-    #[serde(alias = "All usual residents")]
-    All,
-    #[serde(alias = "Males")]
-    Male,
-    #[serde(alias = "Females")]
-    Female,
-    #[serde(alias = "Lives in a household")]
-    LivesInHousehold,
-    #[serde(alias = "Lives in a communal establishment")]
-    LivesInCommunalEstablishment,
-    #[serde(
-    alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
-    )]
-    Schoolchild,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
-pub struct PreProcessingPopulationDensityRecord {
+pub struct PreProcessingAgePopulationRecord {
     pub geography_name: String,
     geography_type: String,
     rural_urban_name: String,
-    cell_name: String,
-    measures_name: String,
+    c_age: usize,
     obs_value: String,
     obs_status: String,
     record_offset: u32,
     record_count: u32,
 }
 
-impl PreProcessingTable for PreProcessingPopulationDensityRecord {
+impl PreProcessingTable for PreProcessingAgePopulationRecord {
     fn get_geography_code(&self) -> String {
         self.geography_name.to_string()
     }
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct PopulationRecord {
-    pub area_size: f32,
-    pub density: f32,
-    pub population_counts: EnumMap<PersonType, u16>,
+pub struct AgePopulationRecord {
+    /// This is the population of the age group,starting from 0, to the last entry being 100 and over
+    pub population_counts: [u16; 101],
     pub population_size: u16,
 }
 
-impl TableEntry<PreProcessingPopulationDensityRecord> for PopulationRecord {}
+impl TableEntry<PreProcessingAgePopulationRecord> for AgePopulationRecord {}
 
-impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
+impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulationRecord {
     type Error = DataLoadingError;
     /// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
     ///
@@ -86,7 +62,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
     /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
     ///
     fn try_from(
-        records: &'a Vec<Box<PreProcessingPopulationDensityRecord>>,
+        records: &'a Vec<Box<PreProcessingAgePopulationRecord>>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {
@@ -99,10 +75,8 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
         }
         let geography_code = String::from(&records[0].geography_name);
         let geography_type = String::from(&records[0].geography_type);
-        let mut area_size: f32 = 0.0;
-        let mut density: f32 = 0.0;
         let mut total_population = 0;
-        let mut data: EnumMap<PersonType, u16> = EnumMap::default();
+        let mut data = [0; 101];
         for record in records {
             if record.geography_name != geography_code {
                 return Err(DataLoadingError::ValueParsingError {
@@ -126,24 +100,15 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
                     },
                 });
             }
-            if record.measures_name == "Value" {
-                if &record.cell_name == "Area (Hectares)" {
-                    area_size = record.obs_value.parse().unwrap_or(0.0);
-                } else if &record.cell_name == "Density (number of persons per hectare)" {
-                    density = record.obs_value.parse().unwrap_or(0.0);
-                } else {
-                    assert_eq!(record.rural_urban_name, "Total", "Invalid Rural Area type ({}) for population count table", record.rural_urban_name);
-                    let person_classification: PersonType =
-                        serde_plain::from_str(&record.cell_name)?;
-                    let population_size = record.obs_value.parse()?;
-                    total_population += population_size;
-                    data[person_classification] = population_size;
-                }
-            }
+            assert_eq!(record.rural_urban_name, "Total", "Invalid Rural Area type ({}) for age structure table", record.rural_urban_name);
+            // As an age of under 1, is 1
+            let age = record.c_age - 1;
+            assert!(age < 100, "Age {} has exceed bounds of 100", age);
+            let population_size = record.obs_value.parse()?;
+            total_population += population_size;
+            data[age] = population_size;
         }
-        Ok(PopulationRecord {
-            area_size,
-            density,
+        Ok(AgePopulationRecord {
             population_counts: data,
             population_size: total_population,
         })

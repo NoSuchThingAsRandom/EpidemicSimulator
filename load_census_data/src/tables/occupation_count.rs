@@ -18,11 +18,14 @@
  *
  */
 
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use std::iter::FromIterator;
 
 use enum_map::EnumMap;
-use rand::{Rng, RngCore};
+use rand::{distributions::Distribution, Rng, RngCore};
+use rand::distributions::WeightedIndex;
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter};
 
@@ -32,7 +35,7 @@ use crate::tables::{PreProcessingTable, TableEntry};
 #[derive(
 Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy, EnumIter,
 )]
-pub enum OccupationType {
+pub enum RawOccupationType {
     #[serde(alias = "All categories: Occupation")]
     All,
     #[serde(alias = "1. Managers, directors and senior officials")]
@@ -69,7 +72,7 @@ pub struct PreProcessingOccupationCountRecordOLD {
     #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
     professional: u32,
     #[serde(
-        alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
+    alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
     )]
     technical: u32,
     #[serde(alias = "Occupation: 4. administrative and secretarial occupations; measures: Value")]
@@ -77,7 +80,7 @@ pub struct PreProcessingOccupationCountRecordOLD {
     #[serde(alias = "Occupation: 5. Skilled trades occupations; measures: Value")]
     skilled_trades: u32,
     #[serde(
-        alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
+    alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
     )]
     caring: u32,
     #[serde(alias = "Occupation: 7. sales and customer service occupations; measures: Value")]
@@ -108,32 +111,21 @@ impl PreProcessingTable for PreProcessingOccupationCountRecord {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct OccupationCountRecord {
-    pub occupation_count: EnumMap<OccupationType, u32>,
+    occupations: Vec<RawOccupationType>,
+    occupation_population: Vec<u32>,
+    occupation_weighting: WeightedIndex<u32>,
     /// This is the sum of the values per occupation, so can be used for random generation
     total_range: u32,
 }
 
 impl OccupationCountRecord {
     pub fn get_random_occupation(
-        &self,
+        &mut self,
         rng: &mut dyn RngCore,
-    ) -> Result<OccupationType, DataLoadingError> {
-        let chosen = rng.gen_range(0..self.total_range);
-        let mut index = 0;
-        for (occupation_type, value) in self.occupation_count.iter() {
-            if index <= chosen && chosen <= index + *value {
-                return Ok(occupation_type);
-            }
-            index += *value;
-        }
-        Err(DataLoadingError::Misc {
-            source: format!(
-                "Allocating a occupation failed, as chosen value ({}) is out of range (0..{})",
-                chosen, self.total_range
-            ),
-        })
+    ) -> RawOccupationType {
+        return self.occupations[self.occupation_weighting.sample(rng)];
     }
 }
 
@@ -157,7 +149,8 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for Occupatio
         let geography_code = String::from(&records[0].geography_name);
         let geography_type = String::from(&records[0].geography_type);
         let mut total_range = 0;
-        let mut occupation_count: EnumMap<OccupationType, u32> = EnumMap::default();
+        let mut occupations = Vec::with_capacity(records.len());
+        let mut occupation_population = Vec::with_capacity(records.len());
         for record in records {
             if record.geography_name != geography_code {
                 return Err(DataLoadingError::ValueParsingError {
@@ -182,15 +175,21 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for Occupatio
                 });
             }
             if record.measures_name == "Value" {
-                let occupation: OccupationType = serde_plain::from_str(&record.cell_name)?;
+                let occupation: RawOccupationType = serde_plain::from_str(&record.cell_name)?;
+                if occupation == RawOccupationType::All {
+                    continue;
+                }
                 let count = record.obs_value.parse()?;
                 total_range += count;
-                occupation_count[occupation] = count;
+                occupations.push(occupation);
+                occupation_population.push(count);
             }
         }
         Ok(OccupationCountRecord {
-            occupation_count,
+            occupations,
+            occupation_population: vec![],
             total_range,
+            occupation_weighting: WeightedIndex::new(&occupation_population).expect("Failed to build weighted sampling"),
         })
     }
 }

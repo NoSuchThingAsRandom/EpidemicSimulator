@@ -23,12 +23,8 @@
 extern crate enum_map;
 
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::string::String;
-use std::thread::sleep;
-use std::time::Duration;
 
 use log::{debug, info, warn};
 use rand::{Rng, RngCore};
@@ -37,6 +33,7 @@ use crate::nomis_download::{build_table_request_string, DataFetcher};
 use crate::osm_parsing::{OSMRawBuildings, TagClassifiedBuilding};
 use crate::parsing_error::DataLoadingError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
+use crate::tables::age_structure::{AgePopulationRecord, PreProcessingAgePopulationRecord};
 use crate::tables::employment_densities::EmploymentDensities;
 use crate::tables::occupation_count::{OccupationCountRecord, PreProcessingOccupationCountRecord};
 use crate::tables::population_and_density_per_output_area::{
@@ -61,7 +58,8 @@ pub const OSM_CACHE_FILENAME: &str = "OSM/cached";
 pub struct CensusDataEntry<'a> {
     pub output_area_code: String,
     pub population_count: &'a PopulationRecord,
-    pub occupation_count: &'a OccupationCountRecord,
+    pub age_population: &'a AgePopulationRecord,
+    pub occupation_count: &'a mut OccupationCountRecord,
 
     pub resides_workplace_count: &'a WorkplaceResidentialRecord,
     pub workplace_density: EmploymentDensities,
@@ -72,6 +70,7 @@ impl<'a> CensusDataEntry<'a> {
         self.population_count.population_size
     }
 
+    // TODO Use a WeightedIndex Distribution
     pub fn get_random_workplace_area(
         &self,
         rng: &mut dyn RngCore,
@@ -98,6 +97,7 @@ impl<'a> CensusDataEntry<'a> {
 pub struct CensusData {
     /// The list of output area codes that are valid and complete (records exist for each table)
     pub valid_areas: HashSet<String>,
+    pub age_counts: HashMap<String, AgePopulationRecord>,
     pub population_counts: HashMap<String, PopulationRecord>,
     pub occupation_counts: HashMap<String, OccupationCountRecord>,
     pub workplace_density: EmploymentDensities,
@@ -220,6 +220,9 @@ impl CensusData {
         } else {
             None
         };
+        // TODO await doesn't work fetch all tables at once
+
+
         // Build population table
         let population_counts = CensusData::fetch_generic_table::<
             PreProcessingPopulationDensityRecord,
@@ -228,6 +231,18 @@ impl CensusData {
             &census_directory,
             &region_code,
             CensusTableNames::PopulationDensity,
+            &data_fetcher,
+        )
+            .await?;
+
+        // Build population table
+        let age_counts = CensusData::fetch_generic_table::<
+            PreProcessingAgePopulationRecord,
+            AgePopulationRecord,
+        >(
+            &census_directory,
+            &region_code,
+            CensusTableNames::AgeStructure,
             &data_fetcher,
         )
             .await?;
@@ -260,68 +275,12 @@ impl CensusData {
         let mut census_data = CensusData {
             valid_areas: HashSet::with_capacity(population_counts.len()),
             population_counts,
+            age_counts,
             occupation_counts,
             workplace_density: EmploymentDensities {},
             residents_workplace,
         };
         census_data.filter_incomplete_output_areas();
-        Ok(census_data)
-    }
-    /// Attempts to load all the Census Tables stored on disk into memory
-    pub fn load_all_tables(
-        census_directory: String,
-        region_code: String,
-        _should_download: bool,
-    ) -> Result<CensusData, DataLoadingError> {
-        // Build population table
-        let population_counts = CensusData::read_table_and_generate_filename::<
-            PreProcessingPopulationDensityRecord,
-            PopulationRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::PopulationDensity,
-        )?;
-
-        // Build occupation table
-        let occupation_counts = CensusData::read_table_and_generate_filename::<
-            PreProcessingOccupationCountRecord,
-            OccupationCountRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::OccupationCount,
-        )?;
-
-        // Build residents workplace table
-        let residents_workplace = CensusData::read_table_and_generate_filename::<
-            PreProcessingWorkplaceResidentialRecord,
-            WorkplaceResidentialRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::ResidentialAreaVsWorkplaceArea,
-        )?;
-        sleep(Duration::from_secs(2));
-
-        let mut census_data = CensusData {
-            valid_areas: HashSet::with_capacity(population_counts.len()),
-            population_counts,
-            occupation_counts,
-            workplace_density: EmploymentDensities {},
-            residents_workplace,
-        };
-        census_data.filter_incomplete_output_areas();
-
-
-        let mut chosen_areas = File::create("debug_dumps/census_resides_workplace.csv").unwrap();
-        for (area, sub_areas) in &census_data.residents_workplace {
-            chosen_areas.write(area.as_ref()).expect("Failed to dump");
-            for a in sub_areas.workplace_count.keys() {
-                chosen_areas.write((", ".to_string() + a).as_ref()).expect("Failed to dump");
-            }
-            chosen_areas.write(("\n").as_ref()).expect("Failed to dump");
-        }
         Ok(census_data)
     }
     pub async fn resume_download(
@@ -341,17 +300,12 @@ impl CensusData {
             + region_code
             + "/"
             + table_name.get_filename();
-        match &table_name {
-            CensusTableNames::OccupationCount
-            | CensusTableNames::PopulationDensity
-            | CensusTableNames::ResidentialAreaVsWorkplaceArea => {
-                info!("Downloading table '{:?}' from api", table_name);
-                let request = build_table_request_string(table_name, region_code.to_string());
-                data_fetcher
-                    .download_and_save_table(&filename, request, None, Some(resume_from_value))
-                    .await?;
-            }
-            CensusTableNames::OutputAreaMap => {}
+        if CensusTableNames::OutputAreaMap != table_name {
+            info!("Downloading table '{:?}' from api", table_name);
+            let request = build_table_request_string(table_name, region_code.to_string());
+            data_fetcher
+                .download_and_save_table(&filename, request, None, Some(resume_from_value))
+                .await?;
         }
         info!("Finished resume");
         Ok(())
@@ -363,12 +317,13 @@ impl CensusData {
         // TODO Is this the most optimal way?
         let mut valid_areas = HashSet::with_capacity(self.population_counts.len());
         for key in self.population_counts.keys() {
-            if self.occupation_counts.contains_key(key) && self.residents_workplace.contains_key(key)
+            if self.occupation_counts.contains_key(key) && self.residents_workplace.contains_key(key) && self.age_counts.contains_key(key)
             {
                 valid_areas.insert(key.to_string());
             }
         }
         debug!("Population area count: {:?}", self.population_counts.len());
+        debug!("Age area count: {:?}", self.age_counts.len());
         debug!("Occupation area count: {:?}", self.occupation_counts.len());
         debug!(
             "Residents area count:  {:?}",
@@ -378,6 +333,7 @@ impl CensusData {
 
         self.population_counts
             .retain(|area, _| valid_areas.contains(area));
+        self.age_counts.retain(|area, _| valid_areas.contains(area));
         self.occupation_counts
             .retain(|area, _| valid_areas.contains(area));
         self.residents_workplace
@@ -408,25 +364,15 @@ impl CensusData {
     /// Attempts to retrieve all records relating to the given output area code
     ///
     /// Will return None, if at least one table is missing the entry
-    pub fn for_output_area_code(&self, code: String) -> Option<CensusDataEntry> {
+    pub fn for_output_area_code(&mut self, code: String) -> Option<CensusDataEntry> {
         let workplace_area_distribution = self.residents_workplace.get(&code)?;
         Some(CensusDataEntry {
             population_count: self.population_counts.get(&code)?,
-            occupation_count: self.occupation_counts.get(&code)?,
+            age_population: self.age_counts.get(&code)?,
+            occupation_count: self.occupation_counts.get_mut(&code)?,
             output_area_code: code,
             workplace_density: EmploymentDensities {},
             resides_workplace_count: workplace_area_distribution,
-        })
-    }
-    /// Returns an iterator over Output Areas
-    pub fn values(&self) -> impl Iterator<Item=CensusDataEntry> {
-        let keys = self.population_counts.keys();
-        keys.filter_map(move |key| {
-            let data = self.for_output_area_code(key.to_string());
-            if data.is_none() {
-                warn!("Output Area: {} is incomplete", key);
-            }
-            data
         })
     }
 }

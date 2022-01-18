@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -18,6 +18,7 @@
  *
  */
 
+use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Formatter};
 
 use lazy_static::lazy_static;
@@ -25,9 +26,10 @@ use rand::distributions::Distribution;
 use rand::distributions::Uniform;
 use rand::RngCore;
 use serde::Serialize;
+use strum_macros::EnumIter;
 use uuid::Uuid;
 
-use load_census_data::tables::occupation_count::OccupationType;
+use load_census_data::tables::occupation_count::RawOccupationType;
 
 use crate::config::PUBLIC_TRANSPORT_PERCENTAGE;
 use crate::disease::{DiseaseModel, DiseaseStatus};
@@ -72,11 +74,13 @@ impl Display for CitizenID {
 pub struct Citizen {
     /// A unique identifier for this Citizen
     id: CitizenID,
+    /// The age of the Citizen in years
+    pub age: u16,
     /// The building they reside at (home)
     pub household_code: BuildingID,
     /// The place they work at
     pub workplace_code: BuildingID,
-    occupation: OccupationType,
+    occupation: Occupation,
     /// The hour which they go to work
     start_working_hour: u32,
     /// The hour which they leave to work
@@ -99,15 +103,17 @@ impl Citizen {
     pub fn new(
         household_code: BuildingID,
         workplace_code: BuildingID,
-        occupation_type: OccupationType,
+        age: u16,
+        occupation: Occupation,
         is_mask_compliant: bool,
         rng: &mut dyn RngCore,
     ) -> Citizen {
         Citizen {
             id: CitizenID::default(),
+            age,
             household_code: household_code.clone(),
             workplace_code,
-            occupation: occupation_type,
+            occupation,
             start_working_hour: 9,
             end_working_hour: 17,
             current_building_position: household_code,
@@ -196,8 +202,16 @@ impl Citizen {
     pub fn set_workplace_code(&mut self, workplace_code: BuildingID) {
         self.workplace_code = workplace_code;
     }
-    pub fn occupation(&self) -> OccupationType {
+    pub fn occupation(&self) -> Occupation {
         self.occupation
+    }
+    pub fn detailed_occupation(&self) -> Option<OccupationType> {
+        match self.occupation() {
+            Occupation::Normal { occupation } => { Some(occupation) }
+            Occupation::Essential { occupation } => { Some(occupation) }
+            Occupation::Unemployed => { None }
+            Occupation::Student => { None }
+        }
     }
 
     pub fn is_susceptible(&self) -> bool {
@@ -215,13 +229,49 @@ impl Display for Citizen {
 }
 
 /// The type of employment a Citizen can have
-#[derive(Debug)]
-pub enum WorkType {
-    Normal,
-    Essential,
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Hash)]
+pub enum Occupation {
+    /// The Citizen is part of the normal workforce, with a detailed classification
+    Normal { occupation: OccupationType },
+    /// The Citizen is classed as part of the "Essential" workforce
+    Essential { occupation: OccupationType },
+    /// The Citizen is unemployed (without a job) and stays at home
     Unemployed,
+    /// The Citizen goes to school
     Student,
-    NA,
+}
+
+/// The detailed job type of a Citizen
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, EnumIter, Hash)]
+pub enum OccupationType {
+    Manager,
+    Professional,
+    Technical,
+    Administrative,
+    SkilledTrades,
+    Caring,
+    Sales,
+    MachineOperatives,
+    Teaching,
+}
+
+impl TryFrom<RawOccupationType> for OccupationType {
+    type Error = ();
+
+    fn try_from(raw_occupation: RawOccupationType) -> Result<Self, Self::Error> {
+        Ok(match raw_occupation {
+            RawOccupationType::All => { return Err(()); },
+            RawOccupationType::Managers => { OccupationType::Manager }
+            RawOccupationType::Professional => { OccupationType::Professional }
+            RawOccupationType::Technical => { OccupationType::Technical }
+            RawOccupationType::Administrative => { OccupationType::Administrative }
+            RawOccupationType::SkilledTrades => { OccupationType::SkilledTrades }
+            RawOccupationType::Caring => { OccupationType::Caring }
+            RawOccupationType::Sales => { OccupationType::Sales }
+            RawOccupationType::MachineOperatives => { OccupationType::MachineOperatives }
+            RawOccupationType::Teaching => { OccupationType::Teaching }
+        })
+    }
 }
 /*
 #[cfg(test)]

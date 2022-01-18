@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -25,7 +25,10 @@ use std::hash::Hash;
 
 use serde::Serialize;
 
+use load_census_data::tables::employment_densities::EmploymentDensities;
+
 use crate::models::building::BuildingID;
+use crate::models::citizen::OccupationType;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;
 
@@ -56,3 +59,18 @@ impl Display for ID {
         }
     }
 }
+
+pub fn get_density_for_occupation(occupation: OccupationType) -> u32 {
+    match occupation {
+        OccupationType::Manager => EmploymentDensities::OFFICE_GENERAL_OFFICE,
+        OccupationType::Professional => EmploymentDensities::OFFICE_GENERAL_OFFICE,
+        OccupationType::Technical => EmploymentDensities::OFFICE_SERVICED_OFFICE,
+        OccupationType::Administrative => EmploymentDensities::OFFICE_GENERAL_OFFICE,
+        OccupationType::SkilledTrades => EmploymentDensities::INDUSTRIAL_GENERAL,
+        OccupationType::Caring => EmploymentDensities::INDUSTRIAL_LIGHT_INDUSTRY_BUSINESS_PARK,
+        OccupationType::Sales => EmploymentDensities::RETAIL_HIGH_STREET,
+        OccupationType::MachineOperatives => EmploymentDensities::INDUSTRIAL_GENERAL,
+        OccupationType::Teaching => EmploymentDensities::RETAIL_HIGH_STREET,
+    }
+}
+

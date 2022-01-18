@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -285,6 +285,13 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
     } else {
         path.push_str("?geography=");
         path.push_str(&area_code);
+    }
+    if table == CensusTableNames::AgeStructure || table == CensusTableNames::PopulationDensity {
+        path.push_str("&rural_urban=0");
+        if table == CensusTableNames::AgeStructure {
+            path.push_str("&c_age=1...101");
+            path.push_str("&measures=20100");
+        }
     }
     path.push_str("&ExcludeZeroValues=true");
     path.push_str("&recordlimit=");

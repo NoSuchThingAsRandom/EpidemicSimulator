@@ -70,6 +70,18 @@ impl Default for Timer {
     }
 }
 
+#[derive(Debug, Default, Clone)]
+struct GeneratedExposures {
+    /// The list of Citizens on Public Transport, grouped by their origin and destination
+    public_transport_pre_generated: HashMap<
+        (OutputAreaID, OutputAreaID),
+        Vec<(CitizenID, bool)>,
+    >,
+    /// The list of buildings, with the amount of exposures that occurred
+    building_exposure_list: HashMap<BuildingID, usize>,
+}
+
+
 //#[derive(Clone)]
 pub struct Simulator {
     /// The total size of the population
@@ -110,16 +122,18 @@ impl Simulator {
         let mut start = Instant::now();
         // Reset public transport containers
         self.public_transport = Default::default();
-        self.generate_and_apply_exposures()?;
+        let exposures = self.generate_exposures()?;
+        let generate_exposure_time = start.elapsed().as_secs_f64();
 
-        let exposure_time = start.elapsed().as_secs_f64();
+        self.apply_exposures(exposures)?;
+        let apply_exposure_time = start.elapsed().as_secs_f64();
         start = Instant::now();
 
         self.apply_interventions()?;
 
         let intervention_time = start.elapsed().as_secs_f64();
-        let total = exposure_time + intervention_time;
-        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",exposure_time,(exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
+        let total = generate_exposure_time + intervention_time;
+        debug!("Generate Exposures: {:.3} seconds ({:.3}%),Apply Exposures: {:.3} seconds ({:.3}%),  Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,(generate_exposure_time/total)*100.0,apply_exposure_time,(apply_exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -128,16 +142,11 @@ impl Simulator {
         }
     }
 
-    fn generate_and_apply_exposures(&mut self) -> anyhow::Result<()> {
+    fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        let mut building_exposure_list: HashMap<BuildingID, usize> = HashMap::new();
+        let mut exposures = GeneratedExposures::default();
         self.statistics.next();
 
-        // The list of Citizens on Public Transport, grouped by their origin and destination
-        let mut public_transport_pre_generate: HashMap<
-            (OutputAreaID, OutputAreaID),
-            Vec<(CitizenID, bool)>,
-        > = HashMap::new();
 
         // Generate exposures for fixed building positions
         for citizen in self.citizens.values_mut() {
@@ -150,21 +159,24 @@ impl Simulator {
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {
-                let transport_session = public_transport_pre_generate
+                let transport_session = exposures.public_transport_pre_generated
                     .entry(travel.clone())
                     .or_default();
 
                 transport_session.push((citizen.id(), citizen.is_infected()));
             } else if let Infected(_) = citizen.disease_status {
-                let entry = building_exposure_list
+                let entry = exposures.building_exposure_list
                     .entry(citizen.current_building_position.clone())
                     .or_insert(1);
                 *entry += 1;
             }
         }
+        return Ok(exposures);
+    }
+    fn apply_exposures(&mut self, exposures: GeneratedExposures) -> anyhow::Result<()> {
 
         // Apply Building Exposures
-        for (building_id, exposure_count) in building_exposure_list {
+        for (building_id, exposure_count) in exposures.building_exposure_list {
             let area = self.output_areas.get(&building_id.output_area_code());
             match area {
                 Some(area) => {
@@ -191,7 +203,7 @@ impl Simulator {
             }
         }
         // Generate public transport routes
-        for (route, mut citizens) in public_transport_pre_generate {
+        for (route, mut citizens) in exposures.public_transport_pre_generated {
             citizens.shuffle(&mut self.rng);
             let mut current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
             while let Some((citizen, is_infected)) = citizens.pop() {
@@ -341,7 +353,7 @@ impl Simulator {
     }
     pub fn error_dump_json(self) -> anyhow::Result<()> {
         println!("Creating Core Dump!");
-        let mut file = File::create("crash.json")?;
+        let mut file = File::create("../../debug_dumps/crash.json")?;
         use serde_json::json;
 
         let mut output_area_json = HashMap::new();
