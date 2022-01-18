@@ -28,8 +28,7 @@ use log::{debug, info, trace};
 use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
-use crate::DataLoadingError;
-use crate::parsing_error::ParseErrorType;
+use crate::OSMError;
 use crate::polygon_lookup::PolygonContainer;
 
 const MAX_SIZE: i32 = 700000;
@@ -227,7 +226,7 @@ impl Voronoi {
         size: i32,
         seeds: Vec<(i32, i32)>,
         scaling: Scaling,
-    ) -> Result<Voronoi, DataLoadingError> {
+    ) -> Result<Voronoi, OSMError> {
         info!(
             "Building Voronoi Grid of {} x {} with {} seeds",
             size,
@@ -291,7 +290,7 @@ impl Voronoi {
             trace!("Converted polygons to geo polygons");
             polygons
         } else {
-            return Err(DataLoadingError::Misc {
+            return Err(OSMError::Misc {
                 source: "Failed to build Voronoi diagram!".to_string(),
             });
         };
@@ -310,18 +309,16 @@ impl Voronoi {
     pub fn find_seed_for_point(
         &self,
         point: geo_types::Point<i32>,
-    ) -> Result<(i32, i32), DataLoadingError> {
+    ) -> Result<(i32, i32), OSMError> {
         let point = self.scaling.scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(&point)?;
         Ok(*self
             .seeds
             .get(*seed_index)
-            .ok_or_else(|| DataLoadingError::ValueParsingError {
-                source: ParseErrorType::MissingKey {
-                    context: "Cannot seed that contains polygon".to_string(),
-                    key: seed_index.to_string(),
-                },
+            .ok_or_else(|| OSMError::MissingKey {
+                context: "Cannot seed that contains polygon".to_string(),
+                key: seed_index.to_string(),
             })?)
     }
 }
@@ -330,7 +327,7 @@ impl Voronoi {
 mod tests {
     use rand::{Rng, thread_rng};
 
-    use crate::DataLoadingError;
+    use crate::OSMError;
     use crate::voronoi_generator::{PolygonContainer, Scaling, Voronoi};
 
     #[test]

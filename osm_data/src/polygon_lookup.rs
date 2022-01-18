@@ -52,23 +52,19 @@ use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelI
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
-use crate::DataLoadingError;
-use crate::osm_parsing::convert::decimal_latitude_and_longitude_to_northing_and_eastings;
-use crate::parsing_error::ParseErrorType;
-use crate::parsing_error::ParseErrorType::{MathError, MissingKey};
+use crate::convert::decimal_latitude_and_longitude_to_northing_and_eastings;
+use crate::OSMError;
 use crate::voronoi_generator::Scaling;
 
 /// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
 #[inline]
 fn geo_polygon_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default>(
     polygon: &geo_types::Polygon<T>,
-) -> Result<quadtree_rs::area::Area<T>, DataLoadingError> {
+) -> Result<quadtree_rs::area::Area<T>, OSMError> {
     let bounds = polygon
         .bounding_rect()
-        .ok_or_else(|| DataLoadingError::ValueParsingError {
-            source: MathError {
-                context: "Failed to generate bounding box for polygon".to_string(),
-            },
+        .ok_or_else(|| OSMError::ValueParsingError {
+            source: "Failed to generate bounding box for polygon".to_string()
         })?;
     let anchor = bounds.min();
     let anchor = (anchor.x, anchor.y);
@@ -101,7 +97,7 @@ fn geo_polygon_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Defau
 #[inline]
 fn geo_point_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default>(
     point: &geo_types::Point<T>,
-) -> Result<quadtree_rs::area::Area<T>, DataLoadingError> {
+) -> Result<quadtree_rs::area::Area<T>, OSMError> {
     let anchor = (point.x(), point.y());
     let area = AreaBuilder::default()
         .anchor(QuadPoint::from(anchor))
@@ -129,7 +125,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         polygons: HashMap<T, geo_types::Polygon<i32>>,
         scaling: Scaling,
         grid_size: i32,
-    ) -> Result<PolygonContainer<T>, DataLoadingError> {
+    ) -> Result<PolygonContainer<T>, OSMError> {
         // Build Quadtree, with Coords of isize and values of seed points
         let mut lookup: Quadtree<i32, T> =
             Quadtree::new((f64::from(grid_size)).log2().ceil() as usize);
@@ -137,10 +133,8 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             let bounds =
                 polygon
                     .bounding_rect()
-                    .ok_or_else(|| DataLoadingError::ValueParsingError {
-                        source: MathError {
-                            context: "Failed to generate bounding box for polygon".to_string(),
-                        },
+                    .ok_or_else(|| OSMError::ValueParsingError {
+                        source: "Failed to generate bounding box for polygon".to_string(),
                     })?;
             let mut bounds = scaling.scale_rect(bounds, grid_size);
             if bounds.width() == 0 {
@@ -150,39 +144,31 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                 bounds.set_max((bounds.max().x, bounds.max().y + 1));
             }
             if (grid_size) < bounds.max().x {
-                return Err(DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::OutOfBounds {
-                        context: "Max X Coordinate is outside bounding rect".to_string(),
-                        max_size: grid_size.to_string(),
-                        actual_size: bounds.max().x.to_string(),
-                    },
+                return Err(OSMError::OutOfBounds {
+                    context: "Max X Coordinate is outside bounding rect".to_string(),
+                    max_size: grid_size.to_string(),
+                    actual_size: bounds.max().x.to_string(),
                 });
             }
             if (grid_size) < bounds.max().y {
-                return Err(DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::OutOfBounds {
-                        context: "Max Y Coordinate is outside bounding rect".to_string(),
-                        max_size: grid_size.to_string(),
-                        actual_size: bounds.max().y.to_string(),
-                    },
+                return Err(OSMError::OutOfBounds {
+                    context: "Max Y Coordinate is outside bounding rect".to_string(),
+                    max_size: grid_size.to_string(),
+                    actual_size: bounds.max().y.to_string(),
                 });
             }
             if bounds.min().x < 0 {
-                return Err(DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::OutOfBounds {
-                        context: "Min X Coordinate is outside bounding rect".to_string(),
-                        max_size: "0".to_string(),
-                        actual_size: bounds.min().x.to_string(),
-                    },
+                return Err(OSMError::OutOfBounds {
+                    context: "Min X Coordinate is outside bounding rect".to_string(),
+                    max_size: "0".to_string(),
+                    actual_size: bounds.min().x.to_string(),
                 });
             }
             if bounds.min().y < 0 {
-                return Err(DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::OutOfBounds {
-                        context: "Min Y Coordinate is outside bounding rect".to_string(),
-                        max_size: "0".to_string(),
-                        actual_size: bounds.min().y.to_string(),
-                    },
+                return Err(OSMError::OutOfBounds {
+                    context: "Min Y Coordinate is outside bounding rect".to_string(),
+                    max_size: "0".to_string(),
+                    actual_size: bounds.min().y.to_string(),
                 });
             }
             let region = AreaBuilder::default()
@@ -218,7 +204,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
     pub fn find_polygons_containing_polygon(
         &self,
         polygon: &geo_types::Polygon<i32>,
-    ) -> Result<Vec<&T>, DataLoadingError> {
+    ) -> Result<Vec<&T>, OSMError> {
         // TODO Move this scaling
         let scaled_polygon: geo_types::Polygon<i32> =
             self.scaling.scale_polygon(polygon, self.grid_size);
@@ -231,22 +217,18 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             let test_polygon =
                 self.polygons
                     .get(id)
-                    .ok_or_else(|| DataLoadingError::ValueParsingError {
-                        source: ParseErrorType::MissingKey {
-                            context: "Can't find polygon with id".to_string(),
-                            key: format!("{:?}", id),
-                        },
+                    .ok_or_else(|| OSMError::MissingKey {
+                        context: "Can't find polygon with id".to_string(),
+                        key: format!("{:?}", id),
                     })?;
             if test_polygon.intersects(polygon) {
                 results.push(id);
             }
         }
         if results.is_empty() {
-            Err(DataLoadingError::ValueParsingError {
-                source: ParseErrorType::MissingKey {
-                    context: "Can't find nearest seed for polygon".to_string(),
-                    key: String::new(),
-                },
+            Err(OSMError::MissingKey {
+                context: "Can't find nearest seed for polygon".to_string(),
+                key: String::new(),
             })
         } else {
             Ok(results)
@@ -258,7 +240,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
     pub fn find_polygon_for_point(
         &self,
         point: &geo_types::Point<i32>,
-    ) -> Result<&T, DataLoadingError> {
+    ) -> Result<&T, OSMError> {
         // TODO Move this scaling
         let scaled_point: geo_types::Point<i32> = self
             .scaling
@@ -278,21 +260,18 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             let poly =
                 self.polygons
                     .get(id)
-                    .ok_or_else(|| DataLoadingError::ValueParsingError {
-                        source: ParseErrorType::MissingKey {
-                            context: "Can't find polygon with id".to_string(),
-                            key: format!("{:?}", id),
-                        },
+                    .ok_or_else(|| OSMError::MissingKey {
+                        context: "Can't find polygon with id".to_string(),
+                        key: format!("{:?}", id),
+
                     })?;
             if poly.intersects(point) {
                 return Ok(id);
             }
         }
-        Err(DataLoadingError::ValueParsingError {
-            source: ParseErrorType::MissingKey {
-                context: "Can't find nearest seed for point".to_string(),
-                key: format!("{:?}", point),
-            },
+        Err(OSMError::MissingKey {
+            context: "Can't find nearest seed for point".to_string(),
+            key: format!("{:?}", point),
         })
     }
 }
@@ -303,9 +282,9 @@ impl PolygonContainer<String> {
     pub fn load_polygons_from_file(
         filename: &str,
         grid_size: i32,
-    ) -> Result<PolygonContainer<String>, DataLoadingError> {
+    ) -> Result<PolygonContainer<String>, OSMError> {
         let mut reader =
-            shapefile::Reader::from_path(filename).map_err(|e| DataLoadingError::IOError {
+            shapefile::Reader::from_path(filename).map_err(|e| OSMError::IOError {
                 source: Box::new(e),
                 context: format!("Shape File '{}' doesn't exist!", filename),
             })?;
@@ -368,20 +347,15 @@ impl PolygonContainer<String> {
                         .collect();
                     rings = interior_ring
                         .pop()
-                        .ok_or_else(|| DataLoadingError::ValueParsingError {
-                            source: ParseErrorType::IsEmpty {
-                                message: "Expected an interior ring to exist!".to_string(),
-                            },
+                        .ok_or_else(|| OSMError::IsEmpty {
+                            context: "Expected an interior ring to exist!".to_string(),
                         })?
                         .0;
                 }
                 geo_types::Polygon::new(LineString::from(rings), interior_ring)
             } else {
-                return Err(DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::InvalidDataType {
-                        value: Some(shape.shapetype().to_string()),
-                        expected_type: "Unexpected shape type!".to_string(),
-                    },
+                return Err(OSMError::ValueParsingError {
+                    source: format!("Unexpected shape type: {}", shape.shapetype().to_string())
                 });
             };
 
@@ -389,11 +363,8 @@ impl PolygonContainer<String> {
             let code_record =
                 record
                     .get("code")
-                    .ok_or_else(|| DataLoadingError::ValueParsingError {
-                        source: MissingKey {
-                            context: "Output Area is missing it's code".to_string(),
-                            key: "code".to_string(),
-                        },
+                    .ok_or_else(|| OSMError::ValueParsingError {
+                        source: "Output Area is missing it's code".to_string()
                     })?;
             let code: String;
             match code_record {
@@ -401,25 +372,20 @@ impl PolygonContainer<String> {
                     if let Some(value) = value {
                         code = value.to_string()
                     } else {
-                        return Err(DataLoadingError::ValueParsingError {
-                            source: ParseErrorType::IsEmpty {
-                                message: "The code for an Output Area is empty".to_string(),
-                            }
+                        return Err(OSMError::IsEmpty {
+                            context: "The code for an Output Area is empty".to_string()
                         });
                     }
                 }
                 _ => {
-                    return Err(DataLoadingError::ValueParsingError {
-                        source: ParseErrorType::InvalidDataType {
-                            value: Some(code_record.field_type().to_string()),
-                            expected_type: "Expected type 'character' for area code".to_string(),
-                        },
+                    return Err(OSMError::ValueParsingError {
+                        source: "Expected type 'character' for area code".to_string()
                     });
                 }
             }
 
             Ok((code, polygon))
-        }).collect::<Result<HashMap<String, geo_types::Polygon<i32>>, DataLoadingError>>()?;
+        }).collect::<Result<HashMap<String, geo_types::Polygon<i32>>, OSMError>>()?;
         info!("Finished loading map data in {:?}", start_time.elapsed());
         let scaling = Scaling::yorkshire_national_grid(grid_size);
         PolygonContainer::new(

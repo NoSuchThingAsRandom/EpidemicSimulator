@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["load_census_data", "sim", "run", "visualisation"]
+members = ["load_census_data", "osm_data", "run", "sim", "visualisation"]
 
 resolver = "2"
 

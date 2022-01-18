@@ -1,0 +1,34 @@
+[package]
+name = "osm_data"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bincode = "1.3"
+
+geo = "0.18.0"
+geo-types = { version = "0.7.2", features = ["serde"] }
+log = "0.4"
+lonlat_bng = "0.3.8"
+ndarray = "0.15.4"
+num = "0.4.0"
+num-traits = "0.2.14"
+
+osmpbf = "0.2.6"
+ostn02_phf = "0.1.13"
+plotters = "0.3.1"
+quadtree_rs = "0.1.2"
+
+proc-macro2 = "=1.0.34"
+proj5 = "0.1.7"
+quote = "=1.0.10"
+rand = "0.8"
+rayon = "1.5.1"
+serde = { version = "1.0.130", features = ["derive"] }
+shapefile = { version = "0.3.0", features = ["geo-types"] }
+
+syn = "=1.0.82"
+uuid = { version = "0.8", features = ["v4", "serde"] }
+voronoice = { git = "https://github.com/NoSuchThingAsRandom/voronoice" }

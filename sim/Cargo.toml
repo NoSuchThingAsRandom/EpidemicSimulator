@@ -8,6 +8,7 @@ authors = ["Sam Ralph"]
 strum = "0.23.0"
 [dependencies]
 load_census_data = { path = "../load_census_data" }
+osm_data = { path = "../osm_data" }
 
 anyhow = "1.0"
 csv = "1.1.6"

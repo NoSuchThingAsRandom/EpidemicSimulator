@@ -30,7 +30,6 @@ use log::{debug, info, warn};
 use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
-use crate::osm_parsing::{OSMRawBuildings, TagClassifiedBuilding};
 use crate::parsing_error::DataLoadingError;
 use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::age_structure::{AgePopulationRecord, PreProcessingAgePopulationRecord};
@@ -44,15 +43,10 @@ use crate::tables::resides_vs_workplace::{
 };
 
 mod nomis_download;
-pub mod osm_parsing;
 pub mod parse_table;
 pub mod parsing_error;
-pub mod polygon_lookup;
 pub mod tables;
-pub mod voronoi_generator;
 
-pub const OSM_FILENAME: &str = "OSM/england-latest.osm.pbf";
-pub const OSM_CACHE_FILENAME: &str = "OSM/cached";
 
 /// This is a container for all the Records relating to one Output Area for All Census Tables
 pub struct CensusDataEntry<'a> {
@@ -382,13 +376,6 @@ mod tests {
     use rand::thread_rng;
 
     use crate::CensusData;
-
-    fn load_census_data() -> CensusData {
-        CensusData::load_all_tables(
-            "../data/".to_string(),
-            "1946157112TYPE299".to_string(),
-            false).expect("Failed to load data")
-    }
 
     #[test]
     fn test_workplace_area_distrubution() {

@@ -26,10 +26,10 @@ use anyhow::Context;
 use log::{error, info};
 use rand::thread_rng;
 
-use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
-use load_census_data::osm_parsing::{OSMRawBuildings, RawBuilding};
-use load_census_data::polygon_lookup::PolygonContainer;
+use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
+use osm_data::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings, RawBuilding};
+use osm_data::polygon_lookup::PolygonContainer;
 use sim::models::output_area::OutputAreaID;
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;

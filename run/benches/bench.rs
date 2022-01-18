@@ -29,8 +29,8 @@ use rand::thread_rng;
 
 use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use load_census_data::osm_parsing::{OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
-use load_census_data::polygon_lookup::PolygonContainer;
 use load_census_data::tables::CensusTableNames;
+use osm_data::polygon_lookup::PolygonContainer;
 use sim::simulator::Simulator;
 
 struct MyProfiler {}

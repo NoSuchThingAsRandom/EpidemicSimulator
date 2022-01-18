@@ -10,6 +10,7 @@ live_render = []
 [dependencies]
 sim = { path = "../sim" }
 load_census_data = { path = "../load_census_data" }
+osm_data = { path = "../osm_data" }
 
 anyhow = "1.0"
 bimap = "0.6.1"

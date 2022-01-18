@@ -14,6 +14,7 @@ harness = false
 
 [dependencies]
 load_census_data = { path = "../load_census_data" }
+osm_data = { path = "../osm_data" }
 visualisation = { path = "../visualisation" }
 sim = { path = "../sim" }
 

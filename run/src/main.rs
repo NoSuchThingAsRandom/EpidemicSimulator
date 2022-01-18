@@ -25,9 +25,9 @@ use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
 
-use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
-use load_census_data::osm_parsing::OSMRawBuildings;
+use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
+use osm_data::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings};
 use visualisation::image_export::DrawingRecord;
 
 use crate::load_data::load_data;

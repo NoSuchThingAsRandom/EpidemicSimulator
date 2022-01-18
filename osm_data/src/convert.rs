@@ -223,7 +223,7 @@ fn helmert_wgs84_to_osbg36(point: (f64, f64, f64)) -> (f64, f64, f64) {
 
 #[cfg(test)]
 mod tests {
-    use crate::osm_parsing::convert::{
+    use crate::convert::{
         cartesian_to_lat_lon, decimal_latitude_and_longitude_to_northing_and_eastings,
         Ellipsoid, helmert_wgs84_to_osbg36, lat_lon_to_cartesian, lat_lon_to_eastings,
     };

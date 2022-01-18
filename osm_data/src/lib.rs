@@ -30,13 +30,18 @@ use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::DataLoadingError;
-use crate::osm_parsing::draw_voronoi::draw_voronoi_polygons;
+use crate::draw_voronoi::draw_voronoi_polygons;
+use crate::error::OSMError;
 use crate::voronoi_generator::{Scaling, Voronoi};
 
 pub mod convert;
 pub mod draw_voronoi;
+pub mod polygon_lookup;
+pub mod voronoi_generator;
+pub mod error;
 
+pub const OSM_FILENAME: &str = "OSM/england-latest.osm.pbf";
+pub const OSM_CACHE_FILENAME: &str = "OSM/cached";
 
 // From guesstimating on: https://maps.nls.uk/geo/explore/#zoom=19&lat=53.94849&lon=-1.03067&layers=170&b=1&marker=53.948300,-1.030701
 pub const YORKSHIRE_AND_HUMBER_TOP_RIGHT: (u32, u32) = (450000, 400000);
@@ -345,13 +350,13 @@ impl OSMRawBuildings {
     }
     fn read_cached_osm_data(
         cache_filename: String,
-    ) -> Result<OSMRawBuildings, DataLoadingError> {
+    ) -> Result<OSMRawBuildings, OSMError> {
         debug!("Reading cached parsing data from: {}",cache_filename);
-        let bytes = read(&cache_filename).map_err(|e| DataLoadingError::IOError {
+        let bytes = read(&cache_filename).map_err(|e| OSMError::IOError {
             source: Box::new(e),
             context: format!("Reading File '{}'  failed!", cache_filename),
         })?;
-        bincode::deserialize(&bytes).map_err(|e| DataLoadingError::IOError {
+        bincode::deserialize(&bytes).map_err(|e| OSMError::IOError {
             source: Box::new(e),
             context: "Failed to parse OSM cached data with serde!".to_string(),
         })
@@ -359,16 +364,16 @@ impl OSMRawBuildings {
     fn load_and_write_cache(
         raw_filename: String,
         cache_filename: String,
-    ) -> Result<OSMRawBuildings, DataLoadingError> {
+    ) -> Result<OSMRawBuildings, OSMError> {
         debug!("Parsing data from raw OSM file");
         let building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
         std::fs::write(cache_filename, bincode::serialize(&building_locations).map_err(|e| {
-            DataLoadingError::IOError {
+            OSMError::IOError {
                 source: Box::new(e),
                 context: "Failed to serialize OSM data with bincode!".to_string(),
             }
         })?)
-            .map_err(|e| DataLoadingError::IOError {
+            .map_err(|e| OSMError::IOError {
                 source: Box::new(e),
                 context: "Failed to write bincode OSM data to file!".to_string(),
             })?;
@@ -388,7 +393,7 @@ impl OSMRawBuildings {
         use_cache: bool,
         visualise_building_boundaries: bool,
         grid_size: i32,
-    ) -> Result<OSMRawBuildings, DataLoadingError> {
+    ) -> Result<OSMRawBuildings, OSMError> {
         info!("Building OSM Data...");
         debug!("Starting to read data from file");
         // If using cache, attempt to load data from cache
@@ -426,7 +431,7 @@ impl OSMRawBuildings {
 
     fn read_buildings_from_osm(
         filename: String,
-    ) -> Result<OSMRawBuildings, DataLoadingError> {
+    ) -> Result<OSMRawBuildings, OSMError> {
         use osmpbf::{Element, ElementReader};
         info!("Reading OSM data from file: {}", filename);
         let reader = ElementReader::from_path(filename)?;
@@ -467,10 +472,10 @@ impl OSMRawBuildings {
                     (ways, nodes)
                 },
             )?;
-        let nodes = nodes.ok_or_else(|| DataLoadingError::Misc {
+        let nodes = nodes.ok_or_else(|| OSMError::Misc {
             source: "No Nodes loaded from OSM file".to_string(),
         })?;
-        let ways = ways.ok_or_else(|| DataLoadingError::Misc {
+        let ways = ways.ok_or_else(|| OSMError::Misc {
             source: "No Ways loaded from OSM file".to_string(),
         })?;
         info!("Completed generation of Raw OSM Elements. Now Creating RawBuildings, from {:?} ways and {:?} nodes",ways.len(),nodes.len());

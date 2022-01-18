@@ -30,8 +30,8 @@ use rand::RngCore;
 use serde::Serialize;
 
 use load_census_data::CensusDataEntry;
-use load_census_data::osm_parsing::{RawBuilding, TagClassifiedBuilding};
 use load_census_data::tables::population_and_density_per_output_area::PersonType;
+use osm_data::{RawBuilding, TagClassifiedBuilding};
 
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};

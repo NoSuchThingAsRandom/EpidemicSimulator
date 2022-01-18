@@ -18,13 +18,10 @@
  *
  */
 
-use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt::Debug;
-use std::iter::FromIterator;
 
-use enum_map::EnumMap;
-use rand::{distributions::Distribution, Rng, RngCore};
+use rand::{distributions::Distribution, RngCore};
 use rand::distributions::WeightedIndex;
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter};

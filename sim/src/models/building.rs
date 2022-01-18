@@ -26,8 +26,8 @@ use geo::Point;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
-use load_census_data::osm_parsing::RawBuilding;
 use load_census_data::tables::employment_densities::EmploymentDensities;
+use osm_data::RawBuilding;
 
 use crate::config::MIN_WORKPLACE_OCCUPANT_COUNT;
 use crate::error::SimError;

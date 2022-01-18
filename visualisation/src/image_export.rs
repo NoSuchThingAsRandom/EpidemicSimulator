@@ -34,7 +34,7 @@ use plotters::prelude::{
 use plotters::style::TextStyle;
 use polylabel::polylabel;
 
-use load_census_data::osm_parsing::TagClassifiedBuilding;
+use osm_data::TagClassifiedBuilding;
 
 use crate::{convert_geo_point_to_pixel, GRID_SIZE, PIXEL_SIZE, SCALE};
 use crate::error::DrawingResult;
@@ -283,7 +283,7 @@ pub fn draw_output_areas(filename: String, data: Vec<DrawingRecord>) -> DrawingR
 
 #[inline]
 fn building_colour(
-    class: load_census_data::osm_parsing::TagClassifiedBuilding,
+    class: osm_data::TagClassifiedBuilding,
 ) -> plotters::style::RGBColor {
     let index = match class {
         TagClassifiedBuilding::Shop => 1,
@@ -298,7 +298,7 @@ fn building_colour(
 }
 
 fn render_buildings(
-    buildings: Vec<load_census_data::osm_parsing::RawBuilding>,
+    buildings: Vec<osm_data::RawBuilding>,
     draw_backend: &DrawingArea<BitMapBackend, Shift>,
 ) -> DrawingResult<()> {
     let start_time = Instant::now();
@@ -332,7 +332,7 @@ fn render_buildings(
 
 pub fn draw_buildings(
     filename: String,
-    buildings: Vec<load_census_data::osm_parsing::RawBuilding>,
+    buildings: Vec<osm_data::RawBuilding>,
 ) -> DrawingResult<()> {
     let start_time = Instant::now();
     info!("Drawing buildings on map...");
@@ -350,7 +350,7 @@ pub fn draw_buildings(
 pub fn draw_buildings_and_output_areas(
     filename: String,
     data: Vec<DrawingRecord>,
-    buildings: Vec<load_census_data::osm_parsing::RawBuilding>,
+    buildings: Vec<osm_data::RawBuilding>,
 ) -> DrawingResult<()> {
     let start_time = Instant::now();
     info!("Drawing output areas and buildings on map");

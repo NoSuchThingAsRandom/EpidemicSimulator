@@ -34,12 +34,12 @@ use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallel
 use strum::IntoEnumIterator;
 
 use load_census_data::{CensusData, CensusDataEntry};
-use load_census_data::osm_parsing::{
+use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
+use load_census_data::tables::employment_densities::EmploymentDensities;
+use osm_data::{
     BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding,
 };
-use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
-use load_census_data::polygon_lookup::PolygonContainer;
-use load_census_data::tables::employment_densities::EmploymentDensities;
+use osm_data::polygon_lookup::PolygonContainer;
 
 use crate::config::NUMBER_FORMATTING;
 use crate::config::STARTING_INFECTED_COUNT;

@@ -21,8 +21,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
-use osmpbf::Error;
-
 #[derive(Debug)]
 pub enum SerdeErrors {
     Json { source: serde_json::Error },
@@ -103,7 +101,7 @@ impl Display for ParseErrorType {
                 )
             }
             ParseErrorType::MissingKey { context, key } => {
-                write!(f, "Missing Key! Context: {}. Key: {}", context, key)
+                write!(f, "Missing Key! Context: {}, \tKey: {}", context, key)
             }
             ParseErrorType::MathError { context } => {
                 write!(f, "Math error! Context: {}", context)
@@ -115,7 +113,7 @@ impl Display for ParseErrorType {
             } => {
                 write!(
                     f,
-                    "Out Of Bounds Error: {}, Max Size: {}, Actual Size: {}",
+                    "Out Of Bounds Error: {},\tMax Size: {},\tActual Size: {}",
                     context, max_size, actual_size
                 )
             }
@@ -126,9 +124,6 @@ impl Display for ParseErrorType {
 impl std::error::Error for ParseErrorType {}
 
 pub enum DataLoadingError {
-    OSMError {
-        source: osmpbf::Error,
-    },
     ShapeFileError {
         source: shapefile::Error,
     },
@@ -154,46 +149,11 @@ pub enum DataLoadingError {
     },
 }
 
-impl std::error::Error for DataLoadingError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            DataLoadingError::NetworkError { ref source } => Some(source),
-            DataLoadingError::SerdeParseError { ref source } => match source {
-                SerdeErrors::Json { ref source } => Some(source),
-                SerdeErrors::Plain { ref source } => Some(source),
-            },
-            DataLoadingError::ValueParsingError { ref source } => Some(source),
-            DataLoadingError::IOError { ref source, .. } => source.source(),
-            DataLoadingError::Misc { .. } => None,
-            DataLoadingError::OSMError { ref source } => Some(source),
-            DataLoadingError::ShapeFileError { ref source } => Some(source),
-        }
-    }
-}
-
 impl From<reqwest::Error> for DataLoadingError {
     fn from(err: reqwest::Error) -> Self {
         DataLoadingError::NetworkError { source: err }
     }
 }
-/*
-impl From<csv::Error> for DataLoadingError {
-    fn from(err: csv::Error) -> Self {
-        DataLoadingError::IOError {
-            source: Box::new(err),
-            context: String::new(),
-        }
-    }
-}
-
-impl From<std::io::Error> for DataLoadingError {
-    fn from(e: std::io::Error) -> Self {
-        DataLoadingError::IOError {
-            source: Box::new(e),
-            context: String::new(),
-        }
-    }
-}*/
 
 impl From<serde_json::Error> for DataLoadingError {
     fn from(err: serde_json::Error) -> Self {
@@ -208,12 +168,6 @@ impl From<serde_plain::Error> for DataLoadingError {
         DataLoadingError::SerdeParseError {
             source: SerdeErrors::Plain { source: err },
         }
-    }
-}
-
-impl From<osmpbf::Error> for DataLoadingError {
-    fn from(err: Error) -> Self {
-        DataLoadingError::OSMError { source: err }
     }
 }
 
@@ -239,44 +193,28 @@ impl From<String> for DataLoadingError {
     }
 }
 
-impl Debug for DataLoadingError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
 impl From<shapefile::Error> for DataLoadingError {
     fn from(e: shapefile::Error) -> Self {
         DataLoadingError::ShapeFileError { source: e }
     }
 }
-/*
-impl Debug for ParsingError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(name) = &self.name {
-            write!(f, "{:?} for {:?} ", self.error_type, name)
-        } else {
-            write!(f, "{:?} for", self.error_type)
-        }
-    }
-}*/
 
 impl Display for DataLoadingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DataLoadingError::NetworkError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n     Type: NetworkError\n        Source: {} ", source)
+                write!(f, "\nAn error occurred loading Census Data\n\tType: NetworkError\n\tSource: {} ", source)
             }
             DataLoadingError::SerdeParseError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n     Type: SerdeError\n      Source: {:#?} ", source)
+                write!(f, "\nAn error occurred loading Census Data\n\tType: SerdeError\n\tSource: {:#?} ", source)
             }
             DataLoadingError::ValueParsingError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n     Type: ParsingError\n        Source: {} ", source)
+                write!(f, "\nAn error occurred loading Census Data\n\tType: ParsingError\n\tSource: {} ", source)
             }
             DataLoadingError::IOError { source, context } => {
                 write!(
                     f,
-                    "\nAn error occurred loading Census Data\n     Type: IoError\n     Source: {}\n     Context: {}",
+                    "\nAn error occurred loading Census Data\n\tType: IoError\n\tSource: {}\n\tContext: {}",
                     source,
                     context
                 )
@@ -284,12 +222,31 @@ impl Display for DataLoadingError {
             DataLoadingError::Misc { source } => {
                 write!(f, "{}", source)
             }
-            DataLoadingError::OSMError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n     Type: OSM Error\n        Source: {} ", source)
-            }
             DataLoadingError::ShapeFileError { source } => {
                 write!(f, "\nAn error occurred loading a shapefile: {}", source)
             }
+        }
+    }
+}
+
+impl Debug for DataLoadingError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::error::Error for DataLoadingError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            DataLoadingError::NetworkError { ref source } => Some(source),
+            DataLoadingError::SerdeParseError { ref source } => match source {
+                SerdeErrors::Json { ref source } => Some(source),
+                SerdeErrors::Plain { ref source } => Some(source),
+            },
+            DataLoadingError::ValueParsingError { ref source } => Some(source),
+            DataLoadingError::IOError { ref source, .. } => source.source(),
+            DataLoadingError::Misc { .. } => None,
+            DataLoadingError::ShapeFileError { ref source } => Some(source),
         }
     }
 }
