@@ -273,6 +273,94 @@ impl Display for Workplace {
     }
 }
 
+pub struct Class {
+    students: Vec<CitizenID>,
+    teacher: Option<CitizenID>,
+    /// The amount of students the class can have
+    capacity: u8,
+}
+
+impl Class {
+    pub fn with_size(capacity: u8) -> Class {
+        Class { students: Vec::with_capacity(capacity as usize), teacher: None, capacity }
+    }
+    pub fn is_full(&self) -> bool {
+        self.students.len() >= self.capacity as usize
+    }
+    pub fn add_student(&mut self, student: CitizenID) -> Result<(), SimError> {
+        if self.is_full() {
+            return Err(SimError::Error { context: "Cannot add student to class that is full!".to_string() });
+        }
+        self.students.push(student);
+        Ok(())
+    }
+    /// Returns all students and the teacher in the class
+    pub fn get_participants(&self) -> Vec<CitizenID> {
+        let mut participants: Vec<CitizenID> = self.students.iter().cloned().collect();
+        if let Some(teacher) = self.teacher {
+            participants.push(teacher)
+        }
+        participants
+    }
+}
+
+pub struct School {
+    building_code: BuildingID,
+    location: geo_types::Point<i32>,
+    /// A class consists 20/30 students and a teacher?
+    classes: Vec<Class>,
+    class_size: u8,
+}
+
+impl Display for School {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "School: {},\tWith  {} classes of size: {}\tLocated at: {:?} ", self.id(), self.classes.len(), self.class_size, self.location)
+    }
+}
+
+impl Debug for School {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Building for School {
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
+        let class = self.classes.last_mut();
+        let mut class = match class {
+            Some(class) => class,
+            None => {
+                self.classes.push(Class::with_size(self.class_size));
+                self.classes.last_mut().expect("Cannot retrieve class that was just added")
+            }
+        };
+        if class.add_student(citizen_id).is_err() {
+            self.classes.push(Class::with_size(self.class_size));
+            class = self.classes.last_mut().expect("Cannot retrieve class that was just added");
+            class.add_student(citizen_id)?
+        }
+
+        Ok(())
+    }
+
+    fn id(&self) -> &BuildingID {
+        self.id()
+    }
+
+    fn occupants(&self) -> &Vec<CitizenID> {
+        self.classes.iter().flat_map(|class| class.get_participants()).collect().as_ref()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        todo!()
+    }
+
+    fn get_location(&self) -> Point<i32> {
+        todo!()
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use geo::prelude::Area;

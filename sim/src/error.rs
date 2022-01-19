@@ -38,6 +38,9 @@ pub enum SimError {
         message: String,
         key: String,
     },
+    Error {
+        context: String
+    },
 }
 
 impl SimError {
@@ -90,6 +93,9 @@ impl Debug for SimError {
             }
             SimError::InitializationError { message } => {
                 write!(f, "{} has not been Initialized", message)
+            }
+            SimError::Error { context } => {
+                write!(f, "An error occurred: {}", context)
             }
         }
     }
