@@ -55,11 +55,6 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
     YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.1 as isize,
 );
 
-/// The size of grids to use
-//pub const GRID_SIZE: usize = 40000;
-const DUMP_TO_FILE: bool = false;
-const DRAW_VORONOI_DIAGRAMS: bool = false;
-
 enum CheckBoundaries {
     York,
     YorkshireAndTheHumber,
@@ -199,7 +194,7 @@ impl<'a> From<DenseTagIter<'a>> for TagClassifiedBuilding {
 
 /// A wrapper for an Open Street Map Way
 struct RawOSMWay {
-    id: i64,
+    _id: i64,
     classification: TagClassifiedBuilding,
     /// The set of [`RawOSMNode`] that make up this `OSM Way`
     node_ids: Vec<i64>,
@@ -456,7 +451,7 @@ impl OSMRawBuildings {
                         //Discard all other OSM elements (Like roads)
                         Element::Way(way) => {
                             let parsed = RawOSMWay {
-                                id: way.id(),
+                                _id: way.id(),
                                 classification: TagClassifiedBuilding::from(way.tags()),
                                 node_ids: way.refs().collect(),
                             };

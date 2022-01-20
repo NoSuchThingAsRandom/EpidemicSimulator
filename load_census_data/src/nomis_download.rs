@@ -279,7 +279,7 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
 
     if let ResidentialAreaVsWorkplaceArea = table {
         path.push_str("?currently_residing_in=");
-        path.push_str(&area_code);
+        path.push_str(YORK_OUTPUT_AREA_CODE);
         path.push_str("&place_of_work=");
         path.push_str(YORK_OUTPUT_AREA_CODE);
     } else {

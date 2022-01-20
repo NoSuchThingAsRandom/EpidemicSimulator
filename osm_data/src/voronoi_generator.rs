@@ -309,7 +309,7 @@ impl Voronoi {
     pub fn find_seed_for_point(
         &self,
         point: geo_types::Point<i32>,
-    ) -> Result<(usize), OSMError> {
+    ) -> Result<usize, OSMError> {
         let point = self.scaling.scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(&point)?;

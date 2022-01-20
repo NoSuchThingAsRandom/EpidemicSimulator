@@ -103,7 +103,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulati
             assert_eq!(record.rural_urban_name, "Total", "Invalid Rural Area type ({}) for age structure table", record.rural_urban_name);
             // As an age of under 1, is 1
             let age = record.c_age - 1;
-            assert!(age < 100, "Age {} has exceed bounds of 100", age);
+            assert!(age <= 100, "Age {} has exceed bounds of 100", age);
             let population_size = record.obs_value.parse()?;
             total_population += population_size;
             data[age] = population_size;

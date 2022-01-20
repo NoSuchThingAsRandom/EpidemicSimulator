@@ -25,11 +25,9 @@ use std::hash::Hash;
 
 use geo::Point;
 use log::error;
-use num_format::Locale::en;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
-use load_census_data::tables::employment_densities::EmploymentDensities;
 use osm_data::RawBuilding;
 
 use crate::config::MIN_WORKPLACE_OCCUPANT_COUNT;
@@ -352,7 +350,7 @@ impl School {
         for age_group in students {
             let mut new_classes = Vec::new();
 
-            let mut age_group = age_group.into_iter();
+            let age_group = age_group.into_iter();
             let class_size = age_group.len() / teachers_per_age_group.floor() as usize;
 
             for class in age_group.as_slice().chunks(class_size) {
@@ -391,6 +389,9 @@ impl School {
             occupant_to_class,
         }
     }
+    pub fn classes(&self) -> &Vec<Class> {
+        &self.classes
+    }
 }
 
 impl Display for School {
@@ -401,18 +402,17 @@ impl Display for School {
 
 impl Debug for School {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(f, "{}", self)
     }
 }
 
 impl Building for School {
-    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
+    fn add_citizen(&mut self, _: CitizenID) -> Result<(), SimError> {
         panic!("Schools can only have citizens added at creation!");
-        Ok(())
     }
 
     fn id(&self) -> &BuildingID {
-        self.id()
+        &self.building_code
     }
 
     fn occupants(&self) -> Vec<CitizenID> {
@@ -433,7 +433,7 @@ impl Building for School {
                 return Vec::new();
             }
         };
-        let mut exposed = self.classes[class_index];
+        let mut exposed = self.classes[*class_index].get_participants();
         exposed.retain(|id| *id != infected_citizen);
         exposed
     }

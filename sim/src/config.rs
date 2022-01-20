@@ -17,10 +17,7 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use std::sync::Arc;
-
-use lazy_static::lazy_static;
-use num_format::{Format, Locale, SystemLocale};
+use num_format::Locale;
 
 pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per Workplace building

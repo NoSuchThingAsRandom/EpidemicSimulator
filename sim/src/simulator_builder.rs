@@ -19,38 +19,32 @@
  */
 
 use std::cell::RefCell;
-use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
-use std::hash::Hash;
-use std::mem::take;
 use std::rc::Rc;
 
 use anyhow::Context;
 use geo_types::Point;
-use log::{debug, error, info, trace, warn};
-use num_format::{SystemLocale, ToFormattedString};
-use num_format::Locale::en;
-use rand::{Rng, RngCore, thread_rng};
+use log::{debug, error, info, warn};
+use num_format::ToFormattedString;
+use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 use strum::IntoEnumIterator;
 
-use load_census_data::{CensusData, CensusDataEntry};
+use load_census_data::CensusData;
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
-use load_census_data::tables::employment_densities::EmploymentDensities;
 use osm_data::{
     BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding,
 };
 use osm_data::polygon_lookup::PolygonContainer;
-use osm_data::voronoi_generator::Voronoi;
 
 use crate::config::{MAX_STUDENT_AGE, NUMBER_FORMATTING};
 use crate::config::STARTING_INFECTED_COUNT;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::error::SimError;
 use crate::models::building::{Building, BuildingID, BuildingType, School, Workplace};
-use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
+use crate::models::citizen::{Citizen, CitizenID, OccupationType};
 use crate::models::get_density_for_occupation;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::simulator::Timer;
@@ -209,9 +203,10 @@ impl SimulatorBuilder {
         Ok(())
     }
 
-    pub fn build_schools(&mut self, rng: &mut dyn RngCore) -> anyhow::Result<()> {
+    pub fn build_schools(&mut self) -> anyhow::Result<()> {
+        // TODO Maybe we need to shuffle?
         // The outer index represents the age of the students, and the inner is just a list of students
-        let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) = self.citizens.iter_mut().filter_map(|(id, citizen)| {
+        let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) = self.citizens.iter_mut().filter_map(|(_id, citizen)| {
             let age = citizen.age;
             if age < MAX_STUDENT_AGE {
                 Some((Some((citizen.age, citizen)), None))
@@ -242,11 +237,10 @@ impl SimulatorBuilder {
         let output_areas = &mut self.output_areas;
 
 
-        let mut finding_closest_school = |citizen: &Citizen| -> Result<&RawBuilding, SimError> {
+        let finding_closest_school = |citizen: &Citizen| -> Result<&RawBuilding, SimError> {
             let area_code = citizen.household_code.output_area_code();
             let area = output_areas.get(&area_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve output area: {}", area_code) })?;
 
-            let building_id = citizen.household_code.building_id();
             let building = area.buildings.get(&citizen.household_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve household home: {}", citizen.household_code) })?;
 
             let closest_school_index = school_lookup.find_seed_for_point(building.get_location())?;
@@ -257,8 +251,6 @@ impl SimulatorBuilder {
 
         // Groups the students/teachers, by the school they are closest to
         // The geo point is the key, because it is the only identifier we can use
-        let mut school_buildings: HashMap<geo_types::Point<i32>, (RawBuilding, (Vec<Vec<(&Citizen)>>, Vec<&Citizen>))> = HashMap::new();
-
         let mut students_per_raw_school = students.into_iter().enumerate().map(|(age, student)|
             {
                 let age_grouped_students_per_school = student.into_iter().filter_map(|student| {
@@ -310,25 +302,30 @@ impl SimulatorBuilder {
 
         let valid_teacher_schools: HashSet<Point<i32>> = teachers_per_school.keys().cloned().collect();
         let valid_student_schools: HashSet<Point<i32>> = students_per_raw_school.keys().cloned().collect();
-        let valid_schools = valid_student_schools.intersection(&valid_teacher_schools);
-
+        let valid_schools = valid_student_schools.intersection(&valid_teacher_schools).collect::<Vec<&Point<i32>>>();
+        debug!("There are {} total valid schools,\t{} valid teacher schools,\t{} valid student schools ",valid_schools.len(),valid_teacher_schools.len(),valid_student_schools.len());
 
         let building_boundaries = &self.osm_data.building_boundaries;
         let output_areas_polygons = &self.output_areas_polygons;
 
-        let schools = valid_schools.into_iter().for_each(|key|
+        let mut class_total = 0;
+        let mut teachers_total = 0;
+        let mut students_total = 0;
+        let mut schools_total = 0;
+        valid_schools.into_iter().for_each(|key|
             {
                 let students = students_per_raw_school.remove(key).unwrap_or_else(|| panic!("School {:?} should exist for students but doesn't", key));
                 let (building, teachers) = teachers_per_school.remove(key).unwrap_or_else(|| panic!("School {:?} should exist for teachers but doesn't", key));
-
+                students_total += students.iter().flatten().collect::<Vec<&&mut Citizen>>().len();
+                teachers_total += teachers.len();
                 // Retrieve the Output Area, and build the School building
                 let output_area_id = get_area_code_for_raw_building(building, output_areas_polygons, building_boundaries).expect("School building is not inside any Output areas!").keys().next().expect("School building is not inside any Output areas!").clone();
                 let building_id = BuildingID::new(output_area_id.clone(), BuildingType::School);
                 let school = School::with_students_and_teachers(building_id.clone(), *building, students.iter().map(|age_group|
                     age_group.iter().map(|student|
-
                         student.id()).collect()).collect(), teachers.iter().map(|citizen| citizen.id()).collect());
-
+                class_total += school.classes().len();
+                schools_total += 1;
                 let output_area = output_areas.get_mut(&output_area_id).ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Retrieving output area for schools".to_string(),
@@ -351,6 +348,7 @@ impl SimulatorBuilder {
                 }
             }
         );
+        info!("Generated {} schools, with {} teachers, {} students across {} classes, with avg class size {} and avg classes per school {}",schools_total,teachers_total,students_total,class_total,(students_total/class_total),(class_total/schools_total));
         Ok(())
     }
 
@@ -361,7 +359,6 @@ impl SimulatorBuilder {
     /// Allocates that Citizen to the Workplace Building in that chosen Output Area
     pub fn build_workplaces(
         &mut self,
-        rng: &mut dyn RngCore,
         mut possible_buildings_per_area: HashMap<OutputAreaID, Vec<RawBuilding>>,
     ) -> anyhow::Result<()> {
         debug!(
@@ -394,8 +391,8 @@ impl SimulatorBuilder {
                 let workplace_output_area_code: OutputAreaID =
                     loop {
                         // TODO Redo this
-                        let mut code = household_census_data.get_random_workplace_area(&mut thread_rng()).context("Failed to retrieve random workplace area")?;
-                        let mut code = Some(OutputAreaID::from_code(code));
+                        let code = household_census_data.get_random_workplace_area(&mut thread_rng()).context("Failed to retrieve random workplace area")?;
+                        let code = Some(OutputAreaID::from_code(code));
                         let code = if let Some(code) = code {
                             if !self.output_areas.contains_key(&code) {
                                 //warn!("Output area: {} doesn't exist!",output_area_code);
@@ -481,7 +478,6 @@ impl SimulatorBuilder {
 
         // Randomise the order of the citizens, to reduce the number of Citizens sharing household and Workplace output areas
         citizens.shuffle(&mut rng);
-        let total_workers = citizens.len();
 
         // Group by occupation
         let mut citizens: HashMap<OccupationType, Vec<&mut Citizen>> = citizens.into_iter().filter_map(|citizen| {
@@ -491,9 +487,6 @@ impl SimulatorBuilder {
             entry.push(b.1);
             a
         });
-
-
-        let total_building_count = possible_buildings.len();
 
         // Calculate how much space we have
         let available_space: usize = possible_buildings.iter().map(|building| building.size()).sum::<i32>() as usize;
@@ -519,7 +512,8 @@ impl SimulatorBuilder {
         let scale = (((required_space as f64) / (available_space as f64)) * BUILDING_PER_OCCUPATION_OVERCAPACITY).ceil() as usize;
         //trace!("Scale for Output Area: {} is {} with {} buildings and {} Workers",workplace_area_code,scale,possible_buildings.len(),total_workers);
         // Allocate buildings using first fit
-        /// Occupation Type, (Current Total Floor Space, The list of buildings to be generated)
+
+        // Occupation Type, (Current Total Floor Space, The list of buildings to be generated)
         let mut building_per_occupation: HashMap<OccupationType, (usize, Vec<RawBuilding>)> = OccupationType::iter().map(|occupation| (occupation, (0, Vec::with_capacity(1000)))).collect();
         let mut differences: HashMap<OccupationType, isize> = required_space_per_occupation.iter().map(|(occupation, size)| (*occupation, *size as isize)).collect();
         // Shuffle to ensure buildings are distributed across the area
@@ -567,7 +561,7 @@ impl SimulatorBuilder {
             }
         }
         // Ensure we have meant the minimum requirements
-        for (occupation_type, (size, buildings)) in &building_per_occupation {
+        for (occupation_type, (size, _buildings)) in &building_per_occupation {
             let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
             if size <= required {
                 warn!( "Occupation: {:?}, has a size {} smaller than required {} for area {}",occupation_type, size, required,  workplace_area_code);
@@ -577,7 +571,7 @@ impl SimulatorBuilder {
         }
 
 
-        /// This is the list of full workplaces that need to be added to the parent Output Area
+        // This is the list of full workplaces that need to be added to the parent Output Area
         let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
 
         // Assign workplaces to every Citizen
@@ -590,7 +584,7 @@ impl SimulatorBuilder {
             }
             let citizens = citizens.get_mut(&occupation).expect(format!("Couldn't get Citizens with occupation: {:?}", occupation).as_str());
             let buildings = building_per_occupation.get_mut(&occupation).expect(format!("Couldn't get Citizens with occupation: {:?}", occupation).as_str());
-            let mut workplaces = SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), occupation, citizens, &buildings.1);
+            let workplaces = SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), occupation, citizens, &buildings.1);
 
 
             if let Err(e) = workplaces {
@@ -615,7 +609,6 @@ impl SimulatorBuilder {
         let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
         let mut buildings = buildings.iter();
 
-        let mut citizen_iter = citizens.iter();
         let mut current_workplace: Workplace = Workplace::new(
             BuildingID::new(
                 workplace_area_code.clone(),
@@ -718,7 +711,7 @@ impl SimulatorBuilder {
             self.output_areas.len()
         ))?;
 
-        self.build_schools(&mut rng)
+        self.build_schools()
             .context("Failed to build schools")?;
 
         timer.code_block_finished(&format!(
@@ -761,7 +754,7 @@ impl SimulatorBuilder {
             }
         });
         info!("Starting to build workplaces for {} areas",self.output_areas.len());
-        self.build_workplaces(&mut rng, possible_workplaces)
+        self.build_workplaces(possible_workplaces)
             .context("Failed to build workplaces")?;
         timer.code_block_finished("Generated workplaces for {} Output Areas")?;
 

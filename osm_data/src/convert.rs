@@ -20,7 +20,7 @@
 //! This is used to convert latitude and longitude to grid coordinates (National Grid Ordnance Survey - OGB36)
 //!
 //! Useful site: https://www.movable-type.co.uk/scripts/latlong-os-gridref.html
-
+#![allow(dead_code, non_snake_case)]
 struct Ellipsoid {
     a: f64,
     b: f64,

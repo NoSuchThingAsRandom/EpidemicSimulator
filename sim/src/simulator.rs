@@ -168,7 +168,7 @@ impl Simulator {
                 let entry = exposures.building_exposure_list
                     .entry(citizen.current_building_position.clone())
                     .or_insert(vec![citizen.id()]);
-                *entry += 1;
+                entry.push(citizen.id());
             }
         }
         return Ok(exposures);
@@ -186,14 +186,17 @@ impl Simulator {
                         building_id
                     ))?;
                     let building = building.as_ref();
-                    for exposure in exposure_count {
-                        let occupants = building.apply_exposure();
-                        self.expose_citizens(
-                            occupants,
-                            1,
-                            ID::Building(building_id.clone()),
-                        )?;
+                    let mut to_expose = Vec::new();
+                    for citizen in exposure_count {
+                        let occupants = building.apply_exposure(citizen);
+                        for id in occupants {
+                            to_expose.push(id);
+                        }
                     }
+                    self.expose_citizens(
+                        to_expose, 1,
+                        ID::Building(building_id.clone()),
+                    )?;
                 }
 
                 None => {

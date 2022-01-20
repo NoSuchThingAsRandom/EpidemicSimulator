@@ -114,7 +114,7 @@ impl OutputArea {
     pub fn generate_citizens_with_households(
         &mut self,
         rng: &mut dyn RngCore,
-        mut census_data: CensusDataEntry,
+        census_data: CensusDataEntry,
         possible_buildings: Vec<RawBuilding>,
     ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
         let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
