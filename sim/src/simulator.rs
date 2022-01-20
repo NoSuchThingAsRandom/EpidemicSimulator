@@ -78,7 +78,7 @@ struct GeneratedExposures {
         Vec<(CitizenID, bool)>,
     >,
     /// The list of buildings, with the amount of exposures that occurred
-    building_exposure_list: HashMap<BuildingID, usize>,
+    building_exposure_list: HashMap<BuildingID, Vec<CitizenID>>,
 }
 
 
@@ -167,7 +167,7 @@ impl Simulator {
             } else if let Infected(_) = citizen.disease_status {
                 let entry = exposures.building_exposure_list
                     .entry(citizen.current_building_position.clone())
-                    .or_insert(1);
+                    .or_insert(vec![citizen.id()]);
                 *entry += 1;
             }
         }
@@ -186,12 +186,14 @@ impl Simulator {
                         building_id
                     ))?;
                     let building = building.as_ref();
-                    let occupants = building.occupants().clone();
-                    self.expose_citizens(
-                        occupants,
-                        exposure_count,
-                        ID::Building(building_id.clone()),
-                    )?;
+                    for exposure in exposure_count {
+                        let occupants = building.apply_exposure();
+                        self.expose_citizens(
+                            occupants,
+                            1,
+                            ID::Building(building_id.clone()),
+                        )?;
+                    }
                 }
 
                 None => {
@@ -239,6 +241,7 @@ impl Simulator {
         Ok(())
     }
 
+    /// Applies the Exposure event to the given Citizens
     fn expose_citizens(
         &mut self,
         citizens: Vec<CitizenID>,

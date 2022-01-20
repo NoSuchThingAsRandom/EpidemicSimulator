@@ -19,10 +19,12 @@
  */
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::Point;
+use log::error;
 use num_format::Locale::en;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
@@ -131,6 +133,8 @@ pub trait Building: Display + Debug {
     fn as_any(&self) -> &dyn Any;
     /// Returns the location of the building
     fn get_location(&self) -> geo_types::Point<i32>;
+    /// Returns a list of Citizens that would be exposed, if the given Citizen is infected
+    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID>;
 }
 
 impl Serialize for dyn Building {
@@ -188,6 +192,12 @@ impl Building for Household {
 
     fn get_location(&self) -> Point<i32> {
         self.location
+    }
+
+    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID> {
+        let mut exposed = self.occupants();
+        exposed.retain(|id| *id != infected_citizen);
+        exposed
     }
 }
 
@@ -261,6 +271,11 @@ impl Building for Workplace {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
+    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID> {
+        let mut exposed = self.occupants();
+        exposed.retain(|id| *id != infected_citizen);
+        exposed
+    }
 }
 
 impl Display for Workplace {
@@ -296,6 +311,8 @@ pub struct School {
     location: geo_types::Point<i32>,
     /// A class consists 20/30 students and a teacher?
     classes: Vec<Class>,
+    /// The class index the teacher/student belongs to
+    occupant_to_class: HashMap<CitizenID, usize>,
 }
 
 impl School {
@@ -303,6 +320,8 @@ impl School {
         if teachers.len() < 1 {
             panic!("Cannot have a school without any teachers!")
         }
+
+
         let mut teachers_per_age_group = (students.len() as f64) / (teachers.len() as f64);
         // Merge age groups, until there are enough teachers
         while teachers_per_age_group < 1.0 {
@@ -321,10 +340,15 @@ impl School {
         }
 
         // Allocate students/teachers into classes
+        let mut occupant_to_class = HashMap::with_capacity(students.len());
+        let mut class_index = 0;
+
         let mut teachers = teachers.into_iter();
         let mut classes: Vec<Class> = Vec::new();
+
         let mut teachers_allocated = 0;
         let mut teachers_should_be_allocated = 0.0;
+
         for age_group in students {
             let mut new_classes = Vec::new();
 
@@ -332,9 +356,15 @@ impl School {
             let class_size = age_group.len() / teachers_per_age_group.floor() as usize;
 
             for class in age_group.as_slice().chunks(class_size) {
+                let teacher = teachers.next().expect("Ran out of teachers!");
+                for student in class {
+                    occupant_to_class.insert(*student, class_index);
+                }
+                occupant_to_class.insert(teacher, class_index);
+                class_index += 1;
                 new_classes.push(Class {
                     students: class.to_vec(),
-                    teachers: vec![teachers.next().expect("Ran out of teachers!")],
+                    teachers: vec![teacher],
                 });
                 teachers_allocated += 1;
                 teachers_should_be_allocated += teachers_per_age_group;
@@ -342,7 +372,10 @@ impl School {
             // Add any missing teachers
             let mut age_group_class_index = 0;
             while teachers_allocated < teachers_should_be_allocated as usize {
-                new_classes.get_mut(age_group_class_index).unwrap().teachers.push(teachers.next().expect("Ran out of teachers!"));
+                let teacher = teachers.next().expect("Ran out of teachers!");
+                new_classes.get_mut(age_group_class_index).unwrap().teachers.push(teacher);
+                occupant_to_class.insert(teacher, classes.len() + age_group_class_index);
+
                 teachers_allocated += 1;
                 age_group_class_index += 1;
                 if age_group_class_index == new_classes.len() {
@@ -355,6 +388,7 @@ impl School {
             building_code: building_id,
             location: building.center(),
             classes,
+            occupant_to_class,
         }
     }
 }
@@ -391,6 +425,18 @@ impl Building for School {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
+    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID> {
+        let class_index = match self.occupant_to_class.get(&infected_citizen) {
+            Some(class_index) => class_index,
+            None => {
+                error!("Citizen does not belong to a class!");
+                return Vec::new();
+            }
+        };
+        let mut exposed = self.classes[class_index];
+        exposed.retain(|id| *id != infected_citizen);
+        exposed
+    }
 }
 
 
@@ -406,6 +452,7 @@ mod tests {
     };
     use load_census_data::tables::employment_densities::EmploymentDensities;
     use load_census_data::tables::occupation_count::OccupationType;
+    use osm_data::{BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding};
 
     use crate::models::building::{
         Building, BuildingID, BuildingType, MINIMUM_FLOOR_SPACE_SIZE, Workplace,
