@@ -45,8 +45,8 @@ pub fn build_citizen_graph(
     simulation.output_areas.values().for_each(|area| {
         for (_, building) in &area.buildings {
             let citizens = building.occupants();
-            for outer_citizen in citizens {
-                for inner_citizen in citizens {
+            for outer_citizen in &citizens {
+                for inner_citizen in &citizens {
                     graph.add_edge(
                         outer_citizen.id().as_u128(),
                         inner_citizen.id().as_u128(),

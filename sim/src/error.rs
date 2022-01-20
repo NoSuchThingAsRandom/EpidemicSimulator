@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -20,7 +20,12 @@
 
 use std::fmt::{Debug, Display, Formatter};
 
+use osm_data::error::OSMError;
+
 pub enum SimError {
+    OSMError {
+        source: OSMError,
+    },
     Default {
         message: String,
     },
@@ -37,6 +42,9 @@ pub enum SimError {
     OptionRetrievalFailure {
         message: String,
         key: String,
+    },
+    Error {
+        context: String
     },
 }
 
@@ -72,6 +80,10 @@ impl Default for SimError {
 impl Debug for SimError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            SimError::OSMError { source } => {
+                write!(f, "Sim Error: {}", source)
+            }
+
             SimError::Default { message } => {
                 write!(f, "Error: {}", message)
             }
@@ -91,6 +103,9 @@ impl Debug for SimError {
             SimError::InitializationError { message } => {
                 write!(f, "{} has not been Initialized", message)
             }
+            SimError::Error { context } => {
+                write!(f, "An error occurred: {}", context)
+            }
         }
     }
 }
@@ -102,3 +117,9 @@ impl Display for SimError {
 }
 
 impl std::error::Error for SimError {}
+
+impl From<osm_data::error::OSMError> for SimError {
+    fn from(e: OSMError) -> Self {
+        SimError::OSMError { source: e }
+    }
+}

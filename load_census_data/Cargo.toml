@@ -7,6 +7,7 @@ authors = ["Sam Ralph"]
 [dependencies]
 async-recursion = "=0.3.2"
 csv = "1.1.6"
+dbase = "=0.2.2"
 enum-map = "1.1.1"
 futures-core = "=0.3.17"
 http = "=0.2.5"

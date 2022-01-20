@@ -305,21 +305,22 @@ impl Voronoi {
             scaling,
         })
     }
-    /// Attempts to find the closest seed to the given point
+    /// Attempts to find the index of the closest seed to the given point
     pub fn find_seed_for_point(
         &self,
         point: geo_types::Point<i32>,
-    ) -> Result<(i32, i32), OSMError> {
+    ) -> Result<(usize), OSMError> {
         let point = self.scaling.scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
         let seed_index = self.polygons.find_polygon_for_point(&point)?;
-        Ok(*self
-            .seeds
-            .get(*seed_index)
-            .ok_or_else(|| OSMError::MissingKey {
-                context: "Cannot seed that contains polygon".to_string(),
-                key: seed_index.to_string(),
-            })?)
+        Ok(*seed_index)
+        /*        Ok(*self
+                    .seeds
+                    .get(*seed_index)
+                    .ok_or_else(|| OSMError::MissingKey {
+                        context: "Cannot seed that contains polygon".to_string(),
+                        key: seed_index.to_string(),
+                    })?)*/
     }
 }
 

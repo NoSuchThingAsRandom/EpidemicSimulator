@@ -23,6 +23,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::Point;
+use num_format::Locale::en;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
@@ -45,6 +46,7 @@ pub const MINIMUM_FLOOR_SPACE_SIZE: u32 = 2000;
 pub enum BuildingType {
     Household,
     Workplace,
+    School,
 }
 
 /// This is used to represent a building location
@@ -125,7 +127,7 @@ pub trait Building: Display + Debug {
     /// Returns the AreaCode where this building is located
     fn id(&self) -> &BuildingID;
     /// Returns a list of ids of occupants that are here
-    fn occupants(&self) -> &Vec<CitizenID>;
+    fn occupants(&self) -> Vec<CitizenID>;
     fn as_any(&self) -> &dyn Any;
     /// Returns the location of the building
     fn get_location(&self) -> geo_types::Point<i32>;
@@ -176,8 +178,8 @@ impl Building for Household {
         &self.building_code
     }
 
-    fn occupants(&self) -> &Vec<CitizenID> {
-        &self.occupants
+    fn occupants(&self) -> Vec<CitizenID> {
+        self.occupants.clone()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -249,8 +251,8 @@ impl Building for Workplace {
         &self.building_code
     }
 
-    fn occupants(&self) -> &Vec<CitizenID> {
-        &self.occupants
+    fn occupants(&self) -> Vec<CitizenID> {
+        self.occupants.clone()
     }
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
@@ -272,6 +274,125 @@ impl Display for Workplace {
         )
     }
 }
+
+pub struct Class {
+    students: Vec<CitizenID>,
+    teachers: Vec<CitizenID>,
+}
+
+impl Class {
+    /// Returns all students and the teacher in the class
+    pub fn get_participants(&self) -> Vec<CitizenID> {
+        let mut participants: Vec<CitizenID> = self.students.iter().cloned().collect();
+        for teacher in &self.teachers {
+            participants.push(teacher.clone())
+        }
+        participants
+    }
+}
+
+pub struct School {
+    building_code: BuildingID,
+    location: geo_types::Point<i32>,
+    /// A class consists 20/30 students and a teacher?
+    classes: Vec<Class>,
+}
+
+impl School {
+    pub fn with_students_and_teachers(building_id: BuildingID, building: RawBuilding, mut students: Vec<Vec<CitizenID>>, teachers: Vec<CitizenID>) -> School {
+        if teachers.len() < 1 {
+            panic!("Cannot have a school without any teachers!")
+        }
+        let mut teachers_per_age_group = (students.len() as f64) / (teachers.len() as f64);
+        // Merge age groups, until there are enough teachers
+        while teachers_per_age_group < 1.0 {
+            let mut new_students = Vec::with_capacity(students.len() / 2);
+            let mut current_index = 0;
+            for age_group in students {
+                if current_index % 2 == 0 {
+                    new_students.push(age_group);
+                } else {
+                    new_students.last_mut().unwrap().extend(age_group);
+                }
+                current_index += 1;
+            }
+            students = new_students;
+            teachers_per_age_group = (students.len() as f64) / (teachers.len() as f64);
+        }
+
+        // Allocate students/teachers into classes
+        let mut teachers = teachers.into_iter();
+        let mut classes: Vec<Class> = Vec::new();
+        let mut teachers_allocated = 0;
+        let mut teachers_should_be_allocated = 0.0;
+        for age_group in students {
+            let mut new_classes = Vec::new();
+
+            let mut age_group = age_group.into_iter();
+            let class_size = age_group.len() / teachers_per_age_group.floor() as usize;
+
+            for class in age_group.as_slice().chunks(class_size) {
+                new_classes.push(Class {
+                    students: class.to_vec(),
+                    teachers: vec![teachers.next().expect("Ran out of teachers!")],
+                });
+                teachers_allocated += 1;
+                teachers_should_be_allocated += teachers_per_age_group;
+            }
+            // Add any missing teachers
+            let mut age_group_class_index = 0;
+            while teachers_allocated < teachers_should_be_allocated as usize {
+                new_classes.get_mut(age_group_class_index).unwrap().teachers.push(teachers.next().expect("Ran out of teachers!"));
+                teachers_allocated += 1;
+                age_group_class_index += 1;
+                if age_group_class_index == new_classes.len() {
+                    age_group_class_index = 0;
+                }
+            }
+            classes.extend(new_classes);
+        }
+        School {
+            building_code: building_id,
+            location: building.center(),
+            classes,
+        }
+    }
+}
+
+impl Display for School {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "School: {},\tWith  {} classes\tLocated at: {:?} ", self.id(), self.classes.len(), self.location)
+    }
+}
+
+impl Debug for School {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Building for School {
+    fn add_citizen(&mut self, citizen_id: CitizenID) -> Result<(), SimError> {
+        panic!("Schools can only have citizens added at creation!");
+        Ok(())
+    }
+
+    fn id(&self) -> &BuildingID {
+        self.id()
+    }
+
+    fn occupants(&self) -> Vec<CitizenID> {
+        self.classes.iter().flat_map(|class| class.get_participants()).collect()
+    }
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
+    }
+
+    fn get_location(&self) -> Point<i32> {
+        self.location
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
