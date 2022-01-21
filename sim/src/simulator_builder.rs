@@ -199,28 +199,33 @@ impl SimulatorBuilder {
             "Households and Citizen generation succeeded for {} Output Areas.",
             ref_output_areas.borrow().len()
         );
+        for occupation in OccupationType::iter() {
+            debug!("There are {} Citizens with an occupation of: {:?}", citizens.iter().filter(|(_, citizen)| citizen.detailed_occupation() == Some(occupation)).count(), occupation);
+        }
         self.citizens = citizens;
         Ok(())
     }
 
     pub fn build_schools(&mut self) -> anyhow::Result<()> {
+        debug!("Building Schools");
         // TODO Maybe we need to shuffle?
         // The outer index represents the age of the students, and the inner is just a list of students
+        let mut teacher_count = 0;
         let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) = self.citizens.iter_mut().filter_map(|(_id, citizen)| {
             let age = citizen.age;
-            if age < MAX_STUDENT_AGE {
-                Some((Some((citizen.age, citizen)), None))
-            } else if let Some(OccupationType::Teaching) = citizen.detailed_occupation() {
+            if Some(OccupationType::Teaching) == citizen.detailed_occupation() {
+                teacher_count += 1;
                 Some((None, Some(citizen)))
+            } else if age < MAX_STUDENT_AGE {
+                Some((Some((citizen.age, citizen)), None))
             } else { None }
-        }//(std::iter::repeat(vec![]).take(MAX_STUDENT_AGE as usize).collect::<Vec<Vec<&mut Citizen>>>(), Vec::new())
-        ).fold({
-                   let mut data = Vec::new();
-                   for _ in 0..MAX_STUDENT_AGE {
-                       data.push(Vec::new());
-                   }
-                   (data, Vec::new())
-               }, |mut acc, (student, teacher)| {
+        }).fold({
+                    let mut data = Vec::new();
+                    for _ in 0..MAX_STUDENT_AGE {
+                        data.push(Vec::new());
+                    }
+                    (data, Vec::new())
+                }, |mut acc, (student, teacher)| {
             if let Some((age, id)) = student {
                 acc.0[age as usize].push(id);
             } else if let Some(id) = teacher {
@@ -228,7 +233,8 @@ impl SimulatorBuilder {
             }
             acc
         });
-
+        debug!("{} teachers retrieved",teacher_count);
+        debug!("There are {} age groups, with {} students and {} teachers",students.len(),students.iter().map(|age_group|age_group.len()).sum::<usize>(),teachers.len());
         // The OSM Voronoi School Lookup
         let school_lookup = self.osm_data.voronoi().get(&TagClassifiedBuilding::School).expect("No schools exist!");
 
@@ -273,7 +279,7 @@ impl SimulatorBuilder {
         ).fold(HashMap::new(), |mut a: HashMap<Point<i32>, Vec<Vec<&mut Citizen>>>, (age, schools_to_flatten): (usize, HashMap<Point<i32>, Vec<&mut Citizen>>)| {
             schools_to_flatten.into_iter().for_each(|(key, students)| {
                 let entry = a.entry(key).or_default();
-                while entry.len() < age {
+                while entry.len() < age + 1 {
                     entry.push(Vec::new());
                 }
                 let age_group_len = entry.len();

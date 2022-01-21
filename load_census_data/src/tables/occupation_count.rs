@@ -122,7 +122,7 @@ impl OccupationCountRecord {
         &mut self,
         rng: &mut dyn RngCore,
     ) -> RawOccupationType {
-        return self.occupations[self.occupation_weighting.sample(rng)];
+        self.occupations[self.occupation_weighting.sample(rng)]
     }
 }
 

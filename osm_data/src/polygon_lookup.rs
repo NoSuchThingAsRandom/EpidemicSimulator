@@ -98,7 +98,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
     ) -> Result<PolygonContainer<T>, OSMError> {
         trace!("Building new Polygon Container of size: {}",grid_size);
         // Build Quadtree, with Coords of isize and values of seed points
-        let mut lookup = QuadTree::with_size(grid_size, grid_size);
+        let mut lookup = QuadTree::with_size(grid_size, grid_size, 10, 50);
         let mut added = 0;
         for (id, polygon) in &polygons {
             let bounds = match
