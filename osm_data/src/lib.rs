@@ -39,6 +39,7 @@ pub mod draw_voronoi;
 pub mod polygon_lookup;
 pub mod voronoi_generator;
 pub mod error;
+mod quadtree;
 
 pub const OSM_FILENAME: &str = "OSM/england-latest.osm.pbf";
 pub const OSM_CACHE_FILENAME: &str = "OSM/cached";
@@ -311,7 +312,7 @@ pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(
 }
 
 /// The container for the processed OSM Data, with Voronoi Diagrams
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct OSMRawBuildings {
     /// A hashmap for referencing a buildings outline/boundaries
     ///
@@ -333,7 +334,7 @@ fn deserialize_to_none<'de, D, T>(
 
 impl OSMRawBuildings {
     pub fn voronoi(&self) -> &HashMap<TagClassifiedBuilding, Voronoi> {
-        self.building_voronoi.as_ref().expect("Voronoi diagrams are not build for buildings!")
+        self.building_voronoi.as_ref().expect("Voronoi diagrams are not built!")
     }
     fn from(building_boundaries: HashMap<BuildingBoundaryID, Polygon<i32>>,
             building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>) -> OSMRawBuildings {
@@ -581,9 +582,12 @@ impl OSMRawBuildings {
     ///
     /// This constructs a polygon map, for each building, where each point inside a polygon means that building is the closest one
     fn construct_voronoi_diagrams(&mut self, grid_size: i32) {
-        let voronoi = self.building_locations
+        let voronoi: HashMap<TagClassifiedBuilding, Voronoi> = self.building_locations
             .par_iter()
             .filter_map(|(building_type, locations)| {
+                if *building_type != TagClassifiedBuilding::School {
+                    return None;
+                }
                 info!(
                     "Building voronoi diagram for {:?} with {} buildings",
                     building_type,
@@ -599,7 +603,7 @@ impl OSMRawBuildings {
                 ) {
                     Ok(voronoi) => Some((*building_type, voronoi)),
                     Err(e) => {
-                        error!("{}", e);
+                        error!("Failed to build {:?} voronoi: {}",building_type, e);
                         None
                     }
                 };

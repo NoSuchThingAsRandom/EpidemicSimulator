@@ -17,6 +17,7 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -29,7 +30,6 @@ use sim::simulator::Simulator;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
 use visualisation::image_export::DrawingRecord;
 
-# ![allow(dead_code)]
 pub fn draw_output_areas(
     filename: String,
     sim: &HashMap<OutputAreaID, OutputArea>,

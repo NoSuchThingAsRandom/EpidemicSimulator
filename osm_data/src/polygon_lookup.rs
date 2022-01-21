@@ -45,72 +45,42 @@ use std::time::Instant;
 
 use geo::prelude::{BoundingRect, Intersects};
 use geo_types::{CoordNum, LineString};
-use log::{debug, info, warn};
+use log::{debug, error, info, trace, warn};
 use num_traits::PrimInt;
-use quadtree_rs::{area::AreaBuilder, point::Point as QuadPoint, Quadtree};
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
 use crate::convert::decimal_latitude_and_longitude_to_northing_and_eastings;
 use crate::OSMError;
+use crate::quadtree::QuadTree;
 use crate::voronoi_generator::Scaling;
 
 /// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
 #[inline]
 fn geo_polygon_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default>(
     polygon: &geo_types::Polygon<T>,
-) -> Result<quadtree_rs::area::Area<T>, OSMError> {
-    let bounds = polygon
+) -> Result<geo_types::Rect<T>, OSMError> {
+    polygon
         .bounding_rect()
         .ok_or_else(|| OSMError::ValueParsingError {
             source: "Failed to generate bounding box for polygon".to_string()
-        })?;
-    let anchor = bounds.min();
-    let anchor = (anchor.x, anchor.y);
-    let mut height = bounds.height();
-    if height <= T::zero() {
-        height = T::one();
-    }
-    let mut width = bounds.width();
-    if width <= T::zero() {
-        width = T::one();
-    }
-    assert!(
-        bounds.height() >= T::zero(),
-        "Rect has a height less than zero {:?}",
-        bounds
-    );
-    assert!(
-        bounds.width() >= T::zero(),
-        "Rect has a width less than zero {:?}",
-        bounds
-    );
-    let area = AreaBuilder::default()
-        .anchor(QuadPoint::from(anchor))
-        .dimensions((width, height))
-        .build()?;
-    Ok(area)
+        })
 }
 
 /// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
 #[inline]
 fn geo_point_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Default>(
     point: &geo_types::Point<T>,
-) -> Result<quadtree_rs::area::Area<T>, OSMError> {
-    let anchor = (point.x(), point.y());
-    let area = AreaBuilder::default()
-        .anchor(QuadPoint::from(anchor))
-        .build()?;
-    Ok(area)
+) -> Result<geo_types::Rect<T>, OSMError> {
+    Ok(point.bounding_rect())
 }
 
 /// A lookup table for finding the closest `seed` to a given point
 ///
 /// T Represents the Data Type used as the index of the `seed`
-#[derive(Debug)]
 pub struct PolygonContainer<T: Debug + Clone + Eq + Ord + Hash> {
-    pub lookup: Quadtree<i32, T>,
+    pub lookup: QuadTree<T, i32>,
     /// The polygon and it's ID
     ///
     /// Has to be i32, for the geo::Intersects function
@@ -126,16 +96,24 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         scaling: Scaling,
         grid_size: i32,
     ) -> Result<PolygonContainer<T>, OSMError> {
+        trace!("Building new Polygon Container of size: {}",grid_size);
         // Build Quadtree, with Coords of isize and values of seed points
-        let mut lookup: Quadtree<i32, T> =
-            Quadtree::new((f64::from(grid_size)).log2().ceil() as usize);
+        let mut lookup = QuadTree::with_size(grid_size, grid_size);
+        let mut added = 0;
         for (id, polygon) in &polygons {
-            let bounds =
-                polygon
-                    .bounding_rect()
-                    .ok_or_else(|| OSMError::ValueParsingError {
-                        source: "Failed to generate bounding box for polygon".to_string(),
-                    })?;
+            let bounds = match
+            polygon
+                .bounding_rect()
+                .ok_or_else(|| OSMError::ValueParsingError {
+                    source: "Failed to generate bounding box for polygon".to_string(),
+                }) {
+                Ok(p) => p,
+                Err(e) => {
+                    //error!("{}",e);
+                    continue;
+                }
+            };
+
             let mut bounds = scaling.scale_rect(bounds, grid_size);
             if bounds.width() == 0 {
                 bounds.set_max((bounds.max().x + 1, bounds.max().y));
@@ -171,23 +149,11 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                     actual_size: bounds.min().y.to_string(),
                 });
             }
-            let region = AreaBuilder::default()
-                .anchor(QuadPoint::from(bounds.min().x_y()))
-                .dimensions((bounds.width(), bounds.height()))
-                .build();
-            //let seed = *seeds.get(index).ok_or_else(|| DataLoadingError::ValueParsingError { source: ParseErrorType::MissingKey { context: "Cannot retrieve seed for polygon".to_string(), key: index.to_string() } })?;
-            match region {
-                Ok(region) => {
-                    lookup
-                        .insert(region, id.clone())
-                        .unwrap_or_else(|| panic!("Polygon insertion failed!: {:?}", polygon));
-                }
-                Err(e) => {
-                    warn!(
-                        "Failed to build region for polygon with boundary ({:?})! {:?}",
-                        bounds, e
-                    );
-                }
+            if (lookup.add_item(id.clone(), bounds)) {
+                added += 1;
+            } else {
+                panic!("Failed to add Polygon with boundary: {:?}. But succedded with: {}", bounds, added
+                );
             }
         }
         Ok(PolygonContainer {
@@ -210,10 +176,9 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             self.scaling.scale_polygon(polygon, self.grid_size);
         let res = self
             .lookup
-            .query(geo_polygon_to_quad_area(&scaled_polygon)?);
+            .get_items(&geo_polygon_to_quad_area(&scaled_polygon)?);
         let mut results = Vec::new();
-        for entry in res {
-            let id = entry.value_ref();
+        for id in res {
             let test_polygon =
                 self.polygons
                     .get(id)
@@ -254,9 +219,8 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             scaled_point.y() < self.grid_size,
             "Y Coordinate is out of range!"
         );
-        let res = self.lookup.query(geo_point_to_quad_area(&scaled_point)?);
-        for entry in res {
-            let id = entry.value_ref();
+        let res = self.lookup.get_items(&geo_point_to_quad_area(&scaled_point)?);
+        for id in res {
             let poly =
                 self.polygons
                     .get(id)

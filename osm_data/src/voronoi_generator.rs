@@ -24,7 +24,7 @@ use std::fmt::{Debug, Display};
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, CoordNum, LineString, Point};
-use log::{debug, info, trace};
+use log::{debug, info, trace, warn};
 use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
@@ -165,19 +165,23 @@ fn get_random_point_inside_polygon(
     Some(start)
 }
 
-fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> geo_types::Polygon<T> {
+fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> Option<geo_types::Polygon<T>> {
+    // Return None, if no vertices exist
+    cell.iter_vertices().next()?;
     //points.push(points.first().expect("Polygon has too many points, Vec is out of space!"));
     // Convert to ints and build the exterior line
     let points = cell
         .iter_vertices()
         .map(|point| {
+            assert!(point.x >= 0.0, "Voronoice produced negative X: {}!", point.x);
+            assert!(point.y >= 0.0, "Voronoice produced negative Y: {}!", point.x);
             geo_types::Point::new(
                 T::from(point.x.round()).expect("Failed to represent f64 x coordinate as T"),
                 T::from(point.y.round()).expect("Failed to represent f64 y coordinate as T"),
             )
         })
         .collect::<Vec<geo_types::Point<T>>>();
-    geo_types::Polygon::new(LineString::from(points), Vec::new())
+    Some(geo_types::Polygon::new(LineString::from(points), Vec::new()))
 }
 
 /// Returns the minimum and maximum grid size required for the seeds
@@ -208,7 +212,6 @@ pub fn find_seed_bounds<T: num_traits::PrimInt + Copy + Clone + Debug>(seeds: &[
     ((min_x, min_y), (max_x, max_y))
 }
 
-#[derive(Debug)]
 pub struct Voronoi {
     pub grid_size: i32,
     pub seeds: Vec<(i32, i32)>,
@@ -266,10 +269,11 @@ impl Voronoi {
                 x: ((grid_size / 2) as f64).floor(),
                 y: ((grid_size / 2) as f64).floor(),
             },
-            grid_size as f64,
-            grid_size as f64,
+            (grid_size) as f64,
+            (grid_size) as f64,
         );
         debug!("Voronoi boundary box size: {} -> {:?}", grid_size, bounding_box);
+        trace!("Seeds: {:?}",voronoi_seeds.iter().take(10).collect::<Vec<&voronoice::Point>>());
         let polygons = VoronoiBuilder::default()
             .set_sites(voronoi_seeds)
             .set_bounding_box(bounding_box)
@@ -285,9 +289,9 @@ impl Voronoi {
             let polygons: HashMap<usize, geo_types::Polygon<i32>> = polygons
                 .iter_cells()
                 .enumerate()
-                .map(|(index, p)| (index, voronoi_cell_to_polygon(&p)))
+                .filter_map(|(index, p)| Some((index, voronoi_cell_to_polygon(&p)?)))
                 .collect();
-            trace!("Converted polygons to geo polygons");
+            trace!("Converted polygons to {} geo polygons",polygons.len());
             polygons
         } else {
             return Err(OSMError::Misc {
