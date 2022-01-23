@@ -24,7 +24,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::Point;
-use log::error;
+use log::{error, trace};
+use num_format::Locale::te;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
@@ -319,10 +320,11 @@ impl School {
             panic!("Cannot have a school without any teachers!")
         }
 
-
-        let mut teachers_per_age_group = (students.len() as f64) / (teachers.len() as f64);
+        let mut students: Vec<Vec<CitizenID>> = students.into_iter().filter(|s| s.len() > 0).collect();
+        let mut teachers_per_age_group = ((teachers.len() as f64) / (students.len() as f64)).floor();
         // Merge age groups, until there are enough teachers
         while teachers_per_age_group < 1.0 {
+            println!("Reducing age groups from: {}, with teachers {}, and teacher_per_age {}", students.len(), teachers.len(), teachers_per_age_group);
             let mut new_students = Vec::with_capacity(students.len() / 2);
             let mut current_index = 0;
             for age_group in students {
@@ -334,9 +336,9 @@ impl School {
                 current_index += 1;
             }
             students = new_students;
-            teachers_per_age_group = (students.len() as f64) / (teachers.len() as f64);
+            teachers_per_age_group = ((teachers.len() as f64) / (students.len() as f64)).floor();
         }
-
+        println!("There are {} teachers and {} teachers per age groups, with {} age groups and {} students", teachers.len(), teachers_per_age_group, students.len(), students.iter().map(|a| a.len()).sum::<usize>());
         // Allocate students/teachers into classes
         let mut occupant_to_class = HashMap::with_capacity(students.len());
         let mut class_index = 0;
@@ -347,12 +349,15 @@ impl School {
         let mut teachers_allocated = 0;
         let mut teachers_should_be_allocated = 0.0;
 
-        for age_group in students {
+        for (age_count, age_group) in students.iter().enumerate() {
             let mut new_classes = Vec::new();
 
             let age_group = age_group.into_iter();
-            let class_size = age_group.len() / teachers_per_age_group.floor() as usize;
-
+            let class_size = (age_group.len() as f64 / teachers_per_age_group).ceil() as usize;
+            if class_size == 0 {
+                continue;
+            }
+            println!("\tAge group: {}, Students: {}, Classes: {}", age_count, age_group.len(), class_size);
             for class in age_group.as_slice().chunks(class_size) {
                 let teacher = teachers.next().expect("Ran out of teachers!");
                 for student in class {
@@ -365,11 +370,12 @@ impl School {
                     teachers: vec![teacher],
                 });
                 teachers_allocated += 1;
-                teachers_should_be_allocated += teachers_per_age_group;
             }
+            teachers_should_be_allocated += teachers_per_age_group;
+
             // Add any missing teachers
             let mut age_group_class_index = 0;
-            while teachers_allocated < teachers_should_be_allocated as usize {
+            while teachers_allocated < teachers_should_be_allocated.floor() as usize {
                 let teacher = teachers.next().expect("Ran out of teachers!");
                 new_classes.get_mut(age_group_class_index).unwrap().teachers.push(teacher);
                 occupant_to_class.insert(teacher, classes.len() + age_group_class_index);

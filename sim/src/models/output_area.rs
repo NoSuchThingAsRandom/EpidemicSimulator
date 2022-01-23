@@ -138,10 +138,12 @@ impl OutputArea {
                     let raw_occupation = census_data
                         .occupation_count
                         .get_random_occupation(rng);
+                    let age = census_data.age_population.get_random_age(rng);
+
                     let citizen = Citizen::new(
                         household_building_id.clone(),
                         household_building_id.clone(),
-                        0,
+                        age,
                         Occupation::Normal { occupation: OccupationType::try_from(raw_occupation).unwrap_or_else(|_| panic!("Couldn't convert Census Occupation ({:?}), to sim occupation", raw_occupation)) },
                         self.mask_distribution.sample(rng),
                         rng,

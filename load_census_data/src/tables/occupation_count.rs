@@ -186,7 +186,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for Occupatio
             occupations,
             occupation_population: vec![],
             total_range,
-            occupation_weighting: WeightedIndex::new(&occupation_population).expect("Failed to build weighted sampling"),
+            occupation_weighting: WeightedIndex::new(&occupation_population).expect("Failed to build Occupation weighted sampling"),
         })
     }
 }

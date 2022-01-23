@@ -52,7 +52,7 @@ pub mod tables;
 pub struct CensusDataEntry<'a> {
     pub output_area_code: String,
     pub population_count: &'a PopulationRecord,
-    pub age_population: &'a AgePopulationRecord,
+    pub age_population: &'a mut AgePopulationRecord,
     pub occupation_count: &'a mut OccupationCountRecord,
 
     pub resides_workplace_count: &'a WorkplaceResidentialRecord,
@@ -362,7 +362,7 @@ impl CensusData {
         let workplace_area_distribution = self.residents_workplace.get(&code)?;
         Some(CensusDataEntry {
             population_count: self.population_counts.get(&code)?,
-            age_population: self.age_counts.get(&code)?,
+            age_population: self.age_counts.get_mut(&code)?,
             occupation_count: self.occupation_counts.get_mut(&code)?,
             output_area_code: code,
             workplace_density: EmploymentDensities {},

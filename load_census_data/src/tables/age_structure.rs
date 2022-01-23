@@ -20,9 +20,12 @@
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
+use rand::distributions::WeightedIndex;
+use rand::prelude::Distribution;
 use serde::Deserialize;
 
 use crate::parsing_error::{DataLoadingError, ParseErrorType};
+use crate::RngCore;
 use crate::tables::{PreProcessingTable, TableEntry};
 
 #[derive(Debug, Deserialize)]
@@ -44,11 +47,21 @@ impl PreProcessingTable for PreProcessingAgePopulationRecord {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct AgePopulationRecord {
     /// This is the population of the age group,starting from 0, to the last entry being 100 and over
     pub population_counts: [u16; 101],
+    age_weighting: WeightedIndex<u16>,
     pub population_size: u16,
+}
+
+impl AgePopulationRecord {
+    pub fn get_random_age(
+        &mut self,
+        rng: &mut dyn RngCore,
+    ) -> u16 {
+        self.age_weighting.sample(rng) as u16
+    }
 }
 
 impl TableEntry<PreProcessingAgePopulationRecord> for AgePopulationRecord {}
@@ -110,6 +123,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulati
         }
         Ok(AgePopulationRecord {
             population_counts: data,
+            age_weighting: WeightedIndex::new(&data).expect("Failed to build age weighted sampling"),
             population_size: total_population,
         })
     }

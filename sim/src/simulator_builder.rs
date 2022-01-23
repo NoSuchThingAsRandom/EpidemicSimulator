@@ -202,6 +202,13 @@ impl SimulatorBuilder {
         for occupation in OccupationType::iter() {
             debug!("There are {} Citizens with an occupation of: {:?}", citizens.iter().filter(|(_, citizen)| citizen.detailed_occupation() == Some(occupation)).count(), occupation);
         }
+        let mut ages = vec![0; 101];
+        for citizen in &citizens {
+            ages[citizen.1.age as usize] += 1;
+        }
+        for (age, count) in ages.iter().enumerate() {
+            println!("There are {} Citizens with an age of {}", count, age);
+        }
         self.citizens = citizens;
         Ok(())
     }
@@ -213,11 +220,11 @@ impl SimulatorBuilder {
         let mut teacher_count = 0;
         let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) = self.citizens.iter_mut().filter_map(|(_id, citizen)| {
             let age = citizen.age;
-            if Some(OccupationType::Teaching) == citizen.detailed_occupation() {
+            if age < MAX_STUDENT_AGE {
+                Some((Some((citizen.age, citizen)), None))
+            } else if Some(OccupationType::Teaching) == citizen.detailed_occupation() {
                 teacher_count += 1;
                 Some((None, Some(citizen)))
-            } else if age < MAX_STUDENT_AGE {
-                Some((Some((citizen.age, citizen)), None))
             } else { None }
         }).fold({
                     let mut data = Vec::new();
@@ -355,6 +362,7 @@ impl SimulatorBuilder {
             }
         );
         info!("Generated {} schools, with {} teachers, {} students across {} classes, with avg class size {} and avg classes per school {}",schools_total,teachers_total,students_total,class_total,(students_total/class_total),(class_total/schools_total));
+        panic!("Built schools!");
         Ok(())
     }
 
