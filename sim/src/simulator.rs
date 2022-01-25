@@ -37,7 +37,7 @@ use load_census_data::tables::population_and_density_per_output_area::AreaClassi
 use crate::config::{
     DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
 };
-use crate::disease::{DiseaseModel, DiseaseStatus,Exposure, StatisticEntry, StatisticsArea, StatisticsRecorder};
+use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::building::{Building, BuildingID, Workplace};
@@ -45,9 +45,8 @@ use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
-use crate::statistics::Statistics;
+use crate::statistics::{StatisticsArea, StatisticsRecorder};
 
-#[derive(Clone)]
 pub struct Simulator {
     /// The total size of the population
     current_population: u32,
@@ -57,7 +56,6 @@ pub struct Simulator {
     /// The list of citizens who have a "home" in this area
     pub citizens: HashMap<CitizenID, Citizen>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
-    pub statistics: Statistics,
     interventions: InterventionStatus,
     disease_model: DiseaseModel,
     pub public_transport: HashMap<PublicTransportID, PublicTransport>,
@@ -325,15 +323,15 @@ impl Simulator {
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics, get_memory_usage()?);
+                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {:?},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics_recorder.current_entry.get(&StatisticsArea::All), get_memory_usage()?);
                 start_time = Instant::now();
             }
             if !self.step()? {
-                debug!("{}", self.statistics);
+                debug!("{:?}", self.statistics_recorder.current_entry.get(&StatisticsArea::All));
                 break;
             }
         }
-        self.statistics_recorder.dump_to_file("recordings/v1.0.0-test.json");
+        self.statistics_recorder.dump_to_file("recordings/v1.0.1-test.json");
         Ok(())
     }
     /// Applies a single time step to the simulation
@@ -353,7 +351,7 @@ impl Simulator {
         let intervention_time = start.elapsed().as_secs_f64();
         let total = exposure_time + intervention_time;
         debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",exposure_time,exposure_time/total,intervention_time,intervention_time/total);
-        if !self.statistics.disease_exists() {
+        if !self.statistics_recorder.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
         } else {
@@ -364,7 +362,7 @@ impl Simulator {
     fn generate_and_apply_exposures(&mut self) -> anyhow::Result<()> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut building_exposure_list: HashMap<BuildingID, usize> = HashMap::new();
-        self.statistics.next();
+        self.statistics_recorder.next();
 
 
         // The list of Citizens on Public Transport, grouped by their origin and destination
@@ -377,11 +375,11 @@ impl Simulator {
         // Generate exposures for fixed building positions
         for citizen in self.citizens.values_mut() {
             citizen.execute_time_step(
-                self.statistics.time_step(),
+                self.statistics_recorder.current_time_step(),
                 &self.disease_model,
                 self.interventions.lockdown_enabled(),
             );
-            self.statistics.add_citizen(&citizen.disease_status);
+            self.statistics_recorder.add_citizen(&citizen);
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {
@@ -460,8 +458,8 @@ impl Simulator {
                         &mut self.rng,
                     )
                     {
-                        self.statistics
-                            .citizen_exposed(location.clone())
+                        self.statistics_recorder
+                            .expose_citizen(citizen, &location)
                             .context(format!(
                                 "Exposing citizen {}",
                                 citizen_id
@@ -482,7 +480,7 @@ impl Simulator {
         Ok(())
     }
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
-        let infected_percent = self.statistics.infected_percentage();
+        let infected_percent = self.statistics_recorder.infected_percentage();
         //debug!("Infected percent: {}",infected_percent);
         let new_interventions = self.interventions.update_status(infected_percent);
         for intervention in new_interventions {
@@ -490,7 +488,7 @@ impl Simulator {
                 InterventionsEnabled::Lockdown => {
                     info!(
                         "Lockdown is enabled at hour {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.current_time_step()
                     );
                     // Send every Citizen home
                     for mut citizen in &mut self.citizens {
@@ -501,7 +499,7 @@ impl Simulator {
                 InterventionsEnabled::Vaccination => {
                     info!(
                         "Starting vaccination program at hour: {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.current_time_step()
                     );
                     let mut eligible = HashSet::new();
                     self.citizens.iter().for_each(|(id, citizen)| {
@@ -515,7 +513,7 @@ impl Simulator {
                     info!(
                         "Mask wearing status has changed: {} at hour {}",
                         status,
-                        self.statistics.time_step()
+                        self.statistics_recorder.current_time_step()
                     )
                 }
             }
@@ -546,7 +544,7 @@ impl Simulator {
         println!("Creating Core Dump!");
         let file = File::create("crash.dump")?;
         let mut file = LineWriter::new(file);
-        writeln!(file, "{}", self.statistics)?;
+        writeln!(file, "{:?}", self.statistics_recorder)?;
         for area in self.output_areas {
             writeln!(file, "Output Area: {}", area.0)?;
             for (_area_type, building_map) in area.1.buildings.iter() {

@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -25,7 +25,7 @@ use anyhow::Context;
 use enum_map::EnumMap;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use load_census_data::CensusDataEntry;
 use load_census_data::tables::population_and_density_per_output_area::{
@@ -36,7 +36,7 @@ use crate::config::HOUSEHOLD_SIZE;
 use crate::models::building::{Building, BuildingID, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID};
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub struct OutputAreaID {
     code: String,
 }
