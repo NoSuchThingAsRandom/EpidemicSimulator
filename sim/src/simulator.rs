@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -37,7 +37,7 @@ use load_census_data::tables::population_and_density_per_output_area::AreaClassi
 use crate::config::{
     DEBUG_ITERATION_PRINT, get_memory_usage, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE,
 };
-use crate::disease::{DiseaseModel, DiseaseStatus};
+use crate::disease::{DiseaseModel, DiseaseStatus,Exposure, StatisticEntry, StatisticsArea, StatisticsRecorder};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::building::{Building, BuildingID, Workplace};
@@ -53,6 +53,7 @@ pub struct Simulator {
     current_population: u32,
     /// A list of all the sub areas containing agents
     pub output_areas: HashMap<OutputAreaID, OutputArea>,
+    statistics_recorder: StatisticsRecorder,
     /// The list of citizens who have a "home" in this area
     pub citizens: HashMap<CitizenID, Citizen>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
@@ -114,7 +115,7 @@ impl Simulator {
             output_areas,
             citizens,
             citizens_eligible_for_vaccine: None,
-            statistics: Statistics::default(),
+            statistics_recorder: StatisticsRecorder::default(),
             interventions: Default::default(),
             disease_model,
             public_transport: Default::default(),
@@ -332,6 +333,7 @@ impl Simulator {
                 break;
             }
         }
+        self.statistics_recorder.dump_to_file("recordings/v1.0.0-test.json");
         Ok(())
     }
     /// Applies a single time step to the simulation
