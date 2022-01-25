@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -21,6 +21,7 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use load_census_data::tables::employment_densities::EmploymentDensities;
@@ -35,7 +36,7 @@ use crate::error::Error;
 /// * An `OutputArea` - for broad location in the country,
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BuildingCode {
     output_area_code: String,
     area_type: AreaClassification,

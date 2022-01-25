@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -88,7 +88,9 @@ impl CensusData {
     pub fn load() -> Result<CensusData, CensusError> {
         let mut workplace_reader = csv::ReaderBuilder::new()
             .has_headers(true)
-            .from_path(CensusTableNames::WorkLocations.get_filename())?; //.context("Cannot create CSV Reader for workplace areas")?;
+            .from_path(CensusTableNames::WorkLocations.get_filename())?;
+        info!("Got workplace table");
+        //.context("Cannot create CSV Reader for workplace areas")?;
         let headers = workplace_reader.headers()?.clone();
         let mut workplace_areas: HashMap<String, HashMap<String, u32>> =
             HashMap::with_capacity(headers.len());

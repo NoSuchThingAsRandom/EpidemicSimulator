@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -35,7 +35,7 @@ use load_census_data::tables::occupation_count::OccupationType;
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
 
 use crate::config::{DEBUG_ITERATION_PRINT, STARTING_INFECTED_COUNT, WORKPLACE_BUILDING_SIZE};
-use crate::disease::{DiseaseModel, DiseaseStatus, Exposure, Statistics};
+use crate::disease::{DiseaseModel, DiseaseStatus, Exposure, StatisticEntry, StatisticsArea, StatisticsRecorder};
 use crate::disease::DiseaseStatus::Infected;
 use crate::models::build_polygons_for_output_areas;
 use crate::models::building::{Building, BuildingCode, Workplace};
@@ -46,7 +46,7 @@ pub struct Simulator {
     current_population: u32,
     /// A list of all the sub areas containing agents
     output_areas: HashMap<String, OutputArea>,
-    current_statistics: Statistics,
+    statistics_recorder: StatisticsRecorder,
     disease_model: DiseaseModel,
     rng: ThreadRng,
 }
@@ -90,7 +90,7 @@ impl Simulator {
         let mut simulator = Simulator {
             current_population: starting_population,
             output_areas,
-            current_statistics: Statistics::default(),
+            statistics_recorder: StatisticsRecorder::default(),
             disease_model: DiseaseModel::covid(),
             rng: thread_rng(),
         };
@@ -310,33 +310,40 @@ impl Simulator {
         let start_time = Instant::now();
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
-            self.execute_time_step()?;
+            let stat_entry = self.execute_time_step()?;
+            let all_entry = stat_entry.get(&StatisticsArea::All).expect("Couldn't retrieve statistics entry for All");
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
                 info!(
-                    "{:?}       - {}",
+                    "{:?}       - {:?}",
                     start_time.elapsed(),
-                    self.current_statistics
+                    all_entry
                 );
             }
-            if !self.current_statistics.disease_exists() {
+            if !all_entry.disease_exists() {
                 info!(
                     "Disease finished at {} as no one has the disease",
                     time_step
                 );
-                debug!("{}", self.current_statistics);
+                debug!("{}", all_entry);
                 break;
             }
+            self.statistics_recorder.record(stat_entry);
         }
+        self.statistics_recorder.dump_to_file("recordings/v1.0.0-test.json");
         Ok(())
     }
-    pub fn execute_time_step(&mut self) -> anyhow::Result<()> {
+    pub fn execute_time_step(&mut self) -> anyhow::Result<HashMap<StatisticsArea, StatisticEntry>> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
+        let mut statistics = HashMap::new();
+        let mut all_statistics = StatisticEntry::new(self.statistics_recorder.current_time_step() + 1);
         let mut exposure_list: HashSet<Exposure> = HashSet::new();
-        let mut statistics = Statistics::new(self.current_statistics.time_step() + 1);
-        for (_, area) in &mut self.output_areas {
+        for (code, area) in &mut self.output_areas {
+            let mut output_area_statistics = StatisticEntry::new(self.statistics_recorder.current_time_step() + 1);
+
             for citizen in &mut area.citizens.values_mut() {
-                citizen.execute_time_step(self.current_statistics.time_step(), &self.disease_model);
-                statistics.add_citizen(&citizen.disease_status);
+                citizen.execute_time_step(self.statistics_recorder.current_time_step(), &self.disease_model);
+                all_statistics.add_citizen(&citizen.disease_status);
+                output_area_statistics.add_citizen(&citizen.disease_status);
                 if let Infected(_) = citizen.disease_status {
                     exposure_list.insert(Exposure::new(
                         citizen.id(),
@@ -344,6 +351,7 @@ impl Simulator {
                     ));
                 }
             }
+            statistics.insert(StatisticsArea::OutputArea { code: code.to_string() }, output_area_statistics);
         }
         debug!("There are {} exposures", exposure_list.len());
         for exposure in exposure_list {
@@ -360,8 +368,10 @@ impl Simulator {
                         match citizen {
                             Some(citizen) => {
                                 if citizen.expose(&self.disease_model, &mut self.rng) {
-                                    statistics
-                                        .citizen_exposed()
+                                    let area_entry = statistics.entry(StatisticsArea::OutputArea { code: area.code.to_string() }).or_insert_with(|| StatisticEntry::new(self.statistics_recorder.current_time_step()));
+                                    area_entry.citizen_exposed()
+                                        .context(format!("Exposing citizen {}", citizen_id))?;
+                                    all_statistics.citizen_exposed()
                                         .context(format!("Exposing citizen {}", citizen_id))?;
                                 }
                             }
@@ -384,7 +394,7 @@ impl Simulator {
                 }
             }
         }
-        self.current_statistics = statistics;
-        Ok(())
+        statistics.insert(StatisticsArea::All, all_statistics);
+        Ok(statistics)
     }
 }

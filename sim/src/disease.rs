@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -18,10 +18,15 @@
  *
  */
 
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
 use std::hash::Hash;
+use std::io::{BufWriter, Write};
 
 use log::error;
+use serde::{Deserialize, Serialize};
+use serde_json::to_writer;
 use uuid::Uuid;
 
 use load_census_data::tables::population_and_density_per_output_area::AreaClassification;
@@ -64,8 +69,41 @@ impl DiseaseStatus {
     }
 }
 
+#[derive(Hash, Eq, PartialEq, Debug, Deserialize, Serialize)]
+pub enum StatisticsArea {
+    Building { id: BuildingCode },
+    OutputArea { code: String },
+    All,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct StatisticsRecorder {
+    data: HashMap<StatisticsArea, Vec<StatisticEntry>>,
+    current_time_step: u32,
+}
+
+
+impl StatisticsRecorder {
+    pub fn dump_to_file(&self, filename: &str) {
+        let mut file = File::create(filename).expect("Failed to create results file!");
+        let mut file_writer = BufWriter::new(file);
+        to_writer(file_writer, self).expect("Failed to write to file!");
+    }
+    pub fn current_time_step(&self) -> u32 {
+        self.current_time_step
+    }
+    pub fn record(&mut self, data: HashMap<StatisticsArea, StatisticEntry>) {
+        self.current_time_step += 1;
+        for (area, entry) in data {
+            let mut recording_entry = self.data.entry(area).or_default();
+            recording_entry.push(entry);
+        }
+    }
+}
+
 /// A snapshot of the disease per time step
-pub struct Statistics {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StatisticEntry {
     time_step: u32,
     susceptible: u32,
     exposed: u32,
@@ -73,9 +111,9 @@ pub struct Statistics {
     recovered: u32,
 }
 
-impl Statistics {
-    pub fn new(hour: u32) -> Statistics {
-        Statistics {
+impl StatisticEntry {
+    pub fn new(hour: u32) -> StatisticEntry {
+        StatisticEntry {
             time_step: hour,
             susceptible: 0,
             exposed: 0,
@@ -139,9 +177,9 @@ impl Statistics {
     }
 }
 
-impl Default for Statistics {
+impl Default for StatisticEntry {
     fn default() -> Self {
-        Statistics {
+        StatisticEntry {
             time_step: 0,
             susceptible: 0,
             exposed: 0,
@@ -151,7 +189,7 @@ impl Default for Statistics {
     }
 }
 
-impl Display for Statistics {
+impl Display for StatisticEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

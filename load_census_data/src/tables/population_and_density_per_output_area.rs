@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -25,13 +25,13 @@ use std::convert::TryFrom;
 use std::fmt::Debug;
 
 use enum_map::EnumMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::parsing_error::{CensusError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
 /// This is a representation of Nomis Area Classifications for table 144
-#[derive(Deserialize, Debug, Enum, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Enum, Clone, Copy)]
 pub enum AreaClassification {
     #[serde(alias = "Total")]
     Total,
