@@ -1,4 +1,5 @@
 import json
+import math
 import time
 
 import matplotlib.animation as anm
@@ -12,6 +13,7 @@ from matplotlib.patches import Polygon
 
 MAX_INFECTED_VALUE = 2000
 MIN_INFECTED_VALUE = 0
+LOG_BASE = 2
 
 
 def build_output_area_df() -> pd.DataFrame:
@@ -58,12 +60,13 @@ def build_patch(value, time_step=None):
     poly_colors = []
     for (code, poly) in output_area_polygons.items():
         if time_step is None:
-            colour_ranking = output_area_df.loc[output_area_df["code"] == code][value].max() / MAX_INFECTED_VALUE
+            colour_ranking = math.log(
+                output_area_df.loc[output_area_df["code"] == code][value].max() / MAX_INFECTED_VALUE, LOG_BASE)
         else:
-            colour_ranking = \
-                output_area_df.loc[(output_area_df["time_step"] == time_step) & (output_area_df["code"] == code)][
-                    value] / MAX_INFECTED_VALUE
-            # colour_ranking=output_area_df.loc[output_area_df["code"]==code and output_area_df["time_step"==index]][value]
+            colour_ranking = math.log((1 / LOG_BASE) +
+                                      output_area_df.loc[(output_area_df["time_step"] == time_step) & (
+                                              output_area_df["code"] == code)][
+                                          value] / MAX_INFECTED_VALUE, LOG_BASE)
         patches.append(poly)
         poly_colors.append(colour_ranking)
     collection = PatchCollection(patches, edgecolors="black")
@@ -74,21 +77,28 @@ def get_colours(value, time_step=None):
     if time_step is not None:
         time_step = int(time_step)
     poly_colors = []
-
+    min_val = 0
     for (code, poly) in output_area_polygons.items():
         if time_step is None:
-            colour_ranking = output_area_df.loc[output_area_df["code"] == code][value].max()
+            val = (
+                    output_area_df.loc[output_area_df["code"] == code][
+                        value].max() / MAX_INFECTED_VALUE)
+            min_val = min(val, min_val)
+            colour_ranking = math.log((1 / LOG_BASE) + val, LOG_BASE)
         else:
-            colour_ranking = \
-                output_area_df.loc[(output_area_df["time_step"] == time_step) & (output_area_df["code"] == code)][
-                    value] / MAX_INFECTED_VALUE
+            colour_ranking = math.log((1 / LOG_BASE) + (
+                    output_area_df.loc[(output_area_df["time_step"] == time_step) & (
+                            output_area_df["code"] == code)][
+                        value] / MAX_INFECTED_VALUE), LOG_BASE)
         poly_colors.append(colour_ranking)
+    print(min_val)
     return poly_colors
 
 
 def plot(value: str, collection: PatchCollection, poly_colours: [float], ax=None, time_step=None):
     max = output_area_df[value].max()
     min = output_area_df[value].max()
+    mpl
     cmap = cm.get_cmap("magma")  # .reversed()
     if ax is None:
         ax = plt.gca()
@@ -127,13 +137,18 @@ if __name__ == "__main__":
     output_area_polygons = build_polygons()
     print("Loaded poly data in: ", time.time() - func_time)
     func_time = time.time()
-
-    frames = 10
+    colours = get_colours("infected")
+    print(min(colours))
+    print(max(colours))
+    print(colours)
+    exit()
+    frames = 100
     selected_hours = np.linspace(output_area_df.time_step.min(), output_area_df.time_step.max(), num=frames)
-
+    plt.axis("off")
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    ax.colorbar(patches, )
-    patches, colour = build_patch("infected", 0)
+
+    patches, colour = build_patch("infected")
+    # ax.colorbar(patches, )
     print("Built patches in: ", time.time() - func_time)
     func_time = time.time()
 
@@ -144,7 +159,8 @@ if __name__ == "__main__":
 
     anim = anm.FuncAnimation(fig, animate, frames=frames, interval=1000, blit=False)
     print("Displaying: ", time.time() - func_time)
-    anim.save("test.gif", writer="imagemagick")
+    plt.show()
+    # anim.save("test.gif", writer="imagemagick")
     print("Saved in: ", time.time() - func_time)
     print("Finished in: ", time.time() - total_time)
     # output_area_heatmap("infected")
