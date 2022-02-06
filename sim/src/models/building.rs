@@ -26,7 +26,7 @@ use std::hash::Hash;
 use geo::Point;
 use log::{error, trace};
 use num_format::Locale::te;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use uuid::Uuid;
 
 use osm_data::RawBuilding;
@@ -289,20 +289,36 @@ impl Display for Workplace {
     }
 }
 
+#[derive(Serialize, Default, Debug)]
+pub struct SchoolStatistic {
+    /// How many students in each class
+    class_sizes: Vec<usize>,
+    /// THe number of students per each age group
+    students_per_age_group: Vec<(usize, usize)>,
+    /// The number of classes per each age group
+    classes_per_age_group: Vec<usize>,
+}
+
+pub const AVERAGE_CLASS_SIZE: f64 = 26.6;
+const AVERAGE_OFFICE_SIZE: usize = 12;
+
 pub struct Class {
     students: Vec<CitizenID>,
-    teachers: Vec<CitizenID>,
+    teacher: CitizenID,
 }
 
 impl Class {
     /// Returns all students and the teacher in the class
     pub fn get_participants(&self) -> Vec<CitizenID> {
         let mut participants: Vec<CitizenID> = self.students.iter().cloned().collect();
-        for teacher in &self.teachers {
-            participants.push(teacher.clone())
-        }
+        participants.push(self.teacher.clone());
         participants
     }
+}
+
+enum RoomID {
+    class_id { id: usize },
+    office_id { id: usize },
 }
 
 pub struct School {
@@ -310,37 +326,40 @@ pub struct School {
     location: geo_types::Point<i32>,
     /// A class consists 20/30 students and a teacher?
     classes: Vec<Class>,
+    /// This groups together all the staff not assigned a class
+    offices: Vec<Vec<CitizenID>>,
     /// The class index the teacher/student belongs to
-    occupant_to_class: HashMap<CitizenID, usize>,
+    occupant_to_class: HashMap<CitizenID, RoomID>,
 }
 
 impl School {
-    pub fn with_students_and_teachers(building_id: BuildingID, building: RawBuilding, mut students: Vec<Vec<CitizenID>>, teachers: Vec<CitizenID>) -> School {
+    // TODO Return errors instead of panicking!
+    pub fn with_students_and_teachers(building_id: BuildingID, building: RawBuilding, mut students: Vec<Vec<CitizenID>>, teachers: Vec<CitizenID>) -> (School, SchoolStatistic) {
+        let mut statistic = SchoolStatistic::default();
         if teachers.len() < 1 {
             panic!("Cannot have a school without any teachers!")
         }
+        // Remove any empty age groups
+        let mut students: Vec<(usize, Vec<CitizenID>)> = students.into_iter().enumerate().filter(|(_age, group)| group.len() > 0).collect();
+        statistic.students_per_age_group = students.iter().map(|(age, students)| (*age, students.len())).collect();
 
-        let mut students: Vec<Vec<CitizenID>> = students.into_iter().filter(|s| s.len() > 0).collect();
+        // Calculate the number of classes per age group
+        statistic.classes_per_age_group = students.iter().map(|(_age, student_number)|
+            { if student_number.len() > 0 { (((student_number.len() as f64) / AVERAGE_CLASS_SIZE).ceil() as usize).max(1) } else { 0 } }
+        ).collect();
+
+        // Check we have enough teachers
+        let required_teachers: usize = statistic.classes_per_age_group.iter().sum();
         let mut teachers_per_age_group = ((teachers.len() as f64) / (students.len() as f64)).floor();
-        // Merge age groups, until there are enough teachers
-        while teachers_per_age_group < 1.0 {
-            println!("Reducing age groups from: {}, with teachers {}, and teacher_per_age {}", students.len(), teachers.len(), teachers_per_age_group);
-            let mut new_students = Vec::with_capacity(students.len() / 2);
-            let mut current_index = 0;
-            for age_group in students {
-                if current_index % 2 == 0 {
-                    new_students.push(age_group);
-                } else {
-                    new_students.last_mut().unwrap().extend(age_group);
-                }
-                current_index += 1;
-            }
-            students = new_students;
-            teachers_per_age_group = ((teachers.len() as f64) / (students.len() as f64)).floor();
+
+        if teachers.len() < (required_teachers as usize) {
+            panic!("School does not have enough teachers ({}), requires: ({})", teachers.len(), required_teachers);
         }
-        println!("There are {} teachers and {} teachers per age groups, with {} age groups and {} students", teachers.len(), teachers_per_age_group, students.len(), students.iter().map(|a| a.len()).sum::<usize>());
+
+        //trace!("There are {} teachers and {:?} classes per age groups, with {} age groups and {} students", teachers.len(), statistic.classes_per_age_group, students.len(), students.iter().map(|(_age,group)| group.len()).sum::<usize>());
+
         // Allocate students/teachers into classes
-        let mut occupant_to_class = HashMap::with_capacity(students.len());
+        let mut participant_to_class = HashMap::with_capacity(students.len());
         let mut class_index = 0;
 
         let mut teachers = teachers.into_iter();
@@ -349,51 +368,46 @@ impl School {
         let mut teachers_allocated = 0;
         let mut teachers_should_be_allocated = 0.0;
 
-        for (age_count, age_group) in students.iter().enumerate() {
+        for (((age, age_group), class_count)) in students.iter().zip(statistic.classes_per_age_group.iter()) {
             let mut new_classes = Vec::new();
-
+            let class_size = (age_group.len() as f64 / *class_count as f64).ceil() as usize;
+            statistic.class_sizes.push(class_size);
             let age_group = age_group.into_iter();
-            let class_size = (age_group.len() as f64 / teachers_per_age_group).ceil() as usize;
-            if class_size == 0 {
-                continue;
-            }
-            println!("\tAge group: {}, Students: {}, Classes: {}", age_count, age_group.len(), class_size);
             for class in age_group.as_slice().chunks(class_size) {
                 let teacher = teachers.next().expect("Ran out of teachers!");
                 for student in class {
-                    occupant_to_class.insert(*student, class_index);
+                    participant_to_class.insert(*student, RoomID::class_id { id: class_index });
                 }
-                occupant_to_class.insert(teacher, class_index);
+                participant_to_class.insert(teacher, RoomID::class_id { id: class_index });
                 class_index += 1;
                 new_classes.push(Class {
                     students: class.to_vec(),
-                    teachers: vec![teacher],
+                    teacher,
                 });
                 teachers_allocated += 1;
             }
             teachers_should_be_allocated += teachers_per_age_group;
 
-            // Add any missing teachers
-            let mut age_group_class_index = 0;
-            while teachers_allocated < teachers_should_be_allocated.floor() as usize {
-                let teacher = teachers.next().expect("Ran out of teachers!");
-                new_classes.get_mut(age_group_class_index).unwrap().teachers.push(teacher);
-                occupant_to_class.insert(teacher, classes.len() + age_group_class_index);
-
-                teachers_allocated += 1;
-                age_group_class_index += 1;
-                if age_group_class_index == new_classes.len() {
-                    age_group_class_index = 0;
-                }
-            }
             classes.extend(new_classes);
         }
-        School {
+        let mut office_index = 0;
+        let mut offices: Vec<Vec<CitizenID>> = Vec::with_capacity(teachers.len() / AVERAGE_OFFICE_SIZE);
+        for aux_staff in teachers.as_slice().chunks(AVERAGE_OFFICE_SIZE) {
+            for staff in aux_staff {
+                participant_to_class.insert(*staff, RoomID::office_id { id: office_index });
+            }
+            offices.push(aux_staff.to_vec());
+            office_index += 1;
+        }
+
+
+        (School {
             building_code: building_id,
             location: building.center(),
             classes,
-            occupant_to_class,
-        }
+            offices,
+            occupant_to_class: participant_to_class,
+        }, statistic)
     }
     pub fn classes(&self) -> &Vec<Class> {
         &self.classes
@@ -439,9 +453,22 @@ impl Building for School {
                 return Vec::new();
             }
         };
-        let mut exposed = self.classes[*class_index].get_participants();
-        exposed.retain(|id| *id != infected_citizen);
-        exposed
+        match class_index {
+            RoomID::class_id { id: class_id } => {
+                let mut exposed = self.classes[*class_id].get_participants();
+                exposed.retain(|id| *id != infected_citizen);
+                exposed
+            }
+            RoomID::office_id { id: staff_id } => {
+                let staff = &self.offices[*staff_id];
+                let mut exposed = Vec::with_capacity(staff.len());
+                staff.iter().for_each(|staff_member|
+                    if *staff_member != infected_citizen {
+                        exposed.push(*staff_member);
+                    });
+                exposed
+            }
+        }
     }
 }
 

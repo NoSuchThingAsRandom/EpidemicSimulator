@@ -13,7 +13,7 @@ load_census_data = { path = "../load_census_data" }
 osm_data = { path = "../osm_data" }
 
 anyhow = "1.0"
-bimap = "0.6.1"
+bimap = "=0.6.1"
 enum-map = "1.1.1"
 log = "0.4"
 geo-types = "0.7.2"

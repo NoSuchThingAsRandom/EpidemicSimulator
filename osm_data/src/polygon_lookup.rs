@@ -149,10 +149,10 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                     actual_size: bounds.min().y.to_string(),
                 });
             }
-            if (lookup.add_item(id.clone(), bounds)) {
+            if lookup.add_item(id.clone(), bounds) {
                 added += 1;
             } else {
-                panic!("Failed to add Polygon with boundary: {:?}. But succedded with: {}", bounds, added
+                panic!("Failed to add Polygon with boundary: {:?}. But succeeded with: {}", bounds, added
                 );
             }
         }
@@ -164,48 +164,30 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         })
     }
 
-    /// Finds the index ofpolygon that contains the given point
+    /// Finds the index of all polygons that containing the given polygon
     ///
     /// Note the point needs to be scaled
-    pub fn find_polygons_containing_polygon(
-        &self,
-        polygon: &geo_types::Polygon<i32>,
-    ) -> Result<Vec<&T>, OSMError> {
+    pub fn find_polygons_containing_polygon<'a>(
+        &'a self,
+        polygon: &'a geo_types::Polygon<i32>,
+    ) -> Result<Box<dyn Iterator<Item=&T> + 'a>, OSMError> {
         // TODO Move this scaling
+
         let scaled_polygon: geo_types::Polygon<i32> =
             self.scaling.scale_polygon(polygon, self.grid_size);
-        let res = self
+        let boundary = geo_polygon_to_quad_area(&scaled_polygon)?;
+        let results = self
             .lookup
-            .get_items(&geo_polygon_to_quad_area(&scaled_polygon)?);
-        let mut results = Vec::new();
-        for id in res {
-            let test_polygon =
-                self.polygons
-                    .get(id)
-                    .ok_or_else(|| OSMError::MissingKey {
-                        context: "Can't find polygon with id".to_string(),
-                        key: format!("{:?}", id),
-                    })?;
-            if test_polygon.intersects(polygon) {
-                results.push(id);
-            }
-        }
-        if results.is_empty() {
-            Err(OSMError::MissingKey {
-                context: "Can't find nearest seed for polygon".to_string(),
-                key: String::new(),
-            })
-        } else {
-            Ok(results)
-        }
+            .get_items(boundary).into_iter();
+        Ok(Box::new(results))
     }
-    /// Finds index of the polygon that contains the given point
+    /// Finds index of the SINGULAR polygon that contains the given point
     ///
     /// Note the point needs to be scaled
-    pub fn find_polygon_for_point(
-        &self,
-        point: &geo_types::Point<i32>,
-    ) -> Result<&T, OSMError> {
+    pub fn find_polygon_for_point<'a>(
+        &'a self,
+        point: &'a geo_types::Point<i32>,
+    ) -> Result<&'a T, OSMError> {
         // TODO Move this scaling
         let scaled_point: geo_types::Point<i32> = self
             .scaling
@@ -219,24 +201,45 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             scaled_point.y() < self.grid_size,
             "Y Coordinate is out of range!"
         );
-        let res = self.lookup.get_items(&geo_point_to_quad_area(&scaled_point)?);
-        for id in res {
-            let poly =
-                self.polygons
-                    .get(id)
-                    .ok_or_else(|| OSMError::MissingKey {
-                        context: "Can't find polygon with id".to_string(),
-                        key: format!("{:?}", id),
-
-                    })?;
-            if poly.intersects(point) {
-                return Ok(id);
-            }
-        }
-        Err(OSMError::MissingKey {
-            context: "Can't find nearest seed for point".to_string(),
-            key: format!("{:?}", point),
-        })
+        let boundary = geo_point_to_quad_area(&scaled_point)?;
+        let results = self.lookup.get_items(boundary);
+        Ok(results.first().unwrap())
+    }
+    /// Finds index of the polygon that contains the given point
+    ///
+    /// Note the point needs to be scaled
+    pub fn find_polygons_for_point<'a>(
+        &'a self,
+        point: &'a geo_types::Point<i32>,
+    ) -> Result<Vec<&T>, OSMError> {
+        // TODO Move this scaling
+        let scaled_point: geo_types::Point<i32> = self
+            .scaling
+            .scale_point((point.x(), point.y()), self.grid_size)
+            .into();
+        assert!(
+            scaled_point.x() < self.grid_size,
+            "X Coordinate is out of range!"
+        );
+        assert!(
+            scaled_point.y() < self.grid_size,
+            "Y Coordinate is out of range!"
+        );
+        let boundary = geo_point_to_quad_area(&scaled_point)?;
+        let results = self.lookup.get_multiple_items(boundary).into_iter().map(|(id, _)| id).collect();
+        /*        let results = results
+                    .filter_map(move |(id, _distance)| {
+                        let poly =
+                            self.polygons
+                                .get(id);
+                        if let Some(poly) = poly {
+                            if poly.intersects(poly) {
+                                return Some(id);
+                            }
+                        }
+                        None
+                    });*/
+        Ok(results)
     }
 }
 

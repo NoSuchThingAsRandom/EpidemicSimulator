@@ -42,6 +42,11 @@ Size: ~1.1GB
 
 There are 121003660 dense nodes (Points of interest)
 
+# School Workforce Data:
+
+This details teachers and schools per local authority
+https://www.gov.uk/government/statistics/school-workforce-in-england-november-2020
+
 # Table 1 - Usual resident population
 
 https://www.nomisweb.co.uk/census/2011/ks101ew

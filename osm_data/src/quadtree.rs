@@ -18,28 +18,143 @@
  *
  */
 
-use std::fmt::Display;
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
+use std::env::var;
+use std::fmt::{Debug, Display, Formatter, write};
+use std::hash::Hash;
 
 use geo::prelude::Intersects;
-use geo_types::CoordNum;
+use geo_types::{Coordinate, CoordNum};
+use itertools::Itertools;
 use log::{trace, warn};
 
 pub const MAX_DEPTH: u8 = 20;
 pub const MIN_BOUNDARY_SIZE: usize = 100;
+
+/// Center point for a rect ([`geo_types::rect::Rect::center()`] for [`geo_types::CoordNum`], as geo_types only implement it for [`geo_types::CoordFloat`]
+pub fn center<T: geo_types::CoordNum>(rect: geo_types::Rect<T>) -> Coordinate<T> {
+    let two = T::one() + T::one();
+    (
+        (rect.max().x + rect.min().x) / two,
+        (rect.max().y + rect.min().y) / two,
+    )
+        .into()
+}
+
+pub fn compare_geo_coord_nums<T: geo_types::CoordNum>(a: T, b: T) -> Ordering {
+    if b < a {
+        Ordering::Less
+    } else if a == b {
+        Ordering::Equal
+    } else {
+        Ordering::Greater
+    }
+}
+
+/// Who doesn't like writing their own absolute function?
+pub fn coord_num_abs<T: geo_types::CoordNum>(mut a: T) -> T {
+    let mut counter: T = T::zero();
+    while a < T::zero() {
+        a = a + T::one();
+        counter = counter + T::one();
+    }
+    println!("Reducing counter");
+    while counter > T::zero() {
+        a = a + T::one();
+        counter = counter - T::one();
+    }
+    a
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cmp::Ordering;
+
+    use crate::quadtree::{compare_geo_coord_nums, coord_num_abs};
+
+    #[test]
+    fn abs_test() {
+        let coord = geo_types::Coordinate::from((500, 500));
+        assert_eq!(coord.x, coord_num_abs(coord.x));
+
+        let coord = geo_types::Coordinate::from((-500, 500));
+        assert_eq!(coord.x, -coord_num_abs(coord.x));
+    }
+
+    #[test]
+    fn compare_test() {
+        let coord = geo_types::Coordinate::from((500, 200));
+        assert_eq!(compare_geo_coord_nums(coord.x, coord.y), Ordering::Less);
+        assert_eq!(compare_geo_coord_nums(coord.x, coord.x), Ordering::Equal);
+        assert_eq!(compare_geo_coord_nums(coord.y, coord.x), Ordering::Greater);
+
+        let coord = geo_types::Coordinate::from((-500, -700));
+        assert_eq!(compare_geo_coord_nums(coord.x, coord.y), Ordering::Less);
+        assert_eq!(compare_geo_coord_nums(coord.x, coord.x), Ordering::Equal);
+        assert_eq!(compare_geo_coord_nums(coord.y, coord.x), Ordering::Greater);
+    }
+}
+
+/// Returns the square abs function as abs is not supported for CoordNum
+pub fn manhattan_distance<T: geo_types::CoordNum>(a: geo_types::Coordinate<T>, b: geo_types::Coordinate<T>) -> T {
+    // TODO This is fucking cursed
+    let x = a.x - b.x;
+    let x: isize = format!("{:?}", x).parse().unwrap();// as isize;
+    let y = a.y - b.y;
+    let mut y: isize = format!("{:?}", y).parse().unwrap();// as isize;
+    T::from(x.abs() + y.abs()).unwrap()
+}
 
 enum Child<T: Clone, U: CoordNum> {
     Quad { children: Box<[QuadTree<T, U>; 4]> },
     Items { items: Items<T, U> },
 }
 
+impl<T: Clone + Debug, U: CoordNum> Display for Child<T, U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Child::Quad { children } => {
+                write!(f, "\n")?;
+                for child in children.iter() {
+                    write!(f, "\t -> {}\n", child)?;
+                }
+            }
+            Child::Items { items } => {
+                write!(f, "\t -> {:?}", items.items)?;
+            }
+        }
+        write!(f, "")
+    }
+}
+
+
 #[derive(Clone)]
 pub struct Items<T: Clone, U: CoordNum> {
     items: Vec<(T, geo_types::Rect<U>)>,
 }
 
+
 impl<T: Clone, U: CoordNum> Items<T, U> {
+    /// Adds a new item to the list, with the given bounding area
     pub fn add(&mut self, item: T, bounding_box: geo_types::Rect<U>) {
         self.items.push((item, bounding_box))
+    }
+    /// Returns the items[`T`] and distance [`U`] to the center point of the given bounding box
+    ///
+    /// The items are sorted in increasing distance from the bounding box
+    pub fn get_items_sorted(&self, bounding_box: geo_types::Rect<U>) -> Vec<(&T, U)> {
+        let search_value_center = center(bounding_box);
+        let mut items: Vec<(&T, U)> = self.items.iter().map(|(item, boundary)| {
+            if boundary.intersects(&bounding_box) {
+                (item, U::zero())
+            } else {
+                let distance = manhattan_distance(search_value_center, center(*boundary));
+                (item, distance)
+            }
+        }).collect();
+        items.sort_by(|(_, a_distance), (_, b_distance)| compare_geo_coord_nums(*a_distance, *b_distance));
+        items
     }
     pub fn get_items(&self, bounding_box: &geo_types::Rect<U>) -> Vec<&T> {
         self.items.iter().filter_map(|(item, boundary)| {
@@ -81,7 +196,7 @@ pub struct QuadTree<T: Clone, U: CoordNum> {
     boundary: geo_types::Rect<U>,
 }
 
-impl<'a, T: Clone, U: CoordNum + Display> QuadTree<T, U> {
+impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
     pub fn with_size(width: U, height: U, initial_depth: u8, max_items_per_quad: usize) -> QuadTree<T, U> {
         let two = U::one() + U::one();
         let bottom_left = QuadTree::with_boundary(U::zero(), width / two, U::zero(), height / two, 1, initial_depth, max_items_per_quad);
@@ -203,16 +318,59 @@ impl<'a, T: Clone, U: CoordNum + Display> QuadTree<T, U> {
     pub fn contains(&self, other: &geo_types::Rect<U>) -> bool {
         self.boundary.intersects(other)
     }
-    pub fn get_items(&self, bounding_box: &geo_types::Rect<U>) -> Vec<&T> {
+    /// Returns the top [`MAX_ITEMS_RETURNED`] closest items to the bounding box
+    pub fn get_multiple_items(&'a self, bounding_box: geo_types::Rect<U>) -> Vec<(&T, U)> {//Box<dyn Iterator<Item=(&T, U)> + 'a> {
+        match &self.child {
+            Child::Quad { children } => {
+                let mut items = HashMap::with_capacity(MAX_ITEMS_RETURNED);
+                let mut used_children = [false; 4];
+
+                // Get all elements from the direct child containing the box
+                for (index, child) in children.iter().enumerate() {
+                    if child.contains(&bounding_box) {
+                        let new_items = child.get_multiple_items(bounding_box);
+                        for (id, container) in new_items {
+                            items.insert(id, container);
+                        }
+                        used_children[index] = true;
+                    }
+                }
+                // Fill up the items buffer if it is less than MAX_ITEMS_RETURNED
+                for (index, is_used) in used_children.iter().enumerate() {
+                    if items.len() >= MAX_ITEMS_RETURNED {
+                        break;
+                    }
+                    if !is_used {
+                        let child = &children[index];
+                        let new_items = child.get_multiple_items(bounding_box);
+                        for (id, container) in new_items {
+                            items.insert(id, container);
+                        }
+                    }
+                }
+                let mut items: Vec<(&T, U)> = items.into_iter().collect();
+                items.truncate(MAX_ITEMS_RETURNED);
+                // TODO Maybe we don't need this sort?
+                items.sort_by(|(_, a), (_, b)| compare_geo_coord_nums(*a, *b));
+                items
+            }
+            Child::Items { items } => {
+                items.get_items_sorted(bounding_box)
+            }
+        }
+    }
+    /// Returns references to all Items that are encapsulated by the given bounding box
+    pub fn get_items(&self, bounding_box: geo_types::Rect<U>) -> Vec<&T> {
         match &self.child {
             Child::Quad { children } => {
                 children.iter().filter_map(|child| if child.contains(&bounding_box) { Some(child.get_items(bounding_box)) } else { None }).flatten().collect()
             }
             Child::Items { items } => {
-                items.get_items(bounding_box)
+                items.get_items(&bounding_box)
             }
         }
     }
+    /// Returns mutable references to all items that are encapsulated by the given bounding box
     pub fn get_items_mut(&mut self, bounding_box: &geo_types::Rect<U>) -> Vec<&mut T> {
         match &mut self.child {
             Child::Quad { children } => {
@@ -224,3 +382,11 @@ impl<'a, T: Clone, U: CoordNum + Display> QuadTree<T, U> {
         }
     }
 }
+
+impl<T: Clone + Debug, U: CoordNum> Display for QuadTree<T, U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:->\t{}", self.depth, self.child)
+    }
+}
+
+pub const MAX_ITEMS_RETURNED: usize = 200;
