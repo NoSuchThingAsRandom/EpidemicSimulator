@@ -21,7 +21,6 @@ sim = { path = "../sim" }
 anyhow = "=1.0.51"
 clap = "2.34.0"
 dotenv = "0.15"
-futures = "=0.3.17"
 futures-io = "=0.3.17"
 futures-sink = "=0.3.17"
 futures-task = "=0.3.17"

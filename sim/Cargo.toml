@@ -26,7 +26,6 @@ rayon = "1.5"
 serde = "1.0"
 serde_json = "1.0"
 serde_plain = "1.0"
-simple_logger = { version = "1.15.0", features = ["timestamps"] }
 strum = "0.23"
 strum_macros = "0.23"
 tokio = { version = "1", features = ["full"] }

@@ -17,7 +17,6 @@ bimap = "=0.6.1"
 enum-map = "1.1.1"
 log = "0.4"
 geo-types = "0.7.2"
-glam = "=0.20.1"
 gilrs = { version = "=0.8.1", optional = true }
 petgraph = "0.6"
 plotters = "0.3"
