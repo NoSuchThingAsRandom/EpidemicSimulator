@@ -52,7 +52,7 @@ def plot_school_locations():
 
 
 def plot_teacher_possibilites():
-    file = open("teacher_school_possiblities.json")
+    file = open("pre_duplicate_removal/teacher_school_possiblities.json")
     data = json.load(file)
     plt.boxplot(data)
     plt.scatter(0.9 + (numpy.random.random(len(data)) / 5), data)

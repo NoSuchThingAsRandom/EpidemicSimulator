@@ -18,20 +18,23 @@
  *
  */
 //! Used to load in building types and locations from an OSM file
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs::read;
+use std::rc::Rc;
 
 use geo::area::Area;
 use geo::centroid::Centroid;
 use geo_types::{CoordFloat, CoordNum, Point, Polygon};
 use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::draw_voronoi::draw_voronoi_polygons;
 use crate::error::OSMError;
+use crate::quadtree::manhattan_distance;
 use crate::voronoi_generator::{Scaling, Voronoi};
 
 pub mod convert;
@@ -55,6 +58,12 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
     YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.0 as isize,
     YORKSHIRE_AND_HUMBER_BOTTOM_LEFT.1 as isize,
 );
+/// This is the maximum distance, to merge buildings together
+///
+/// i.e. If building A, within this distance of building B, they should be merged
+pub const MAXIMUM_DUPLICATION_DISTANCE: i32 = 500;
+/// The types of buildings to remove duplicates from
+pub const BUILDINGS_TO_REMOVE_DUPLICATES: [TagClassifiedBuilding; 2] = [TagClassifiedBuilding::Hospital, TagClassifiedBuilding::School];
 
 enum CheckBoundaries {
     York,
@@ -362,7 +371,40 @@ impl OSMRawBuildings {
         cache_filename: String,
     ) -> Result<OSMRawBuildings, OSMError> {
         debug!("Parsing data from raw OSM file");
-        let building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
+        let mut building_locations = OSMRawBuildings::read_buildings_from_osm(raw_filename)?;
+
+        debug!("Removing duplicate buildings...");
+        for building_class in BUILDINGS_TO_REMOVE_DUPLICATES {
+            let mut classified_buildings_to_remove_duplicates = building_locations.building_locations.get_mut(&building_class).expect("Building class doesn't exist!");
+
+            // This is the group of buildings that are within [`MAXIMUM_DUPLICATION_DISTANCE`] of each other
+            let mut duplicates: HashMap<Point<i32>, Vec<Point<i32>>> = HashMap::new();
+            for building in classified_buildings_to_remove_duplicates.iter() {
+                for check_building in classified_buildings_to_remove_duplicates.iter() {
+                    if building.center == check_building.center {
+                        continue;
+                    }
+                    if manhattan_distance(building.center.0, check_building.center.0) < MAXIMUM_DUPLICATION_DISTANCE {
+                        if let Some(entry) = duplicates.get_mut(&check_building.center()) {
+                            entry.push(building.center);
+                        } else if let Some(entry) = duplicates.get_mut(&building.center()) {
+                            entry.push(check_building.center);
+                        } else {
+                            duplicates.insert(building.center, vec![check_building.center]);
+                        }
+                    }
+                }
+            }
+            let mut to_remove_list: HashSet<Point<i32>> = duplicates.values().cloned().flatten().collect();
+            let filtered = to_remove_list.iter().filter(|to_remove| duplicates.contains_key(to_remove)).cloned().collect::<Vec<Point<i32>>>();
+            if !filtered.is_empty() {
+                warn!("A building is chosen to be removed, that is also selected to be kept: {:?}",filtered.len());
+            }
+            filtered.iter().for_each(|building| { to_remove_list.remove(building); });
+            classified_buildings_to_remove_duplicates.retain(|building| to_remove_list.contains(&building.center));
+        }
+        debug!("Saving cache to file");
+
         std::fs::write(cache_filename, bincode::serialize(&building_locations).map_err(|e| {
             OSMError::IOError {
                 source: Box::new(e),
@@ -373,7 +415,7 @@ impl OSMRawBuildings {
                 source: Box::new(e),
                 context: "Failed to write bincode OSM data to file!".to_string(),
             })?;
-        debug!("Completed and saved parsing data");
+        info!("Completed and saved parsing data");
         Ok(building_locations)
     }
     /// Returns a hashmap of buildings located at which points

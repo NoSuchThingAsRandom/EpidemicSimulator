@@ -351,13 +351,13 @@ impl SimulatorBuilder {
         }
 
 
-        let mut file = File::create("debug_dumps/teacher_school_possiblities.json");
+        let mut file = File::create("../../debug_dumps/teacher_school_possibilities.json");
         serde_json::to_writer(file.unwrap(), &teacher_school_possibilites).unwrap();
-        let mut file = File::create("debug_dumps/student_schools.json");
+        let mut file = File::create("../../debug_dumps/student_schools.json");
         serde_json::to_writer(file.unwrap(), &student_school).unwrap();
-        let mut file = File::create("debug_dumps/teacher_schools.json");
+        let mut file = File::create("../../debug_dumps/teacher_schools.json");
         serde_json::to_writer(file.unwrap(), &teacher_school).unwrap();
-        let mut file = File::create("debug_dumps/teacher_schools.json");
+        let mut file = File::create("../../debug_dumps/teacher_schools.json");
         serde_json::to_writer(file.unwrap(), &teacher_school).unwrap();
         info!("Assigned teachers to schools");
         warn!("Failed to assign schools to {} teachers",failed_count);
@@ -424,7 +424,7 @@ impl SimulatorBuilder {
         );
 
 
-        let mut file = File::create("debug_dumps/school_statistics.json");
+        let mut file = File::create("../../debug_dumps/pre_duplicate_removal/school_statistics.json");
         serde_json::to_writer(file.unwrap(), &debug_stats).unwrap();
         warn!("{} schools are missing teachers",schools_missing_teachers);
         info!("Generated {} schools, with {} teachers, {} students across {} classes, with avg class size {} and avg classes per school {}",schools_total,teachers_total,students_total,class_total,(students_total/class_total),(class_total/schools_total));
