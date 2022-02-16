@@ -19,6 +19,11 @@
  */
 use num_format::Locale;
 
+/// The directory to store debug dumps in
+pub const DEBUG_DUMP_DIRECTORY: &str = "debug_dumps/";
+/// If true, will generate the debug dumps
+pub const CREATE_DEBUG_DUMPS: bool = false;
+
 pub const STARTING_INFECTED_COUNT: u32 = 10;
 /// The amount of floor space in m^2 per Workplace building
 pub const WORKPLACE_BUILDING_SIZE: u16 = 1000;

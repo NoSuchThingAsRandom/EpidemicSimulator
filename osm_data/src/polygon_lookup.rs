@@ -43,7 +43,7 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::time::Instant;
 
-use geo::prelude::{BoundingRect, Intersects};
+use geo::prelude::BoundingRect;
 use geo_types::{CoordNum, LineString};
 use log::{debug, error, info, trace, warn};
 use num_traits::PrimInt;

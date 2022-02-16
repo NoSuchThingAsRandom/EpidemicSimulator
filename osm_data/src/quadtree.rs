@@ -17,17 +17,17 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::env::var;
-use std::fmt::{Debug, Display, Formatter, write};
+use std::collections::HashMap;
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::prelude::Intersects;
 use geo_types::{Coordinate, CoordNum};
-use itertools::Itertools;
 use log::{trace, warn};
+use serde;
+use serde::{Serialize, Serializer};
+use serde::ser::SerializeSeq;
 
 pub const MAX_DEPTH: u8 = 20;
 pub const MIN_BOUNDARY_SIZE: usize = 100;
@@ -102,10 +102,11 @@ pub fn manhattan_distance<T: geo_types::CoordNum>(a: geo_types::Coordinate<T>, b
     let x = a.x - b.x;
     let x: isize = format!("{:?}", x).parse().unwrap();// as isize;
     let y = a.y - b.y;
-    let mut y: isize = format!("{:?}", y).parse().unwrap();// as isize;
+    let y: isize = format!("{:?}", y).parse().unwrap();// as isize;
     T::from(x.abs() + y.abs()).unwrap()
 }
 
+#[derive(Serialize)]
 enum Child<T: Clone, U: CoordNum> {
     Quad { children: Box<[QuadTree<T, U>; 4]> },
     Items { items: Items<T, U> },
@@ -132,6 +133,16 @@ impl<T: Clone + Debug, U: CoordNum> Display for Child<T, U> {
 #[derive(Clone)]
 pub struct Items<T: Clone, U: CoordNum> {
     items: Vec<(T, geo_types::Rect<U>)>,
+}
+
+impl<T: Clone, U: CoordNum + Serialize> Serialize for Items<T, U> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let mut seq = serializer.serialize_seq(Some(self.items.len()))?;
+        for (_, rect) in &self.items {
+            seq.serialize_element(rect)?;
+        }
+        seq.end()
+    }
 }
 
 
@@ -189,8 +200,10 @@ impl<T: Clone, U: CoordNum> Default for Items<T, U> {
 }
 
 
+#[derive(Serialize)]
 pub struct QuadTree<T: Clone, U: CoordNum> {
     depth: u8,
+    #[serde(skip)]
     max_items_per_quad: usize,
     child: Child<T, U>,
     boundary: geo_types::Rect<U>,

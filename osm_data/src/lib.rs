@@ -18,18 +18,16 @@
  *
  */
 //! Used to load in building types and locations from an OSM file
-use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs::read;
-use std::rc::Rc;
 
 use geo::area::Area;
 use geo::centroid::Centroid;
 use geo_types::{CoordFloat, CoordNum, Point, Polygon};
 use log::{debug, error, info, warn};
 use osmpbf::{DenseNode, DenseTagIter, TagIter};
-use rayon::prelude::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::draw_voronoi::draw_voronoi_polygons;
@@ -375,7 +373,7 @@ impl OSMRawBuildings {
 
         debug!("Removing duplicate buildings...");
         for building_class in BUILDINGS_TO_REMOVE_DUPLICATES {
-            let mut classified_buildings_to_remove_duplicates = building_locations.building_locations.get_mut(&building_class).expect("Building class doesn't exist!");
+            let classified_buildings_to_remove_duplicates = building_locations.building_locations.get_mut(&building_class).expect("Building class doesn't exist!");
 
             // This is the group of buildings that are within [`MAXIMUM_DUPLICATION_DISTANCE`] of each other
             let mut duplicates: HashMap<Point<i32>, Vec<Point<i32>>> = HashMap::new();

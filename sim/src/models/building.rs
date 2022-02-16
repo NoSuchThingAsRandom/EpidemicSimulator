@@ -24,9 +24,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::Point;
-use log::{error, trace};
-use num_format::Locale::te;
-use serde::{Deserialize, Serialize, Serializer};
+use log::error;
+use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
 use osm_data::RawBuilding;
@@ -297,6 +296,8 @@ pub struct SchoolStatistic {
     students_per_age_group: Vec<(usize, usize)>,
     /// The number of classes per each age group
     classes_per_age_group: Vec<usize>,
+    number_of_office_staff: usize,
+    number_of_offices: usize,
 }
 
 pub const AVERAGE_CLASS_SIZE: f64 = 26.6;
@@ -317,8 +318,8 @@ impl Class {
 }
 
 enum RoomID {
-    class_id { id: usize },
-    office_id { id: usize },
+    ClassId { id: usize },
+    OfficeId { id: usize },
 }
 
 pub struct School {
@@ -334,13 +335,13 @@ pub struct School {
 
 impl School {
     // TODO Return errors instead of panicking!
-    pub fn with_students_and_teachers(building_id: BuildingID, building: RawBuilding, mut students: Vec<Vec<CitizenID>>, teachers: Vec<CitizenID>) -> (School, SchoolStatistic) {
+    pub fn with_students_and_teachers(building_id: BuildingID, building: RawBuilding, students: Vec<Vec<CitizenID>>, teachers: Vec<CitizenID>) -> (School, SchoolStatistic) {
         let mut statistic = SchoolStatistic::default();
         if teachers.len() < 1 {
             panic!("Cannot have a school without any teachers!")
         }
         // Remove any empty age groups
-        let mut students: Vec<(usize, Vec<CitizenID>)> = students.into_iter().enumerate().filter(|(_age, group)| group.len() > 0).collect();
+        let students: Vec<(usize, Vec<CitizenID>)> = students.into_iter().enumerate().filter(|(_age, group)| group.len() > 0).collect();
         statistic.students_per_age_group = students.iter().map(|(age, students)| (*age, students.len())).collect();
 
         // Calculate the number of classes per age group
@@ -350,13 +351,10 @@ impl School {
 
         // Check we have enough teachers
         let required_teachers: usize = statistic.classes_per_age_group.iter().sum();
-        let mut teachers_per_age_group = ((teachers.len() as f64) / (students.len() as f64)).floor();
 
         if teachers.len() < (required_teachers as usize) {
             panic!("School does not have enough teachers ({}), requires: ({})", teachers.len(), required_teachers);
         }
-
-        //trace!("There are {} teachers and {:?} classes per age groups, with {} age groups and {} students", teachers.len(), statistic.classes_per_age_group, students.len(), students.iter().map(|(_age,group)| group.len()).sum::<usize>());
 
         // Allocate students/teachers into classes
         let mut participant_to_class = HashMap::with_capacity(students.len());
@@ -365,10 +363,8 @@ impl School {
         let mut teachers = teachers.into_iter();
         let mut classes: Vec<Class> = Vec::new();
 
-        let mut teachers_allocated = 0;
-        let mut teachers_should_be_allocated = 0.0;
 
-        for (((age, age_group), class_count)) in students.iter().zip(statistic.classes_per_age_group.iter()) {
+        for ((_age, age_group), class_count) in students.iter().zip(statistic.classes_per_age_group.iter()) {
             let mut new_classes = Vec::new();
             let class_size = (age_group.len() as f64 / *class_count as f64).ceil() as usize;
             statistic.class_sizes.push(class_size);
@@ -376,30 +372,31 @@ impl School {
             for class in age_group.as_slice().chunks(class_size) {
                 let teacher = teachers.next().expect("Ran out of teachers!");
                 for student in class {
-                    participant_to_class.insert(*student, RoomID::class_id { id: class_index });
+                    participant_to_class.insert(*student, RoomID::ClassId { id: class_index });
                 }
-                participant_to_class.insert(teacher, RoomID::class_id { id: class_index });
+                participant_to_class.insert(teacher, RoomID::ClassId { id: class_index });
                 class_index += 1;
                 new_classes.push(Class {
                     students: class.to_vec(),
                     teacher,
                 });
-                teachers_allocated += 1;
             }
-            teachers_should_be_allocated += teachers_per_age_group;
 
             classes.extend(new_classes);
         }
+
+        // Assign any leftover teachers to Offices
         let mut office_index = 0;
         let mut offices: Vec<Vec<CitizenID>> = Vec::with_capacity(teachers.len() / AVERAGE_OFFICE_SIZE);
-        for aux_staff in teachers.as_slice().chunks(AVERAGE_OFFICE_SIZE) {
-            for staff in aux_staff {
-                participant_to_class.insert(*staff, RoomID::office_id { id: office_index });
+        for misc_staff in teachers.as_slice().chunks(AVERAGE_OFFICE_SIZE) {
+            for staff in misc_staff {
+                participant_to_class.insert(*staff, RoomID::OfficeId { id: office_index });
+                statistic.number_of_office_staff += 1;
             }
-            offices.push(aux_staff.to_vec());
+            offices.push(misc_staff.to_vec());
             office_index += 1;
+            statistic.number_of_offices += 1;
         }
-
 
         (School {
             building_code: building_id,
@@ -411,6 +408,10 @@ impl School {
     }
     pub fn classes(&self) -> &Vec<Class> {
         &self.classes
+    }
+
+    pub fn offices(&self) -> &Vec<Vec<CitizenID>> {
+        &self.offices
     }
 }
 
@@ -454,12 +455,12 @@ impl Building for School {
             }
         };
         match class_index {
-            RoomID::class_id { id: class_id } => {
+            RoomID::ClassId { id: class_id } => {
                 let mut exposed = self.classes[*class_id].get_participants();
                 exposed.retain(|id| *id != infected_citizen);
                 exposed
             }
-            RoomID::office_id { id: staff_id } => {
+            RoomID::OfficeId { id: staff_id } => {
                 let staff = &self.offices[*staff_id];
                 let mut exposed = Vec::with_capacity(staff.len());
                 staff.iter().for_each(|staff_member|

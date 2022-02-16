@@ -19,14 +19,14 @@
  */
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::default::Default;
-use std::fmt::format;
+use std::fs;
 use std::fs::File;
 use std::rc::Rc;
 
 use anyhow::Context;
-use geo_types::Point;
+use geo_types::{Coordinate, Point};
 use log::{debug, error, info, warn};
 use num_format::ToFormattedString;
 use rand::{RngCore, thread_rng};
@@ -247,9 +247,25 @@ impl SimulatorBuilder {
         let building_locations = self.osm_data.building_locations.get(&TagClassifiedBuilding::School).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve school buildings!") })?;
         debug!("There are {} raw schools",building_locations.len());
 
+        let all_boundaries = &self.osm_data.building_boundaries;
+
+        if crate::config::CREATE_DEBUG_DUMPS {
+            let school_boundaries: Vec<(Point<i32>, Vec<Coordinate<i32>>)> = building_locations.iter().filter_map(|building| {
+                let path = all_boundaries.get(&building.boundary_id())?;
+                Some((building.center(), path.exterior().clone().0))
+            }).collect();
+            let debug_directory = crate::config::DEBUG_DUMP_DIRECTORY.to_owned() + "schools/";
+            fs::create_dir_all(debug_directory.clone()).context("Failed to create debug dump directory")?;
+
+            let filename = debug_directory.clone() + "raw_schools_locations.json";
+            let file = File::create(filename.clone()).context(format!("Failed to create file: '{}'", filename.clone()))?;
+            serde_json::to_writer(file, &school_boundaries).context("Failed to dump school boundaries to file!")?;
+        }
+
         let output_areas = &mut self.output_areas;
 
 
+        // Function to find the closest school to a given Citizen
         let finding_closest_school = |citizen: &Citizen, get_multiple: bool| -> Result<Vec<&RawBuilding>, SimError> {
             let area_code = citizen.household_code.output_area_code();
             let area = output_areas.get(&area_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve output area: {}", area_code) })?;
@@ -266,16 +282,12 @@ impl SimulatorBuilder {
 
         // Groups the students/teachers, by the school they are closest to
         // The geo point is the key, because it is the only identifier we can use
-
-        let mut student_school: HashMap<String, u32> = HashMap::new();
         let mut citizens_per_raw_school = students.into_iter().enumerate().map(|(age, student)|
             {
                 let age_grouped_students_per_school = student.into_iter().filter_map(|student| {
                     match finding_closest_school(student, false) {
                         Ok(schools) => {
                             if let Some(school) = schools.first() {
-                                let mut entry = student_school.entry(format!("{:?}", school.center().x_y())).or_default();
-                                *entry += 1;
                                 Some((*school, student))
                             } else {
                                 warn!("No schools available");
@@ -307,34 +319,45 @@ impl SimulatorBuilder {
             acc
         });
         info!("Assigned Students to {} raw schools",citizens_per_raw_school.len());
-        let mut teacher_school: HashMap<String, u32> = HashMap::new();
-        let mut failed_count = 0;
-        let mut school_full = 0;
-        let mut school_not_found = 0;
-        let mut teacher_school_possibilites = Vec::with_capacity(20000);
-        for (index, teacher) in teachers.into_iter().enumerate() {
+
+
+        // The amount of teachers that fail to be assigned
+        let mut failed_teacher_count = 0;
+        // Take a two pronged approach to assigning teachers
+        for teacher in teachers.into_iter() {
             let mut placed = false;
             match finding_closest_school(teacher, true) {
                 Ok(schools) => {
-                    let mut hashed_schools = HashSet::with_capacity(200);
-                    schools.iter().for_each(|school| { (hashed_schools.insert(school.center())); });
-                    //assert_eq!(hashed_schools.len(), schools.len());
-                    teacher_school_possibilites.push(hashed_schools.len());
-                    for school in schools {
+                    // Attempt to assign Teacher as a Teacher to the closest Available School
+                    // Available, being that it exists, and does not have enough teachers for the number of students
+
+                    // The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
+                    let mut teacher = Some(teacher);
+                    for school in &schools {
                         let school_entry = citizens_per_raw_school.get_mut(&school.center());
                         if let Some((students, teachers, _)) = school_entry {
                             let total_students = students.iter().map(|age_group| ((age_group.len() as f64 / AVERAGE_CLASS_SIZE).ceil() as usize).max(1)).sum::<usize>();
                             if teachers.len() < total_students {
-                                teachers.push(teacher);
-                                let mut entry = teacher_school.entry(format!("{:?}", school.center().x_y())).or_default();
-                                *entry += 1;
                                 placed = true;
+                                if let Some(teacher) = teacher {
+                                    teachers.push(teacher);
+                                }
+                                teacher = None;
                                 break;
-                            } else {
-                                school_full += 1;
                             }
-                        } else {
-                            school_not_found += 1;
+                        }
+                    }
+                    // If all Schools are full, fallback to adding to the closest school as Secondary Staff
+                    if !placed {
+                        for school in &schools {
+                            let school_entry = citizens_per_raw_school.get_mut(&school.center());
+                            if let Some((_students, teachers, _)) = school_entry {
+                                if let Some(teacher) = teacher {
+                                    teachers.push(teacher);
+                                    placed = true;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -342,31 +365,42 @@ impl SimulatorBuilder {
                     warn!("Failed to assign school to teacher: {}",e);
                 }
             }
-            if index % 5000 == 0 {
-                debug!("On index {} for assigning teachers. {} have failed. {} schools are full, {} schools don't exist",index,failed_count,school_full,school_not_found);
-            }
             if !placed {
-                failed_count += 1;
+                failed_teacher_count += 1;
             }
         }
+        if crate::config::CREATE_DEBUG_DUMPS {
+            let debug_directory = crate::config::DEBUG_DUMP_DIRECTORY.to_owned() + "schools/";
+            fs::create_dir_all(debug_directory.clone()).context("Failed to create debug dump directory")?;
+
+            let school_boundaries: Vec<(Point<i32>, Vec<Coordinate<i32>>)> = citizens_per_raw_school.iter().filter_map(|(_, (_, _, building))| {
+                let path = all_boundaries.get(&building.boundary_id())?;
+                Some((building.center(), path.exterior().clone().0))
+            }).collect();
 
 
-        let mut file = File::create("../../debug_dumps/teacher_school_possibilities.json");
-        serde_json::to_writer(file.unwrap(), &teacher_school_possibilites).unwrap();
-        let mut file = File::create("../../debug_dumps/student_schools.json");
-        serde_json::to_writer(file.unwrap(), &student_school).unwrap();
-        let mut file = File::create("../../debug_dumps/teacher_schools.json");
-        serde_json::to_writer(file.unwrap(), &teacher_school).unwrap();
-        let mut file = File::create("../../debug_dumps/teacher_schools.json");
-        serde_json::to_writer(file.unwrap(), &teacher_school).unwrap();
+            let filename = debug_directory.clone() + "parsed_schools_locations.json";
+            let file = File::create(filename.clone()).context(format!("Failed to create file: '{}'", filename.clone()))?;
+            serde_json::to_writer(file, &school_boundaries).unwrap();
+
+
+            let debug_school_data: HashMap<String, (usize, usize)> = citizens_per_raw_school.iter().map(|(school, (students, teachers, _building))| {
+                return (format!("{:?}", school.x_y()), (students.iter().map(|age_group| age_group.len()).sum(), teachers.len()));
+            }).collect();
+            let filename = debug_directory.clone() + "citizen_schools.json";
+            let file = File::create(filename.clone()).context(format!("Failed to create file: '{}'", filename.clone()))?;
+            serde_json::to_writer(file, &debug_school_data).unwrap();
+        }
         info!("Assigned teachers to schools");
-        warn!("Failed to assign schools to {} teachers",failed_count);
+        warn!("Failed to assign schools to {} teachers",failed_teacher_count);
 
         let building_boundaries = &self.osm_data.building_boundaries;
         let output_areas_polygons = &self.output_areas_polygons;
 
         let mut class_total = 0;
         let mut teachers_total = 0;
+        let mut misc_staff_total = 0;
+        let mut offices_total = 0;
         let mut students_total = 0;
         let mut schools_total = 0;
 
@@ -375,7 +409,7 @@ impl SimulatorBuilder {
         let mut debug_stats = HashMap::with_capacity(citizens_per_raw_school.len());
 
 
-        citizens_per_raw_school.into_iter().for_each(|(key, (students, teachers, building))|
+        citizens_per_raw_school.into_iter().for_each(|(_school_position, (students, teachers, building))|
             {
                 students_total += students.iter().flatten().collect::<Vec<&&mut Citizen>>().len();
                 teachers_total += teachers.len();
@@ -397,6 +431,8 @@ impl SimulatorBuilder {
                 let (school, stats) = School::with_students_and_teachers(building_id.clone(), *building, student_ids, teacher_ids);
                 debug_stats.insert(format!("({},{}", school.get_location().x(), school.get_location().y()), stats);
                 class_total += school.classes().len();
+                offices_total += school.offices().len();
+                misc_staff_total += school.offices().iter().map(|office| office.len()).sum::<usize>();
                 schools_total += 1;
 
 
@@ -422,13 +458,16 @@ impl SimulatorBuilder {
                 }
             }
         );
+        if crate::config::CREATE_DEBUG_DUMPS {
+            let debug_directory = crate::config::DEBUG_DUMP_DIRECTORY.to_owned() + "schools/";
+            fs::create_dir_all(debug_directory.clone()).context("Failed to create debug dump directory")?;
 
-
-        let mut file = File::create("../../debug_dumps/pre_duplicate_removal/school_statistics.json");
-        serde_json::to_writer(file.unwrap(), &debug_stats).unwrap();
+            let filename = debug_directory.clone() + "school_statistics.json";
+            let file = File::create(filename.clone()).context(format!("Failed to create file: '{}'", filename.clone()))?;
+            serde_json::to_writer(file, &debug_stats).unwrap();
+        }
         warn!("{} schools are missing teachers",schools_missing_teachers);
-        info!("Generated {} schools, with {} teachers, {} students across {} classes, with avg class size {} and avg classes per school {}",schools_total,teachers_total,students_total,class_total,(students_total/class_total),(class_total/schools_total));
-        panic!("Built schools!");
+        info!("Generated {} schools, with {} teachers, {} students across {} classes, with avg class size {} and avg classes per school {}. With {} offices and {} misc staff",schools_total,teachers_total,students_total,class_total,(students_total/class_total),(class_total/schools_total),offices_total,misc_staff_total);
         Ok(())
     }
 
@@ -595,6 +634,8 @@ impl SimulatorBuilder {
 
         // Occupation Type, (Current Total Floor Space, The list of buildings to be generated)
         let mut building_per_occupation: HashMap<OccupationType, (usize, Vec<RawBuilding>)> = OccupationType::iter().map(|occupation| (occupation, (0, Vec::with_capacity(1000)))).collect();
+
+        // The amount of floor space required to be added per each occupation
         let mut differences: HashMap<OccupationType, isize> = required_space_per_occupation.iter().map(|(occupation, size)| (*occupation, *size as isize)).collect();
         // Shuffle to ensure buildings are distributed across the area
         possible_buildings.shuffle(&mut rng);
@@ -605,13 +646,13 @@ impl SimulatorBuilder {
                 continue;
             }
 
-            // Add the building to the first Occupation group, where it won't exceed the required size
+            // Add the building to the first Occupation group, that won't exceed the required size
             for (occupation, (current_size, buildings)) in &mut building_per_occupation {
                 // If adding the building doesn't exceed the bin size, do it!
                 if *current_size + building_size < *required_space_per_occupation.get(occupation).expect("Occupation type is missing!") {
                     *current_size += building_size;
                     buildings.push(*building);
-                    *differences.get_mut(occupation).expect("") -= building_size as isize;
+                    *differences.get_mut(occupation).expect("Failed to retrieve the differences in allocating floor space for occupation!") -= building_size as isize;
                     added = true;
                 }
             }
@@ -629,10 +670,10 @@ impl SimulatorBuilder {
                 // Add to that building
                 match min_occupation {
                     Some(occupation) => {
-                        let (size, buildings) = building_per_occupation.get_mut(&occupation).expect("");
+                        let (size, buildings) = building_per_occupation.get_mut(&occupation).expect("Building Occupation doesn't exist");
                         *size += building_size;
                         buildings.push(*building);
-                        *differences.get_mut(&occupation).expect("") -= building_size as isize;
+                        *differences.get_mut(&occupation).expect("Failed to retrieve differences for building occupation") -= building_size as isize;
                     }
                     None => {
                         //error!("Failed to add building of size: {}, \nCurrent Capacities: {:?}\nRequired Sizes: {:?}",building.size()*(scale as i32),building_per_occupation.iter().map(| (occupation_type,(size,_))|(*occupation_type,*size)).collect::<HashMap<OccupationType,usize>>(),required_space_per_occupation);
