@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -117,7 +117,7 @@ impl DiseaseModel {
             death_rate: 0.2,
             exposed_time: 4 * 24,
             infected_time: 14 * 24,
-            max_time_step: 1000,
+            max_time_step: 100,
             vaccination_rate: 5000,
             mask_percentage: 0.8,
         }

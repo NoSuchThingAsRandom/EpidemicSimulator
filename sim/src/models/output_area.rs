@@ -33,6 +33,7 @@ use load_census_data::CensusDataEntry;
 use load_census_data::tables::population_and_density_per_output_area::PersonType;
 use osm_data::{RawBuilding, TagClassifiedBuilding};
 
+use crate::config::MAX_STUDENT_AGE;
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
 
@@ -139,12 +140,16 @@ impl OutputArea {
                         .occupation_count
                         .get_random_occupation(rng);
                     let age = census_data.age_population.get_random_age(rng);
-
+                    let occupation = if age < MAX_STUDENT_AGE {
+                        Occupation::Student
+                    } else {
+                        Occupation::Normal { occupation: OccupationType::try_from(raw_occupation).unwrap_or_else(|_| panic!("Couldn't convert Census Occupation ({:?}), to sim occupation", raw_occupation)) }
+                    };
                     let citizen = Citizen::new(
                         household_building_id.clone(),
                         household_building_id.clone(),
                         age,
-                        Occupation::Normal { occupation: OccupationType::try_from(raw_occupation).unwrap_or_else(|_| panic!("Couldn't convert Census Occupation ({:?}), to sim occupation", raw_occupation)) },
+                        occupation,
                         self.mask_distribution.sample(rng),
                         rng,
                     );

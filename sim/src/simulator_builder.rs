@@ -153,14 +153,14 @@ impl SimulatorBuilder {
         // TODO This is super hacky and I hate it
         let ref_output_areas = Rc::new(RefCell::new(&mut self.output_areas));
         let census_data_ref = &mut self.census_data;
-        ref_output_areas.borrow_mut().retain(|output_area_id, output_area| {
+        ref_output_areas.borrow_mut().iter_mut().for_each(|(output_area_id, output_area)| {
             let generate_citizen_closure = || -> anyhow::Result<()> {
                 // Retrieve the Census Data
                 let census_data_entry = census_data_ref
                     .for_output_area_code(output_area_id.code().to_string())
                     .ok_or_else(|| SimError::InitializationError {
                         message: format!(
-                            "Cannot generate Citizens for Output Area {} as Census Data exists",
+                            "Cannot generate Citizens for Output Area {} as no Census Data exists",
                             output_area_id
                         ),
                     })?;
@@ -195,18 +195,16 @@ impl SimulatorBuilder {
                 )?);
                 Ok(())
             }();
-            generate_citizen_closure.is_ok()
+            if let Err(e) = generate_citizen_closure {
+                warn!("{:?}",e);
+            }
         });
-        error!(
+        info!(
             "Households and Citizen generation succeeded for {} Output Areas.",
             ref_output_areas.borrow().len()
         );
         for occupation in OccupationType::iter() {
             debug!("There are {} Citizens with an occupation of: {:?}", citizens.iter().filter(|(_, citizen)| citizen.detailed_occupation() == Some(occupation)).count(), occupation);
-        }
-        let mut ages = vec![0; 101];
-        for citizen in &citizens {
-            ages[citizen.1.age as usize] += 1;
         }
         self.citizens = citizens;
         Ok(())
@@ -507,6 +505,10 @@ impl SimulatorBuilder {
             // For each Citizen, assign a workplace area
             'citizens: for citizen_id in household_output_area.get_residents() {
                 let mut index = 0;
+                let citizen = self.citizens.get(&citizen_id).expect(format!("Citizen {} does not exist!", citizen_id).as_str());
+                if citizen.is_student() || citizen.detailed_occupation() == Some(OccupationType::Teaching) {
+                    continue 'citizens;
+                }
                 let workplace_output_area_code: OutputAreaID =
                     loop {
                         // TODO Redo this
@@ -858,22 +860,22 @@ impl SimulatorBuilder {
             possible_workplaces.len()
         );
 
-        // Remove any areas that do not have any workplaces
-        let output_area_ref = Rc::new(RefCell::new(&mut self.output_areas));
-        let citizens_ref = &mut self.citizens;
-        output_area_ref.borrow_mut().retain(|code, data| {
-            if !possible_workplaces.contains_key(code) {
-                data.get_residents().iter().for_each(|id| {
-                    if citizens_ref.remove(id).is_none() {
-                        error!("Failed to remove citizen: {}", id);
-                    }
-                });
+        /*        // Remove any areas that do not have any workplaces
+                let output_area_ref = Rc::new(RefCell::new(&mut self.output_areas));
+                let citizens_ref = &mut self.citizens;
+                output_area_ref.borrow_mut().retain(|code, data| {
+                    if !possible_workplaces.contains_key(code) {
+                        data.get_residents().iter().for_each(|id| {
+                            if citizens_ref.remove(id).is_none() {
+                                error!("Failed to remove citizen: {}", id);
+                            }
+                        });
 
-                false
-            } else {
-                true
-            }
-        });
+                        false
+                    } else {
+                        true
+                    }
+                });*/
         info!("Starting to build workplaces for {} areas",self.output_areas.len());
         self.build_workplaces(possible_workplaces)
             .context("Failed to build workplaces")?;
