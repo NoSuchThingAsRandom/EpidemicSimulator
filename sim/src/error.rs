@@ -39,6 +39,9 @@ pub enum SimError {
     InitializationError {
         message: String,
     },
+    MissingCitizen {
+        citizen_id: String,
+    },
     OptionRetrievalFailure {
         message: String,
         key: String,
@@ -105,6 +108,9 @@ impl Debug for SimError {
             }
             SimError::Error { context } => {
                 write!(f, "An error occurred: {}", context)
+            }
+            SimError::MissingCitizen { citizen_id } => {
+                write!(f, "Citizen ({}) doesn't exist! ", citizen_id)
             }
         }
     }

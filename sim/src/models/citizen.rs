@@ -202,9 +202,15 @@ impl Citizen {
     pub fn set_workplace_code(&mut self, workplace_code: BuildingID) {
         self.workplace_code = workplace_code;
     }
+    /// Returns True if this Citizen is a student
+    pub fn is_student(&self) -> bool {
+        self.occupation == Occupation::Student
+    }
+
     pub fn occupation(&self) -> Occupation {
         self.occupation
     }
+    /// Attempts to return the detailed Occupation type, if it is available
     pub fn detailed_occupation(&self) -> Option<OccupationType> {
         match self.occupation() {
             Occupation::Normal { occupation } => { Some(occupation) }
@@ -260,7 +266,7 @@ impl TryFrom<RawOccupationType> for OccupationType {
 
     fn try_from(raw_occupation: RawOccupationType) -> Result<Self, Self::Error> {
         Ok(match raw_occupation {
-            RawOccupationType::All => { return Err(()); },
+            RawOccupationType::All => { return Err(()); }
             RawOccupationType::Managers => { OccupationType::Manager }
             RawOccupationType::Professional => { OccupationType::Professional }
             RawOccupationType::Technical => { OccupationType::Technical }

@@ -32,6 +32,7 @@ use rand::thread_rng;
 use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
+use crate::error::SimError;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::building::BuildingID;
 use crate::models::citizen::{Citizen, CitizenID};
@@ -193,10 +194,13 @@ impl Simulator {
                             to_expose.push(id);
                         }
                     }
+                    if let Err(e) =
                     self.expose_citizens(
                         to_expose, 1,
                         ID::Building(building_id.clone()),
-                    )?;
+                    ).context(format!("Exposing building: {}", building_id)) {
+                        error!("{:?}",e)
+                    }
                 }
 
                 None => {
@@ -216,11 +220,14 @@ impl Simulator {
                 if current_bus.add_citizen(citizen).is_err() {
                     // Only need to save buses with exposures
                     if current_bus.exposure_count > 0 {
+                        if let Err(e) =
                         self.expose_citizens(
                             current_bus.occupants().clone(),
                             current_bus.exposure_count,
                             ID::PublicTransport(current_bus.id().clone()),
-                        )?;
+                        ).context(format!("Failed to expose bus: {}", current_bus.id())) {
+                            error!("{:?}",e);
+                        }
                     }
                     current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
                     current_bus
@@ -232,11 +239,14 @@ impl Simulator {
                 }
             }
             if current_bus.exposure_count > 0 {
+                if let Err(e) =
                 self.expose_citizens(
                     current_bus.occupants().clone(),
                     current_bus.exposure_count,
                     ID::PublicTransport(current_bus.id().clone()),
-                )?;
+                ).context(format!("Failed to expose bus: {}", current_bus.id())) {
+                    error!("{:?}",e);
+                }
             }
         }
         // Apply Public Transport Exposures
@@ -273,7 +283,7 @@ impl Simulator {
                     }
                 }
                 None => {
-                    error!("Citizen {}, does not exist!", citizen_id);
+                    return Err(SimError::MissingCitizen { citizen_id: citizen_id.to_string() }).context("Cannot expose Citizen, as they do not exist!");
                 }
             }
         }
