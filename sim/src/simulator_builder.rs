@@ -600,7 +600,7 @@ impl SimulatorBuilder {
         }
         // TODO Need to fix what happens if not enough buildings
         if possible_buildings.len() < OccupationType::iter().len() * 2 {
-            warn!("Not enough buildings {} for {} occupations for area: {}",possible_buildings.len(), OccupationType::iter().len(),workplace_area_code);
+            //warn!("Not enough buildings {} for {} occupations for area: {}",possible_buildings.len(), OccupationType::iter().len(),workplace_area_code);
         }
 
 
@@ -695,14 +695,15 @@ impl SimulatorBuilder {
             }
         }
         // Ensure we have meant the minimum requirements
-        for (occupation_type, (size, _buildings)) in &building_per_occupation {
-            let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
-            if size <= required {
-                warn!( "Occupation: {:?}, has a size {} smaller than required {} for area {}",occupation_type, size, required,  workplace_area_code);
-                //\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", , required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
-                //return Ok(HashMap::new());
-            }
-        }
+        // TODO This is broken
+        /*        for (occupation_type, (size, _buildings)) in &building_per_occupation {
+                    let required = required_space_per_occupation.get(occupation_type).expect("Occupation type is missing!");
+                    if size <= required {
+                        warn!( "Occupation: {:?}, has a size {} smaller than required {} for area {}",occupation_type, size, required,  workplace_area_code);
+                        //\nCurrent Capacities: {:?}\nRequired Sizes: {:?}", , required, building_per_occupation.iter().map(|(occupation_type, (size, _))| (*occupation_type, *size)).collect::<HashMap<OccupationType, usize>>(), required_space_per_occupation);
+                        //return Ok(HashMap::new());
+                    }
+                }*/
 
 
         // This is the list of full workplaces that need to be added to the parent Output Area
@@ -722,7 +723,7 @@ impl SimulatorBuilder {
 
 
             if let Err(e) = workplaces {
-                error!("Failed to assign workplaces to Citizens for Occupation: {:?},\n\tError: {:?}",occupation,e);
+                //error!("Failed to assign workplaces to Citizens for Occupation: {:?},\n\tError: {:?}",occupation,e);
                 continue;
             }
             let mut workplaces = workplaces.unwrap();

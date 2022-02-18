@@ -215,8 +215,7 @@ impl Simulator {
         let hour = self.statistics.time_step();
         let disease = &self.disease_model;
         let lockdown = self.interventions.lockdown_enabled();
-
-        let (stats, exposures) = self.citizens.write().expect("Failed to retrieve global Citizen lock!").par_iter_mut().fold(|| (Statistics::from_hour(hour), GeneratedExposures::default()), |(mut statistics, mut exposures), (id, citizen)| {
+        let (stats, exposures) = self.citizens.get_mut().expect("Failed to retrieve global Citizen lock!").par_iter_mut().fold(|| (Statistics::from_hour(hour), GeneratedExposures::default()), |(mut statistics, mut exposures), (id, citizen)| {
             let citizen = citizen.get_mut().expect("Failed to retrieve individual Citizen lock");
             citizen.execute_time_step(
                 hour, disease, lockdown,
@@ -268,10 +267,10 @@ impl Simulator {
                 }
 
                 None => {
-                    error!(
-                        "Cannot find output area {}, that had an exposure occurred in!",
-                        &building_id.output_area_code()
-                    );
+                    /*                    error!(
+                                            "Cannot find output area {}, that had an exposure occurred in!",
+                                            &building_id.output_area_code()
+                                        );*/
                 }
             }
         }
