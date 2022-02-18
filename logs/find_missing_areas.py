@@ -1,6 +1,6 @@
 index = 0
 areas = set()
-with open("log.log") as logs:
+with open("york_performance_logs/log.log") as logs:
     for line in logs:
         line: str = str(line)
         line: [str] = line.split(">")

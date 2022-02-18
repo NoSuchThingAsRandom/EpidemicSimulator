@@ -21,13 +21,16 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{LineWriter, Write};
+use std::ops::AddAssign;
 use std::time::Instant;
 
 use anyhow::Context;
 use log::{debug, error, info};
+use num_format::Locale::{am, en};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
+use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
@@ -118,7 +121,9 @@ impl Default for Timer {
 
 #[derive(Debug, Default, Clone)]
 struct GeneratedExposures {
-    /// The list of Citizens on Public Transport, grouped by their origin and destination
+    /// The list of Citizens on Public Transport, grouped by their origin and destination,
+    ///
+    /// The bool represents whether a Citizen is infected
     public_transport_pre_generated: HashMap<
         (OutputAreaID, OutputAreaID),
         Vec<(CitizenID, bool)>,
@@ -127,6 +132,18 @@ struct GeneratedExposures {
     building_exposure_list: HashMap<BuildingID, Vec<CitizenID>>,
 }
 
+impl AddAssign for GeneratedExposures {
+    fn add_assign(&mut self, rhs: Self) {
+        for (building, citizens) in rhs.public_transport_pre_generated {
+            let entry = self.public_transport_pre_generated.entry(building).or_default();
+            entry.extend(citizens);
+        }
+        for (building, citizens) in rhs.building_exposure_list {
+            let entry = self.building_exposure_list.entry(building).or_default();
+            entry.extend(citizens);
+        }
+    }
+}
 
 //#[derive(Clone)]
 pub struct Simulator {
@@ -179,7 +196,7 @@ impl Simulator {
         self.apply_interventions()?;
 
         let intervention_time = start.elapsed().as_secs_f64();
-        let total = generate_exposure_time + intervention_time;
+        let total = generate_exposure_time + apply_exposure_time + intervention_time;
         debug!("Generate Exposures: {:.3} seconds ({:.3}%),Apply Exposures: {:.3} seconds ({:.3}%),  Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,(generate_exposure_time/total)*100.0,apply_exposure_time,(apply_exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
@@ -192,18 +209,17 @@ impl Simulator {
     /// Detects the Citizens that have been exposed in the current time step
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        let mut exposures = GeneratedExposures::default();
+        //let mut exposures = GeneratedExposures::default();
         self.statistics.next();
+        let hour = self.statistics.time_step();
+        let disease = &self.disease_model;
+        let lockdown = self.interventions.lockdown_enabled();
 
-
-        // Generate exposures for fixed building positions
-        for citizen in self.citizens.values_mut() {
+        let (stats, exposures) = self.citizens.par_iter_mut().fold(|| (Statistics::from_hour(hour), GeneratedExposures::default()), |(mut statistics, mut exposures), (id, citizen)| {
             citizen.execute_time_step(
-                self.statistics.time_step(),
-                &self.disease_model,
-                self.interventions.lockdown_enabled(),
+                hour, disease, lockdown,
             );
-            self.statistics.add_citizen(&citizen.disease_status);
+            statistics.add_citizen(&citizen.disease_status);
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {
@@ -218,7 +234,13 @@ impl Simulator {
                     .or_insert(vec![citizen.id()]);
                 entry.push(citizen.id());
             }
-        }
+            (statistics, exposures)
+        }).reduce(|| (Statistics::from_hour(hour), GeneratedExposures::default()), |(mut a_stats, mut a_exposures), (b_stats, b_exposures)| {
+            a_stats += b_stats;
+            a_exposures += b_exposures;
+            (a_stats, a_exposures)
+        });
+        self.statistics += stats;
         return Ok(exposures);
     }
     /// Applies the exposure cycle on any Citizens that have come in contact with an infected Citizen

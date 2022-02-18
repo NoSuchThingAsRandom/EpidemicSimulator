@@ -262,18 +262,26 @@ impl SimulatorBuilder {
 
         let output_areas = &mut self.output_areas;
 
-
+        let building_boundaries = &self.osm_data.building_boundaries;
+        let output_areas_polygons = &self.output_areas_polygons;
         // Function to find the closest school to a given Citizen
         let finding_closest_school = |citizen: &Citizen, get_multiple: bool| -> Result<Vec<&RawBuilding>, SimError> {
             let area_code = citizen.household_code.output_area_code();
             let area = output_areas.get(&area_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve output area: {}", area_code) })?;
 
             let building = area.buildings.get(&citizen.household_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve household home: {}", citizen.household_code) })?;
-            Ok(if get_multiple {
+            Ok({
                 let closest_schools_index = school_lookup.find_seeds_for_point(building.get_location())?;
-                closest_schools_index.into_iter().filter_map(|index| building_locations.get(index)).collect()
-            } else {
-                vec![building_locations.get(school_lookup.find_seed_for_point(building.get_location())?).unwrap()]
+                closest_schools_index.into_iter().filter_map(|index| {
+                    let school = building_locations.get(index)?;
+                    let area_codes = get_area_code_for_raw_building(school, output_areas_polygons, building_boundaries).expect("School building is not inside any Output areas!");
+                    let output_area_id = area_codes.keys().next().expect("School building is not inside any Output areas!");
+                    if output_areas.contains_key(output_area_id) {
+                        Some(school)
+                    } else {
+                        None
+                    }
+                }).collect()
             })
         };
 
@@ -392,8 +400,6 @@ impl SimulatorBuilder {
         info!("Assigned teachers to schools");
         warn!("Failed to assign schools to {} teachers",failed_teacher_count);
 
-        let building_boundaries = &self.osm_data.building_boundaries;
-        let output_areas_polygons = &self.output_areas_polygons;
 
         let mut class_total = 0;
         let mut teachers_total = 0;

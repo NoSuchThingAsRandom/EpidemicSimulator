@@ -20,8 +20,10 @@
 
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::ops::{Add, AddAssign};
 
 use log::error;
+use num_format::Locale::am;
 use num_format::ToFormattedString;
 
 use crate::config::NUMBER_FORMATTING;
@@ -42,15 +44,15 @@ pub struct Statistics {
     /// First Instance, Amount
     pub buildings_exposed: HashMap<BuildingID, (u32, u32)>,
     pub workplace_exposed: HashMap<BuildingID, (u32, u32)>,
-    /// First Instance, Amount
+    /// First Time Step it occurred, Amount
     pub output_areas_exposed: HashMap<OutputAreaID, (u32, u32)>,
     pub public_trandport_exposure_count: u32,
 }
 
 impl Statistics {
-    pub fn new() -> Statistics {
+    pub fn from_hour(hour: u32) -> Statistics {
         Statistics {
-            time_step: 0,
+            time_step: hour,
             susceptible: 0,
             exposed: 0,
             infected: 0,
@@ -178,6 +180,31 @@ impl Statistics {
                 "         {} first infected at {} with total {}",
                 building.0, building.1.0, building.1.1
             );
+        }
+    }
+}
+
+impl AddAssign for Statistics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.susceptible += rhs.susceptible;
+        self.exposed += rhs.exposed;
+        self.infected += rhs.infected;
+        self.recovered += rhs.recovered;
+        self.vaccinated += rhs.vaccinated;
+        for (building, amount) in rhs.buildings_exposed {
+            let entry = self.buildings_exposed.entry(building).or_default();
+            entry.0 += amount.0;
+            entry.1 += amount.1;
+        }
+        for (building, amount) in rhs.workplace_exposed {
+            let entry = self.workplace_exposed.entry(building).or_default();
+            entry.0 += amount.0;
+            entry.1 += amount.1;
+        }
+        for (building, amount) in rhs.output_areas_exposed {
+            let entry = self.output_areas_exposed.entry(building).or_default();
+            entry.0 += amount.0;
+            entry.1 += amount.1;
         }
     }
 }
