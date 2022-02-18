@@ -22,6 +22,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use std::ops::AddAssign;
+use std::sync::{Mutex, RwLock};
 use std::time::Instant;
 
 use anyhow::Context;
@@ -30,7 +31,7 @@ use num_format::Locale::{am, en};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
-use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
@@ -152,7 +153,7 @@ pub struct Simulator {
     /// A list of all the sub areas containing agents
     pub output_areas: HashMap<OutputAreaID, OutputArea>,
     /// The list of citizens who have a "home" in this area
-    pub citizens: HashMap<CitizenID, Citizen>,
+    pub citizens: RwLock<HashMap<CitizenID, Mutex<Citizen>>>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
     pub statistics: Statistics,
     interventions: InterventionStatus,
@@ -215,7 +216,8 @@ impl Simulator {
         let disease = &self.disease_model;
         let lockdown = self.interventions.lockdown_enabled();
 
-        let (stats, exposures) = self.citizens.par_iter_mut().fold(|| (Statistics::from_hour(hour), GeneratedExposures::default()), |(mut statistics, mut exposures), (id, citizen)| {
+        let (stats, exposures) = self.citizens.write().expect("Failed to retrieve global Citizen lock!").par_iter_mut().fold(|| (Statistics::from_hour(hour), GeneratedExposures::default()), |(mut statistics, mut exposures), (id, citizen)| {
+            let citizen = citizen.get_mut().expect("Failed to retrieve individual Citizen lock");
             citizen.execute_time_step(
                 hour, disease, lockdown,
             );
@@ -324,9 +326,11 @@ impl Simulator {
         location: ID,
     ) -> anyhow::Result<()> {
         for citizen_id in citizens {
-            let citizen = self.citizens.get_mut(&citizen_id);
+            let mut citizens_ref = self.citizens.write().expect("Failed to retrieve global Citizen lock");
+            let citizen = citizens_ref.get_mut(&citizen_id);
             match citizen {
                 Some(citizen) => {
+                    let mut citizen = citizen.lock().expect("Failed to retrieve Citizen lock");
                     if citizen.is_susceptible()
                         && citizen.expose(
                         exposure_count,
@@ -363,9 +367,11 @@ impl Simulator {
                         self.statistics.time_step()
                     );
                     // Send every Citizen home
-                    for mut citizen in &mut self.citizens {
-                        let home = citizen.1.household_code.clone();
-                        citizen.1.current_building_position = home;
+                    let citizens = self.citizens.read().expect("Failed to retrive global Citizen lock");
+                    for (_id, mut citizen) in citizens.iter() {
+                        let mut citizen = citizen.lock().unwrap();
+                        let home = citizen.household_code.clone();
+                        citizen.current_building_position = home;
                     }
                 }
                 InterventionsEnabled::Vaccination => {
@@ -374,8 +380,8 @@ impl Simulator {
                         self.statistics.time_step()
                     );
                     let mut eligible = HashSet::new();
-                    self.citizens.iter().for_each(|(id, citizen)| {
-                        if citizen.disease_status == DiseaseStatus::Susceptible {
+                    self.citizens.read().expect("Failed to retrieve global Citizen Lock").iter().for_each(|(id, citizen)| {
+                        if citizen.lock().expect("Failed to retrieve local Citizen Lock").disease_status == DiseaseStatus::Susceptible {
                             eligible.insert(*id);
                         }
                     });
@@ -399,10 +405,11 @@ impl Simulator {
                 .collect();
             for citizen_id in chosen {
                 citizens.remove(&citizen_id);
-                let citizen = self
-                    .citizens
+                let mut citizens_ref = self
+                    .citizens.write().expect("Failed to obtain global lock");
+                let mut citizen = citizens_ref
                     .get_mut(&citizen_id)
-                    .context("Citizen '{}' due to be vaccinated, doesn't exist!")?;
+                    .context("Citizen '{}' due to be vaccinated, doesn't exist!")?.lock().expect("Failed to get Citizen lock");
                 citizen.disease_status = DiseaseStatus::Vaccinated;
             }
         }
@@ -424,8 +431,8 @@ impl Simulator {
             }
         }
         writeln!(file, "\n\n\n----------\n\n\n")?;
-        for citizen in self.citizens {
-            writeln!(file, "    {}", citizen.1)?;
+        for citizen in self.citizens.read().unwrap().iter() {
+            writeln!(file, "    {}", citizen.1.lock().unwrap())?;
         }
         Ok(())
     }
@@ -439,8 +446,9 @@ impl Simulator {
             output_area_json.insert(area.0, area.1.buildings);
         }
         let mut citizens = HashMap::new();
-        for citizen in self.citizens {
-            citizens.insert(citizen.0.to_string(), citizen.1);
+        for (id, citizen) in self.citizens.read().unwrap().iter() {
+            let citizen = citizen.lock().unwrap();
+            citizens.insert(id.to_string(), citizen.clone());
         }
         file.write_all(
             json!({"citizens":citizens,"output_areas":output_area_json})
@@ -454,10 +462,12 @@ impl Simulator {
 
 impl From<SimulatorBuilder> for Simulator {
     fn from(builder: SimulatorBuilder) -> Self {
+        let pop_size = builder.citizens.len();
+        let citizens = RwLock::new(builder.citizens.into_par_iter().map(|(id, citizen)| (id, Mutex::new(citizen))).collect());
         Simulator {
-            current_population: builder.citizens.len() as u32,
+            current_population: pop_size as u32,
             output_areas: builder.output_areas,
-            citizens: builder.citizens,
+            citizens,
             citizens_eligible_for_vaccine: None,
             statistics: Statistics::default(),
             interventions: Default::default(),

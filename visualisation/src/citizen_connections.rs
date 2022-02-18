@@ -36,10 +36,11 @@ use load_census_data::tables::resides_vs_workplace::WorkplaceResidentialRecord;
 pub fn build_citizen_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
+    let citizens = simulation.citizens.read().unwrap();
     let mut graph: GraphMap<u128, u8, Undirected> =
-        GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
+        GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
-    simulation.citizens.keys().for_each(|citizen| {
+    citizens.keys().for_each(|citizen| {
         graph.add_node(citizen.id().as_u128());
     });
     simulation.output_areas.values().for_each(|area| {
@@ -86,10 +87,12 @@ pub fn build_workplace_output_area_graph(
 pub fn build_building_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
+    let citizens = simulation.citizens.read().unwrap();
     let mut graph: GraphMap<u128, u8, Undirected> =
-        GraphMap::with_capacity(simulation.citizens.len(), 20 * simulation.citizens.len());
+        GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
-    simulation.citizens.values().for_each(|citizen| {
+    citizens.values().for_each(|citizen| {
+        let citizen = citizen.lock().unwrap();
         let weight = graph.edge_weight_mut(
             citizen.household_code.building_id().as_u128(),
             citizen.workplace_code.building_id().as_u128(),

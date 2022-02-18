@@ -66,6 +66,7 @@ pub const BUILDINGS_TO_REMOVE_DUPLICATES: [TagClassifiedBuilding; 2] = [TagClass
 enum CheckBoundaries {
     York,
     YorkshireAndTheHumber,
+    All,
 }
 
 impl CheckBoundaries {
@@ -88,6 +89,14 @@ impl CheckBoundaries {
                     return Err(());
                 }
                 if !(-2.55..=0.15).contains(&lon) {
+                    return Err(());
+                }
+            }
+            CheckBoundaries::All => {
+                if !(52.0..56.0).contains(&lat) {
+                    return Err(())
+                }
+                if !(-3.0..=1.0).contains(&lon) {
                     return Err(());
                 }
             }
@@ -271,7 +280,7 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
         let visible = node.info().map(|info| info.visible()).unwrap_or(true);
         if visible {
             // TODO Change this
-            CheckBoundaries::YorkshireAndTheHumber.check_boundaries(node.lat(), node.lon())?;
+            CheckBoundaries::All.check_boundaries(node.lat(), node.lon())?;
             let position = convert::decimal_latitude_and_longitude_to_northing_and_eastings(
                 node.lat(),
                 node.lon(),

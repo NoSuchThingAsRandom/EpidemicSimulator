@@ -278,10 +278,15 @@ pub fn build_table_request_string(table: CensusTableNames, area_code: String) ->
     path.push_str(".data.csv");
 
     if let ResidentialAreaVsWorkplaceArea = table {
+        let code = match area_code.as_str() {
+            "1946157112TYPE299" => { YORK_OUTPUT_AREA_CODE }
+            "2013265923TYPE299" => { YORK_AND_HUMBER_OUTPUT_AREA_CODE }
+            _ => panic!("Cannot retrieve NOMIS area code for {} area to download", area_code)
+        };
         path.push_str("?currently_residing_in=");
-        path.push_str(YORK_OUTPUT_AREA_CODE);
+        path.push_str(code);
         path.push_str("&place_of_work=");
-        path.push_str(YORK_OUTPUT_AREA_CODE);
+        path.push_str(code);
     } else {
         path.push_str("?geography=");
         path.push_str(&area_code);

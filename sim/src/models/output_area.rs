@@ -22,6 +22,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::sync::Mutex;
 
 use anyhow::Context;
 use log::error;

@@ -18,12 +18,19 @@
  *
  */
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use rayon::spawn;
 
 use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
@@ -284,3 +291,47 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+
+fn test() {
+    let mut data = RwLock::new(HashMap::new());
+    for index in 0..10 {
+        let mut writer = data.write().unwrap();
+        writer.insert(index, Mutex::new(5));
+    }
+    println!("{:?}", data);
+    let mut values: Vec<i32> = (0..10).collect();
+    //values.shuffle(&mut thread_rng());
+    let start = Instant::now();
+    values.into_par_iter().for_each(|index| {
+        println!("Got A lock");
+        //for _index in 0..10 {
+        let my_ref = data.read().unwrap();
+
+        let mut value = my_ref.get(&index).unwrap().lock().unwrap();
+        println!("Index: {}, Value: {:?}", index, value);
+        *value = *value * 2;
+        //}
+        sleep(Duration::new(2, 0));
+        println!("Released A lock");
+    });
+    println!("{:?}", data);
+    println!("Finished in: {:?}", start.elapsed().as_secs());
+    //values.shuffle(&mut thread_rng());
+    let mut values: Vec<i32> = (0..10).collect();
+
+    let start = Instant::now();
+    values.into_iter().for_each(|index| {
+        println!("Got A lock");
+        //for _index in 0..10 {
+        let my_ref = data.read().unwrap();
+
+        let mut value = my_ref.get(&index).unwrap().lock().unwrap();
+        println!("Index: {}, Value: {:?}", index, value);
+        *value = *value * 2;
+        //}
+        sleep(Duration::new(2, 0));
+        println!("Released A lock");
+    });
+    println!("{:?}", data);
+    println!("Finished in: {:?}", start.elapsed().as_secs());
+}

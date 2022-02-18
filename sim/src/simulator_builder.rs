@@ -144,7 +144,7 @@ impl SimulatorBuilder {
             HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
         >,
     ) -> anyhow::Result<()> {
-        let mut citizens = HashMap::new();
+        let mut citizens: HashMap<CitizenID, Citizen> = HashMap::new();
         let mut no_buildings = 0;
         let mut no_households = 0;
         // Generate Citizens
