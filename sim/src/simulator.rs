@@ -42,12 +42,57 @@ use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::simulator_builder::SimulatorBuilder;
 use crate::statistics::Statistics;
 
+pub enum DayOfWeek {
+    /// Represents a normal working day (Mon - Fri), with the integer representing the actual day
+    ///
+    /// 1 -> Monday
+    /// 2 -> Tuesday
+    /// 3 -> Wednesday
+    /// 4 -> Thursday
+    /// 5 -> Friday
+    Weekday(u8),
+    /// The weekend, where most of the population are not working, with the integer representing the actual day
+    ///
+    /// 1 -> Saturday
+    /// 2 -> Sunday
+    Weekend(u8),
+}
+
+impl DayOfWeek {
+    pub fn next_day(self) -> Self {
+        match self {
+            DayOfWeek::Weekday(day) => {
+                if day < 5 {
+                    DayOfWeek::Weekday(day + 1)
+                } else {
+                    DayOfWeek::Weekend(1)
+                }
+            }
+            DayOfWeek::Weekend(day) => {
+                if day < 2 {
+                    DayOfWeek::Weekend(day + 1)
+                } else {
+                    DayOfWeek::Weekday(1)
+                }
+            }
+        }
+    }
+}
+
+impl Default for DayOfWeek {
+    fn default() -> Self {
+        DayOfWeek::Weekday(0)
+    }
+}
+
+/// A simple struct for benchmarking how long a block of code takes
 pub struct Timer {
     function_timer: Instant,
     code_block_timer: Instant,
 }
 
 impl Timer {
+    /// Call this to record how long has elapsed since the last call
     #[inline]
     pub fn code_block_finished(&mut self, message: &str) -> anyhow::Result<()> {
         info!(
@@ -101,6 +146,7 @@ pub struct Simulator {
 
 /// Runtime Simulation Methods
 impl Simulator {
+    /// Start the entire simulation process, until the disease is eradicated, or we reach teh max time step
     pub fn simulate(&mut self) -> anyhow::Result<()> {
         let mut start_time = Instant::now();
         info!("Starting simulation...");
@@ -143,6 +189,7 @@ impl Simulator {
         }
     }
 
+    /// Detects the Citizens that have been exposed in the current time step
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposures = GeneratedExposures::default();
@@ -174,29 +221,22 @@ impl Simulator {
         }
         return Ok(exposures);
     }
+    /// Applies the exposure cycle on any Citizens that have come in contact with an infected Citizen
     fn apply_exposures(&mut self, exposures: GeneratedExposures) -> anyhow::Result<()> {
-
         // Apply Building Exposures
-        for (building_id, exposure_count) in exposures.building_exposure_list {
+        for (building_id, infected_citizens) in exposures.building_exposure_list {
             let area = self.output_areas.get(&building_id.output_area_code());
             match area {
                 Some(area) => {
-                    // TODO Sometime there's a weird bug here?
                     let building = &area.buildings.get(&building_id).context(format!(
                         "Failed to retrieve exposure building {}",
                         building_id
                     ))?;
                     let building = building.as_ref();
-                    let mut to_expose = Vec::new();
-                    for citizen in exposure_count {
-                        let occupants = building.apply_exposure(citizen);
-                        for id in occupants {
-                            to_expose.push(id);
-                        }
-                    }
+                    let exposure_count = infected_citizens.len();
                     if let Err(e) =
                     self.expose_citizens(
-                        to_expose, 1,
+                        building.find_exposures(infected_citizens), exposure_count,
                         ID::Building(building_id.clone()),
                     ).context(format!("Exposing building: {}", building_id)) {
                         error!("{:?}",e)

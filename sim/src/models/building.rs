@@ -19,12 +19,15 @@
  */
 
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
+use std::iter::FromIterator;
 
 use geo::Point;
 use log::error;
+use rayon::iter::IntoParallelIterator;
+use rayon::prelude::FromParallelIterator;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
@@ -47,6 +50,9 @@ pub enum BuildingType {
     Household,
     Workplace,
     School,
+    Restaurant,
+    SuperMarket,
+    Shop,
 }
 
 /// This is used to represent a building location
@@ -132,7 +138,7 @@ pub trait Building: Display + Debug {
     /// Returns the location of the building
     fn get_location(&self) -> geo_types::Point<i32>;
     /// Returns a list of Citizens that would be exposed, if the given Citizen is infected
-    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID>;
+    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID>;
 }
 
 impl Serialize for dyn Building {
@@ -192,9 +198,9 @@ impl Building for Household {
         self.location
     }
 
-    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID> {
+    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID> {
         let mut exposed = self.occupants();
-        exposed.retain(|id| *id != infected_citizen);
+        exposed.retain(|id| !infected_citizens.contains(id));
         exposed
     }
 }
@@ -269,9 +275,9 @@ impl Building for Workplace {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
-    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID> {
+    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID> {
         let mut exposed = self.occupants();
-        exposed.retain(|id| *id != infected_citizen);
+        exposed.retain(|id| !infected_citizens.contains(id));
         exposed
     }
 }
@@ -446,30 +452,34 @@ impl Building for School {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
-    fn apply_exposure(&self, infected_citizen: CitizenID) -> Vec<CitizenID> {
-        let class_index = match self.occupant_to_class.get(&infected_citizen) {
-            Some(class_index) => class_index,
-            None => {
-                error!("Citizen does not belong to a class!");
-                return Vec::new();
-            }
-        };
-        match class_index {
-            RoomID::ClassId { id: class_id } => {
-                let mut exposed = self.classes[*class_id].get_participants();
-                exposed.retain(|id| *id != infected_citizen);
-                exposed
-            }
-            RoomID::OfficeId { id: staff_id } => {
-                let staff = &self.offices[*staff_id];
-                let mut exposed = Vec::with_capacity(staff.len());
-                staff.iter().for_each(|staff_member|
-                    if *staff_member != infected_citizen {
-                        exposed.push(*staff_member);
-                    });
-                exposed
+    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID> {
+        let infected_citizens: HashSet<CitizenID> = HashSet::from_par_iter(infected_citizens.into_par_iter());
+        let mut exposed = HashSet::new();
+        for infected_citizen in &infected_citizens {
+            let class_index = match self.occupant_to_class.get(&infected_citizen) {
+                Some(class_index) => class_index,
+                None => {
+                    error!("Citizen does not belong to a class!");
+                    continue;
+                }
+            };
+            match class_index {
+                RoomID::ClassId { id: class_id } => {
+                    let mut members = self.classes[*class_id].get_participants().iter().for_each(|citizen|
+                        if !infected_citizens.contains(citizen) {
+                            exposed.insert(*citizen);
+                        });
+                }
+                RoomID::OfficeId { id: staff_id } => {
+                    let staff = &self.offices[*staff_id];
+                    staff.iter().for_each(|staff_member|
+                        if !infected_citizens.contains(staff_member) {
+                            exposed.insert(*staff_member);
+                        });
+                }
             }
         }
+        exposed.into_iter().collect()
     }
 }
 
