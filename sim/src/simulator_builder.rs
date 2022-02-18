@@ -195,14 +195,17 @@ impl SimulatorBuilder {
                 )?);
                 Ok(())
             }();
-            if let Err(e) = generate_citizen_closure {
-                warn!("{:?}",e);
-            }
         });
         info!(
             "Households and Citizen generation succeeded for {} Output Areas.",
             ref_output_areas.borrow().len()
         );
+        if no_households > 0 {
+            warn!("Failed to generate households for {} Output Areas, as no homes exist!",no_households);
+        }
+        if no_buildings > 0 {
+            warn!("Failed to generate households for {} Output Areas, as no buildings exist!",no_buildings);
+        }
         for occupation in OccupationType::iter() {
             debug!("There are {} Citizens with an occupation of: {:?}", citizens.iter().filter(|(_, citizen)| citizen.detailed_occupation() == Some(occupation)).count(), occupation);
         }
@@ -422,7 +425,9 @@ impl SimulatorBuilder {
                     return;
                 }
                 // Retrieve the Output Area, and build the School building
-                let output_area_id = get_area_code_for_raw_building(building, output_areas_polygons, building_boundaries).expect("School building is not inside any Output areas!").keys().next().expect("School building is not inside any Output areas!").clone();
+                // TODO Change to Let Else when `https://github.com/rust-lang/rust/issues/87335` is stabilised
+                let output_area_id = if let Some(area) = get_area_code_for_raw_building(building, output_areas_polygons, building_boundaries) { area } else { return; };
+                let output_area_id = if let Some(area) = output_area_id.keys().next() { area } else { return; };
                 let building_id = BuildingID::new(output_area_id.clone(), BuildingType::School);
 
                 // Pull the Citizen ID's out of the Citizens
