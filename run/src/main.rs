@@ -222,9 +222,10 @@ async fn main() -> anyhow::Result<()> {
 
         let total_buildings = 100.0;
         let data: Vec<visualisation::image_export::DrawingRecord> = sim
-            .output_areas
+            .output_areas.read().unwrap()
             .iter()
             .map(|(code, area)| {
+                let area = area.lock().unwrap();
                 DrawingRecord::from((
                     code.to_string(),
                     (area.polygon.clone()),

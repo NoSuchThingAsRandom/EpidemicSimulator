@@ -28,17 +28,17 @@ use std::time::Instant;
 use anyhow::Context;
 use log::{debug, error, info};
 use num_format::Locale::{am, en};
+use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
-use rand::thread_rng;
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::error::SimError;
-use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::building::BuildingID;
+use crate::interventions::{InterventionsEnabled, InterventionStatus, MaskStatus};
+use crate::models::building::{Building, BuildingID};
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
@@ -151,7 +151,7 @@ pub struct Simulator {
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
-    pub output_areas: HashMap<OutputAreaID, OutputArea>,
+    pub output_areas: RwLock<HashMap<OutputAreaID, Mutex<OutputArea>>>,
     /// The list of citizens who have a "home" in this area
     pub citizens: RwLock<HashMap<CitizenID, Mutex<Citizen>>>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
@@ -247,33 +247,42 @@ impl Simulator {
     /// Applies the exposure cycle on any Citizens that have come in contact with an infected Citizen
     fn apply_exposures(&mut self, exposures: GeneratedExposures) -> anyhow::Result<()> {
         // Apply Building Exposures
-        for (building_id, infected_citizens) in exposures.building_exposure_list {
-            let area = self.output_areas.get(&building_id.output_area_code());
-            match area {
-                Some(area) => {
-                    let building = &area.buildings.get(&building_id).context(format!(
-                        "Failed to retrieve exposure building {}",
-                        building_id
-                    ))?;
-                    let building = building.as_ref();
-                    let exposure_count = infected_citizens.len();
-                    if let Err(e) =
-                    self.expose_citizens(
-                        building.find_exposures(infected_citizens), exposure_count,
-                        ID::Building(building_id.clone()),
-                    ).context(format!("Exposing building: {}", building_id)) {
-                        error!("{:?}",e)
-                    }
+        let output_areas = &self.output_areas;
+        let disease_model = &self.disease_model;
+        let mask_status = &self.interventions.mask_status;
+        let mut citizens = &mut self.citizens;
+        let area_ref = output_areas.read().expect("Failed to get lock on output areas");
+        let buildings = exposures.building_exposure_list.into_iter().filter_map(|(building_id, citizens)| {
+            let area = area_ref.get(&building_id.output_area_code())?.lock().expect("Failed to lock single output area");
+            let building = match area.buildings.get(&building_id).context(format!(
+                "Failed to retrieve exposure building {}",
+                building_id
+            )) {
+                Ok(building) => building.as_ref(),
+                Err(e) => {
+                    error!("{:?}",e);
+                    return None;
                 }
-
-                None => {
-                    /*                    error!(
-                                            "Cannot find output area {}, that had an exposure occurred in!",
-                                            &building_id.output_area_code()
-                                        );*/
+            };
+            return Some((building, citizens));
+        }).collect::<HashMap<&dyn Building, Vec<CitizenID>>>().into_iter().filter_map(|(building, infected_citizens)| {
+            let exposure_count = infected_citizens.len();
+            let mut citizens_ref = self.citizens.write().expect("Failed to retrieve global Citizen lock");
+            let citizen_ids = building.find_exposures(infected_citizens);
+            let citizens: Vec<&mut Mutex<Citizen>> = citizen_ids.iter().filter_map(|id| citizens_ref.get_mut(&id)).collect();
+            match Simulator::expose_citizens(
+                disease_model,
+                mask_status,
+                &mut thread_rng(),
+                citizens, exposure_count,
+            ).context(format!("Exposing building: {}", building.id())) {
+                Ok(citizens) => (Some(citizens)),
+                Err(e) => {
+                    error!("{:?}",e);
+                    return None;
                 }
             }
-        }
+        });/*
         // Generate public transport routes
         for (route, mut citizens) in exposures.public_transport_pre_generated {
             citizens.shuffle(&mut self.rng);
@@ -311,48 +320,46 @@ impl Simulator {
                     error!("{:?}",e);
                 }
             }
-        }
+        }*/
         // Apply Public Transport Exposures
         //debug!("There are {} exposures", exposure_list.len());
         Ok(())
     }
 
     /// Applies the Exposure event to the given Citizens
+    ///
+    /// Returns the list of now infected Citizens
     fn expose_citizens(
-        &mut self,
-        citizens: Vec<CitizenID>,
+        disease_model: &DiseaseModel,
+        mask_status: &MaskStatus,
+        rng: &mut dyn RngCore,
+        citizens: Vec<&mut Mutex<Citizen>>,
         exposure_count: usize,
-        location: ID,
-    ) -> anyhow::Result<()> {
-        for citizen_id in citizens {
-            let mut citizens_ref = self.citizens.write().expect("Failed to retrieve global Citizen lock");
-            let citizen = citizens_ref.get_mut(&citizen_id);
-            match citizen {
-                Some(citizen) => {
-                    let mut citizen = citizen.lock().expect("Failed to retrieve Citizen lock");
-                    if citizen.is_susceptible()
-                        && citizen.expose(
-                        exposure_count,
-                        &self.disease_model,
-                        &self.interventions.mask_status,
-                        &mut self.rng,
-                    )
-                    {
-                        self.statistics
-                            .citizen_exposed(location.clone())
-                            .context(format!("Exposing citizen {}", citizen_id))?;
-
-                        if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
-                            vaccine_list.remove(&citizen_id);
-                        }
-                    }
-                }
-                None => {
-                    return Err(SimError::MissingCitizen { citizen_id: citizen_id.to_string() }).context("Cannot expose Citizen, as they do not exist!");
-                }
+    ) -> anyhow::Result<Vec<CitizenID>> {
+        //            let mut citizens_ref = self.citizens.write().expect("Failed to retrieve global Citizen lock");
+        //             let citizen = citizens_ref.get_mut(&citizen_id);
+        //                        self.statistics
+        //                             .citizen_exposed(location.clone())
+        //                             .context(format!("Exposing citizen {}", citizen))?;
+        //
+        //                         if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
+        //                             vaccine_list.remove(&citizen);
+        //                         }
+        let mut infected = Vec::with_capacity(citizens.len());
+        for citizen in citizens {
+            let mut citizen = citizen.lock().expect("Failed to retrieve Citizen lock");
+            if citizen.is_susceptible()
+                && citizen.expose(
+                exposure_count,
+                disease_model,
+                mask_status,
+                rng,
+            )
+            {
+                infected.push(citizen.id());
             }
         }
-        Ok(())
+        Ok(infected)
     }
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
         let infected_percent = self.statistics.infected_percentage();
@@ -423,9 +430,9 @@ impl Simulator {
         let file = File::create("crash.dump")?;
         let mut file = LineWriter::new(file);
         writeln!(file, "{}", self.statistics)?;
-        for area in self.output_areas {
+        for area in self.output_areas.read().unwrap().iter() {
             writeln!(file, "Output Area: {}", area.0)?;
-            for building in area.1.buildings.values() {
+            for building in area.1.lock().unwrap().buildings.values() {
                 writeln!(file, "      {}", building)?;
             }
         }
@@ -441,8 +448,10 @@ impl Simulator {
         use serde_json::json;
 
         let mut output_area_json = HashMap::new();
-        for area in self.output_areas {
-            output_area_json.insert(area.0, area.1.buildings);
+        let mut area_ref = self.output_areas.write().unwrap();
+        for (id, area) in area_ref.drain() {
+            let output_area = area.into_inner().unwrap();
+            output_area_json.insert(id, output_area.buildings);
         }
         let mut citizens = HashMap::new();
         for (id, citizen) in self.citizens.read().unwrap().iter() {
@@ -463,9 +472,10 @@ impl From<SimulatorBuilder> for Simulator {
     fn from(builder: SimulatorBuilder) -> Self {
         let pop_size = builder.citizens.len();
         let citizens = RwLock::new(builder.citizens.into_par_iter().map(|(id, citizen)| (id, Mutex::new(citizen))).collect());
+        let output_areas = RwLock::new(builder.output_areas.into_iter().map(|(id, area)| (id, Mutex::new(area))).collect());
         Simulator {
             current_population: pop_size as u32,
-            output_areas: builder.output_areas,
+            output_areas,
             citizens,
             citizens_eligible_for_vaccine: None,
             statistics: Statistics::default(),

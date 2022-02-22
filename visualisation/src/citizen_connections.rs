@@ -43,8 +43,8 @@ pub fn build_citizen_graph(
     citizens.keys().for_each(|citizen| {
         graph.add_node(citizen.id().as_u128());
     });
-    simulation.output_areas.values().for_each(|area| {
-        for (_, building) in &area.buildings {
+    simulation.output_areas.read().unwrap().values().for_each(|area| {
+        for (_, building) in &area.lock().unwrap().buildings {
             let citizens = building.occupants();
             for outer_citizen in &citizens {
                 for inner_citizen in &citizens {

@@ -21,7 +21,7 @@
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
 use geo::Point;
@@ -140,6 +140,21 @@ pub trait Building: Display + Debug {
     /// Returns a list of Citizens that would be exposed, if the given Citizen is infected
     fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID>;
 }
+
+impl Eq for Building {}
+
+impl PartialEq<Self> for dyn Building {
+    fn eq(&self, other: &Self) -> bool {
+        self.id().eq(other.id())
+    }
+}
+
+impl Hash for dyn Building {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id().hash(state)
+    }
+}
+
 
 impl Serialize for dyn Building {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
