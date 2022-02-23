@@ -589,7 +589,7 @@ impl SimulatorBuilder {
     }
 
     /// Calculates which buildings should be assigned to what occupation, and scales the floor space, to ensure every Citizen can have a workplace
-    fn assign_buildings_per_output_area(workplace_area_code: OutputAreaID, mut citizens: Vec<&mut Citizen>, possible_buildings: &mut Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
+    fn assign_buildings_per_output_area(workplace_area_code: OutputAreaID, mut citizens: Vec<&mut Citizen>, possible_buildings: &mut Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building + Sync + Send>>> {
         if citizens.len() == 0 {
             warn!("No buildings can be assigned to area {} as no workers exist: {:?}",workplace_area_code,citizens);
             return Ok(HashMap::new());
@@ -707,7 +707,7 @@ impl SimulatorBuilder {
 
 
         // This is the list of full workplaces that need to be added to the parent Output Area
-        let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
+        let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building + Sync + Send>> = HashMap::new();
 
         // Assign workplaces to every Citizen
         // TODO Parallelise
@@ -738,10 +738,10 @@ impl SimulatorBuilder {
     /// Assigns Each Citizen to one of the Given RawBuildings and transforms the RawBuildings into Workplaces
     ///
     /// Note that each Citizen should have the same Occupation
-    fn assign_workplaces_to_citizens_per_occupation(workplace_area_code: OutputAreaID, occupation: OccupationType, citizens: &mut Vec<&mut Citizen>, buildings: &Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building>>> {
+    fn assign_workplaces_to_citizens_per_occupation(workplace_area_code: OutputAreaID, occupation: OccupationType, citizens: &mut Vec<&mut Citizen>, buildings: &Vec<RawBuilding>) -> anyhow::Result<HashMap<BuildingID, Box<dyn Building + Sync + Send>>> {
         let total_building_count = buildings.len();
         let total_workers = citizens.len();
-        let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building>> = HashMap::new();
+        let mut workplace_buildings: HashMap<BuildingID, Box<dyn Building + Sync + Send>> = HashMap::new();
         let mut buildings = buildings.iter();
 
         let mut current_workplace: Workplace = Workplace::new(
@@ -790,7 +790,7 @@ impl SimulatorBuilder {
                 };
             citizen.set_workplace_code(current_workplace.id().clone());
         }
-        workplace_buildings.insert(current_workplace.id().clone(), Box::new(current_workplace));
+        workplace_buildings.insert(current_workplace.id().clone(), Box::new(current_workplace) as Box<dyn Building + Sync + Send>);
         Ok(workplace_buildings)
     }
 
@@ -912,6 +912,14 @@ impl SimulatorBuilder {
                 .map(|area| area.1.total_residents)
                 .sum::<u32>()
         );
+        // TODO Move this earlier in the process
+        let mut output_areas = &mut self.output_areas;
+        self.citizens.drain().for_each(|(citizen_id, citizen)| {
+            let code = citizen.current_building_position.output_area_code();
+            let area = output_areas.get_mut(&code).ok_or_else(|| warn!("Citizen doesn't belong to any output area!")).unwrap();
+            area.citizens.insert(citizen_id, citizen);
+        });
+
         Ok(())
     }
 }

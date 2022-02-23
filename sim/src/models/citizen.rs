@@ -133,7 +133,8 @@ impl Citizen {
         current_hour: u32,
         disease: &DiseaseModel,
         lockdown_enabled: bool,
-    ) {
+    ) -> Option<OutputAreaID> {
+        let old_position = self.current_building_position.output_area_code();
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
         if !lockdown_enabled {
             match current_hour % 24 {
@@ -165,6 +166,11 @@ impl Citizen {
                     self.on_public_transport = None;
                 }
             }
+        }
+        if self.current_building_position.output_area_code().eq(&old_position) {
+            None
+        } else {
+            Some(self.current_building_position.output_area_code())
         }
     }
     /// Registers a new exposure to this citizen

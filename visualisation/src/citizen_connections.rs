@@ -32,18 +32,20 @@ use petgraph::dot::Config::{EdgeNoLabel, NodeIndexLabel};
 use petgraph::graphmap::GraphMap;
 
 use load_census_data::tables::resides_vs_workplace::WorkplaceResidentialRecord;
+use sim::models::citizen::{Citizen, CitizenID};
 
 pub fn build_citizen_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
-    let citizens = simulation.citizens.read().unwrap();
+    let area_ref = simulation.output_areas.read().unwrap();
+    let citizens: HashMap<&CitizenID, &Citizen> = area_ref.iter().map(|area| &area.1.citizens).flatten().collect();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
     citizens.keys().for_each(|citizen| {
         graph.add_node(citizen.id().as_u128());
     });
-    simulation.output_areas.values().for_each(|area| {
+    area_ref.values().for_each(|area| {
         for (_, building) in &area.buildings {
             let citizens = building.occupants();
             for outer_citizen in &citizens {
@@ -87,12 +89,12 @@ pub fn build_workplace_output_area_graph(
 pub fn build_building_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
-    let citizens = simulation.citizens.read().unwrap();
+    let area_ref = simulation.output_areas.read().unwrap();
+    let citizens: HashMap<&CitizenID, &Citizen> = area_ref.iter().map(|area| &area.1.citizens).flatten().collect();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
     citizens.values().for_each(|citizen| {
-        let citizen = citizen.lock().unwrap();
         let weight = graph.edge_weight_mut(
             citizen.household_code.building_id().as_u128(),
             citizen.workplace_code.building_id().as_u128(),

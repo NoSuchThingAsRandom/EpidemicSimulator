@@ -18,7 +18,7 @@
  *
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -35,6 +35,7 @@ use load_census_data::tables::population_and_density_per_output_area::PersonType
 use osm_data::{RawBuilding, TagClassifiedBuilding};
 
 use crate::config::MAX_STUDENT_AGE;
+use crate::interventions::InterventionStatus;
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
 
@@ -81,12 +82,15 @@ impl PartialEq for OutputAreaID {
 pub struct OutputArea {
     /// The Census Data Output Area Code
     pub output_area_id: OutputAreaID,
-
+    pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
+    pub citizens: HashMap<CitizenID, Citizen>,
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
-    pub buildings: HashMap<BuildingID, Box<dyn Building>>,
+    pub buildings: HashMap<BuildingID, Box<dyn Building + Sync + Send>>,
     /// A polygon for drawing this output area
     pub polygon: geo_types::Polygon<i32>,
     pub total_residents: u32,
+    pub interventions: InterventionStatus,
+
     /// The distribution to use to determine whether a Citizen is wearing a mask\
     /// Is stored as a distribution to increase speed
     mask_distribution: Bernoulli,
@@ -103,9 +107,12 @@ impl OutputArea {
     ) -> anyhow::Result<OutputArea> {
         Ok(OutputArea {
             output_area_id,
+            citizens_eligible_for_vaccine: None,
+            citizens: Default::default(),
             buildings: HashMap::default(),
             polygon,
             total_residents: 0,
+            interventions: Default::default(),
             mask_distribution: Bernoulli::new(mask_compliance_ratio)
                 .context("Failed to initialise the mask distribution")?,
         })
@@ -204,7 +211,7 @@ impl OutputArea {
 
 impl Clone for OutputArea {
     fn clone(&self) -> Self {
-        let mut buildings_copy: HashMap<BuildingID, Box<dyn Building>> =
+        let mut buildings_copy: HashMap<BuildingID, Box<dyn Building + Sync + Send>> =
             HashMap::with_capacity(self.buildings.len());
         for (code, current_building) in &self.buildings {
             let current_building = current_building.as_any();
@@ -219,9 +226,12 @@ impl Clone for OutputArea {
 
         OutputArea {
             output_area_id: self.output_area_id.clone(),
+            citizens_eligible_for_vaccine: self.citizens_eligible_for_vaccine.clone(),
+            citizens: self.citizens.clone(),
             buildings: buildings_copy,
             polygon: self.polygon.clone(),
             total_residents: self.total_residents,
+            interventions: self.interventions.clone(),
             mask_distribution: self.mask_distribution,
         }
     }
