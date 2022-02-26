@@ -29,6 +29,7 @@ use clap::{App, Arg};
 use log::{error, info};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use rayon;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use rayon::spawn;
 
@@ -62,6 +63,7 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().expect("Failed to load dot env");
     pretty_env_logger::init_timed();
+    rayon::ThreadPoolBuilder::new().num_threads(40).build_global().unwrap();
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
@@ -225,6 +227,7 @@ async fn main() -> anyhow::Result<()> {
             .output_areas.read().unwrap()
             .iter()
             .map(|(code, area)| {
+                let area = area.lock().unwrap();
                 DrawingRecord::from((
                     code.to_string(),
                     (area.polygon.clone()),

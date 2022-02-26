@@ -148,4 +148,5 @@ def plot_school_positions():
 
 
 # plot_school_outlines()
-plot_school_positions()
+# plot_school_positions()
+plot_school_locations()

@@ -31,7 +31,7 @@ use log::{debug, error, info, warn};
 use num_format::ToFormattedString;
 use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 use strum::IntoEnumIterator;
 
 use load_census_data::CensusData;
@@ -278,7 +278,8 @@ impl SimulatorBuilder {
                 closest_schools_index.into_iter().filter_map(|index| {
                     let school = building_locations.get(index)?;
                     let area_codes = get_area_code_for_raw_building(school, output_areas_polygons, building_boundaries).expect("School building is not inside any Output areas!");
-                    let output_area_id = area_codes.keys().next().expect("School building is not inside any Output areas!");
+                    let output_area_id = area_codes.keys().next()?;
+                    //.expect("School building is not inside any Output areas!");
                     if output_areas.contains_key(output_area_id) {
                         Some(school)
                     } else {
@@ -291,7 +292,7 @@ impl SimulatorBuilder {
 
         // Groups the students/teachers, by the school they are closest to
         // The geo point is the key, because it is the only identifier we can use
-        let mut citizens_per_raw_school = students.into_iter().enumerate().map(|(age, student)|
+        let mut citizens_per_raw_school = students.into_par_iter().enumerate().map(|(age, student)|
             {
                 let age_grouped_students_per_school = student.into_iter().filter_map(|student| {
                     match finding_closest_school(student, false) {
@@ -315,7 +316,7 @@ impl SimulatorBuilder {
                 });
                 (age, age_grouped_students_per_school)
             }
-        ).fold(HashMap::new(), |mut acc: HashMap<Point<i32>, (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>, &RawBuilding)>, (age, schools_to_flatten): (usize, HashMap<Point<i32>, (Vec<&mut Citizen>, &RawBuilding)>)| {
+        ).fold(|| HashMap::new(), |mut acc: HashMap<Point<i32>, (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>, &RawBuilding)>, (age, schools_to_flatten): (usize, HashMap<Point<i32>, (Vec<&mut Citizen>, &RawBuilding)>)| {
             schools_to_flatten.into_iter().for_each(|(key, (students, school))| {
                 let (entry, _, _) = acc.entry(key).or_insert_with(|| (Vec::new(), Vec::new(), school));
                 while entry.len() < age + 1 {
@@ -326,6 +327,19 @@ impl SimulatorBuilder {
                 age_group.extend(students);
             });
             acc
+        }).reduce(|| HashMap::new(), |mut a, b| {
+            for (point, (students, teachers, building)) in b {
+                let (entry, _, _) = a.entry(point).or_insert_with(|| (Vec::new(), Vec::new(), building));
+                for (index, age_group) in students.into_iter().enumerate() {
+                    if entry.len() < index + 1 {
+                        entry.push(age_group);
+                    } else {
+                        let entry_group = entry.get_mut(index).unwrap();
+                        entry_group.extend(age_group);
+                    }
+                }
+            }
+            a
         });
         info!("Assigned Students to {} raw schools",citizens_per_raw_school.len());
 

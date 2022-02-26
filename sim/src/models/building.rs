@@ -138,7 +138,7 @@ pub trait Building: Display + Debug {
     /// Returns the location of the building
     fn get_location(&self) -> geo_types::Point<i32>;
     /// Returns a list of Citizens that would be exposed, if the given Citizen is infected
-    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID>;
+    fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID>;
 }
 
 impl Serialize for dyn Building {
@@ -198,7 +198,7 @@ impl Building for Household {
         self.location
     }
 
-    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID> {
+    fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
         let mut exposed = self.occupants();
         exposed.retain(|id| !infected_citizens.contains(id));
         exposed
@@ -275,7 +275,7 @@ impl Building for Workplace {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
-    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID> {
+    fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
         let mut exposed = self.occupants();
         exposed.retain(|id| !infected_citizens.contains(id));
         exposed
@@ -452,8 +452,8 @@ impl Building for School {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
-    fn find_exposures(&self, infected_citizens: Vec<CitizenID>) -> Vec<CitizenID> {
-        let infected_citizens: HashSet<CitizenID> = HashSet::from_par_iter(infected_citizens.into_par_iter());
+    fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
+        let infected_citizens: HashSet<&CitizenID> = HashSet::from_par_iter(infected_citizens.into_par_iter());
         let mut exposed = HashSet::new();
         for infected_citizen in &infected_citizens {
             let class_index = match self.occupant_to_class.get(&infected_citizen) {

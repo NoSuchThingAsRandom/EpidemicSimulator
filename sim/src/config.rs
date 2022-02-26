@@ -31,7 +31,7 @@ pub const HOUSEHOLD_SIZE: u16 = 4;
 pub const MIN_WORKPLACE_OCCUPANT_COUNT: u32 = 20;
 
 /// How often to print debug statements
-pub const DEBUG_ITERATION_PRINT: usize = 10;
+pub const DEBUG_ITERATION_PRINT: usize = 50;
 
 pub const PUBLIC_TRANSPORT_PERCENTAGE: f64 = 0.2;
 pub const BUS_CAPACITY: u32 = 20;

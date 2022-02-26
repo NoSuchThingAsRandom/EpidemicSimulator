@@ -38,14 +38,16 @@ pub fn build_citizen_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
     let area_ref = simulation.output_areas.read().unwrap();
-    let citizens: HashMap<&CitizenID, &Citizen> = area_ref.iter().map(|area| &area.1.citizens).flatten().collect();
+    let citizen_lookup_ref = simulation.citizen_output_area_lookup.read().unwrap();
+    let citizens = citizen_lookup_ref.keys();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
-    citizens.keys().for_each(|citizen| {
+    citizens.for_each(|citizen| {
         graph.add_node(citizen.id().as_u128());
     });
     area_ref.values().for_each(|area| {
+        let area = area.lock().unwrap();
         for (_, building) in &area.buildings {
             let citizens = building.occupants();
             for outer_citizen in &citizens {
@@ -90,7 +92,7 @@ pub fn build_building_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
     let area_ref = simulation.output_areas.read().unwrap();
-    let citizens: HashMap<&CitizenID, &Citizen> = area_ref.iter().map(|area| &area.1.citizens).flatten().collect();
+    let citizens: HashMap<CitizenID, Citizen> = area_ref.iter().map(|area| area.1.lock().unwrap().citizens.clone()).flatten().collect();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
