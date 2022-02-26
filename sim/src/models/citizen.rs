@@ -48,24 +48,49 @@ fn binomial(probability: f64, n: u8) -> f64 {
 
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, Serialize)]
 pub struct CitizenID {
-    id: Uuid,
+    /// This is a global unique Citizen index
+    global_index: u32,
+    /// This is the local index, for lookup inside an Output Area
+    local_index: u32,
+    /// This is a randomised unique ID, to ensure unique hashes
+    uuid_id: Uuid,
 }
 
 impl CitizenID {
-    pub fn id(&self) -> Uuid {
-        self.id
+    pub fn from_indexes(global_index: u32, local_index: u32) -> CitizenID {
+        CitizenID {
+            global_index,
+            local_index,
+            uuid_id: Uuid::new_v4(),
+        }
+    }
+
+    pub fn global_index(&self) -> u32 {
+        self.global_index
+    }
+    pub fn set_global_index(&mut self, global_index: u32) {
+        self.global_index = global_index;
+    }
+    pub fn local_index(&self) -> u32 {
+        self.local_index
+    }
+    pub fn set_local_index(&mut self, local_index: u32) {
+        self.local_index = local_index;
+    }
+    pub fn uuid_id(&self) -> Uuid {
+        self.uuid_id
     }
 }
 
 impl Default for CitizenID {
     fn default() -> Self {
-        CitizenID { id: Uuid::new_v4() }
+        CitizenID { global_index: 0, local_index: 0, uuid_id: Uuid::new_v4() }
     }
 }
 
 impl Display for CitizenID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Citizen ID: {}", self.id)
+        write!(f, "Citizen ID: {}", self.uuid_id)
     }
 }
 
@@ -101,6 +126,7 @@ pub struct Citizen {
 impl Citizen {
     /// Generates a new Citizen with a random ID
     pub fn new(
+        citizen_id: CitizenID,
         household_code: BuildingID,
         workplace_code: BuildingID,
         age: u16,
@@ -109,7 +135,7 @@ impl Citizen {
         rng: &mut dyn RngCore,
     ) -> Citizen {
         Citizen {
-            id: CitizenID::default(),
+            id: citizen_id,
             age,
             household_code: household_code.clone(),
             workplace_code,

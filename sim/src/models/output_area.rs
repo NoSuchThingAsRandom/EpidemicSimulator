@@ -42,14 +42,18 @@ use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
 #[derive(Debug, Clone, Serialize)]
 pub struct OutputAreaID {
     code: String,
+    index: u32,
 }
 
 impl OutputAreaID {
-    pub fn from_code(code: String) -> OutputAreaID {
-        OutputAreaID { code }
+    pub fn from_code_and_index(code: String, index: u32) -> OutputAreaID {
+        OutputAreaID { code, index }
     }
     pub fn code(&self) -> &String {
         &self.code
+    }
+    pub fn index(&self) -> u32 {
+        self.index
     }
 }
 
@@ -81,9 +85,9 @@ impl PartialEq for OutputAreaID {
 #[derive(Debug)]
 pub struct OutputArea {
     /// The Census Data Output Area Code
-    pub output_area_id: OutputAreaID,
+    output_area_id: OutputAreaID,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
-    pub citizens: HashMap<CitizenID, Citizen>,
+    pub citizens: Vec<Citizen>,
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
     pub buildings: HashMap<BuildingID, Box<dyn Building + Sync + Send>>,
     /// A polygon for drawing this output area
@@ -120,13 +124,16 @@ impl OutputArea {
     /// Generates the Citizens for this Output Area, with households being the provided [`RawBuilding`]
     ///
     /// Note each [`RawBuilding`] must have a classification of [`TagClassifiedBuilding::Household`]
+    ///
+    /// Returns the total number of citizens that have been generated
     pub fn generate_citizens_with_households(
         &mut self,
+        mut global_citizen_index: u32,
         rng: &mut dyn RngCore,
         census_data: CensusDataEntry,
         possible_buildings: Vec<RawBuilding>,
-    ) -> anyhow::Result<HashMap<CitizenID, Citizen>> {
-        let mut citizens = HashMap::with_capacity(census_data.total_population_size() as usize);
+    ) -> anyhow::Result<u32> {
+        self.citizens = Vec::with_capacity(census_data.total_population_size() as usize);
         let pop_count = &census_data.population_count.population_counts;
 
         // TODO Fix this
@@ -154,6 +161,7 @@ impl OutputArea {
                         Occupation::Normal { occupation: OccupationType::try_from(raw_occupation).unwrap_or_else(|_| panic!("Couldn't convert Census Occupation ({:?}), to sim occupation", raw_occupation)) }
                     };
                     let citizen = Citizen::new(
+                        CitizenID::from_indexes(global_citizen_index, generated_population as u32),
                         household_building_id.clone(),
                         household_building_id.clone(),
                         age,
@@ -164,9 +172,10 @@ impl OutputArea {
                     household
                         .add_citizen(citizen.id())
                         .context("Failed to add Citizen to Household")?;
-                    citizens.insert(citizen.id(), citizen);
+                    self.citizens.push(citizen);
                     self.total_residents += 1;
                     generated_population += 1;
+                    global_citizen_index += 1;
                 }
                 assert!(
                     self.buildings
@@ -186,10 +195,10 @@ impl OutputArea {
                     generated_population,
                     pop_count[PersonType::All]
                 );
-                return Ok(citizens);
+                return Ok(self.citizens.len() as u32);
             }
         }
-        Ok(citizens)
+        Ok(self.citizens.len() as u32)
     }
     fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<CitizenID> {
         let mut citizens = Vec::new();
@@ -206,6 +215,18 @@ impl OutputArea {
     }
     pub fn get_workers(&self) -> Vec<CitizenID> {
         self.extract_occupants_for_building_type::<Workplace>()
+    }
+    pub fn get_citizen(&self, citizen_id: CitizenID) -> Option<&Citizen> {
+        self.citizens.get(citizen_id.local_index() as usize)
+    }
+    pub fn get_citizen_mut(&mut self, citizen_id: CitizenID) -> Option<&mut Citizen> {
+        self.citizens.get_mut(citizen_id.local_index() as usize)
+    }
+    pub fn id(&self) -> OutputAreaID {
+        self.output_area_id.clone()
+    }
+    pub fn decrement_index(&mut self) {
+        self.output_area_id.index -= 1;
     }
 }
 

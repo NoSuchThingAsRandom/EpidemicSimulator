@@ -54,10 +54,12 @@ use crate::simulator::Timer;
 pub struct SimulatorBuilder {
     census_data: CensusData,
     osm_data: OSMRawBuildings,
-    pub output_areas: HashMap<OutputAreaID, OutputArea>,
+    pub output_areas: Vec<OutputArea>,
+    /// This maps the String code of an Output Area to it's index
+    output_area_lookup: HashMap<String, u32>,
     output_areas_polygons: PolygonContainer<String>,
     pub disease_model: DiseaseModel,
-    pub citizens: HashMap<CitizenID, Citizen>,
+    pub citizen_output_area_lookup: Vec<OutputAreaID>,
 }
 
 /// Initialisation Methods
@@ -68,7 +70,7 @@ impl SimulatorBuilder {
     pub fn initialise_output_areas(&mut self) -> anyhow::Result<()> {
         // Build the initial Output Areas and Households
         for entry in &self.census_data.valid_areas {
-            let output_id = OutputAreaID::from_code(entry.to_string());
+            let output_id = OutputAreaID::from_code_and_index(entry.to_string(), self.output_areas.len() as u32);
             // TODO Remove polygons from grid
             let polygon = self
                 .output_areas_polygons
@@ -81,14 +83,14 @@ impl SimulatorBuilder {
                     },
                 })
                 .context(format!("Loading polygon shape for area: {}", output_id))?;
+            self.output_area_lookup.insert(output_id.code().clone(), output_id.index());
             let new_area = OutputArea::new(
                 output_id,
                 polygon.clone(),
                 self.disease_model.mask_percentage,
             )
                 .context("Failed to create Output Area")?;
-            self.output_areas
-                .insert(new_area.output_area_id.clone(), new_area);
+            self.output_areas.push(new_area);
         }
         Ok(())
     }
@@ -98,7 +100,7 @@ impl SimulatorBuilder {
     /// Note that Schools, are not returned, because they are built from the Voronoi Diagrams
     pub fn assign_buildings_to_output_areas(
         &mut self,
-    ) -> anyhow::Result<HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>>
+    ) -> anyhow::Result<HashMap<String, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>>
     {
         debug!(
             "Attempting to allocating {} possible buildings to {} Output Areas",
@@ -115,6 +117,7 @@ impl SimulatorBuilder {
             &self.osm_data.building_locations,
             &self.output_areas_polygons,
         );
+        // Count the number of buildings generated
         let count: usize = possible_buildings_per_area
             .par_iter()
             .map(|(_, classed_building)| {
@@ -125,8 +128,16 @@ impl SimulatorBuilder {
             })
             .sum();
 
-        self.output_areas
-            .retain(|code, _area| possible_buildings_per_area.contains_key(code));
+        // Remove any areas without any buildings
+        let to_delete: Vec<&OutputArea> = self.output_areas.iter()
+            .filter(|area| possible_buildings_per_area.contains_key(area.id().code())).collect();
+        for deletion in to_delete {
+            for index in deletion.id().index() as usize..self.output_areas.len() {
+                let mut area = self.output_areas.get_mut(index).unwrap();
+                area.decrement_index();
+            }
+            self.output_areas.remove(deletion.id().index() as usize);
+        }
         debug!(
             "{} Buildings have been assigned. {} Output Areas remaining (with buildings)",
             count,
@@ -140,11 +151,10 @@ impl SimulatorBuilder {
         &mut self,
         rng: &mut dyn RngCore,
         possible_buildings_per_area: &mut HashMap<
-            OutputAreaID,
+            String,
             HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
         >,
     ) -> anyhow::Result<()> {
-        let mut citizens: HashMap<CitizenID, Citizen> = HashMap::new();
         let mut no_buildings = 0;
         let mut no_households = 0;
         // Generate Citizens
@@ -153,26 +163,27 @@ impl SimulatorBuilder {
         // TODO This is super hacky and I hate it
         let ref_output_areas = Rc::new(RefCell::new(&mut self.output_areas));
         let census_data_ref = &mut self.census_data;
-        ref_output_areas.borrow_mut().iter_mut().for_each(|(output_area_id, output_area)| {
+        let mut global_citizen_index = 0;
+        ref_output_areas.borrow_mut().iter_mut().for_each(|(output_area)| {
             let generate_citizen_closure = || -> anyhow::Result<()> {
                 // Retrieve the Census Data
                 let census_data_entry = census_data_ref
-                    .for_output_area_code(output_area_id.code().to_string())
+                    .for_output_area_code(output_area.id().code().to_string())
                     .ok_or_else(|| SimError::InitializationError {
                         message: format!(
                             "Cannot generate Citizens for Output Area {} as no Census Data exists",
-                            output_area_id
+                            output_area.id()
                         ),
                     })?;
                 // Extract the possible buildings for this Output Area
                 let possible_buildings = possible_buildings_per_area
-                    .get_mut(output_area_id)
+                    .get_mut(output_area.id().code())
                     .ok_or_else(|| {
                         no_buildings += 1;
                         return SimError::InitializationError {
                             message: format!(
                                 "Cannot generate Citizens for Output Area {} as no buildings exist",
-                                output_area_id
+                                output_area.id()
                             ),
                         };
                     })?;
@@ -184,15 +195,21 @@ impl SimulatorBuilder {
                         return SimError::InitializationError {
                             message: format!(
                                 "Cannot generate Citizens for Output Area {} as no households exist",
-                                output_area_id
+                                output_area.id()
                             ),
                         };
                     })?;
-                citizens.extend(output_area.generate_citizens_with_households(
+                let generated_count = output_area.generate_citizens_with_households(
+                    global_citizen_index,
                     rng,
                     census_data_entry,
                     possible_households,
-                )?);
+                )?;
+                global_citizen_index += generated_count;
+                for citizen in &output_area.citizens {
+                    self.citizen_output_area_lookup.push(output_area.id().clone());
+                }
+                assert_eq!(global_citizen_index as usize, self.citizen_output_area_lookup.len());
                 Ok(())
             }();
         });
@@ -206,10 +223,6 @@ impl SimulatorBuilder {
         if no_buildings > 0 {
             warn!("Failed to generate households for {} Output Areas, as no buildings exist!",no_buildings);
         }
-        for occupation in OccupationType::iter() {
-            debug!("There are {} Citizens with an occupation of: {:?}", citizens.iter().filter(|(_, citizen)| citizen.detailed_occupation() == Some(occupation)).count(), occupation);
-        }
-        self.citizens = citizens;
         Ok(())
     }
 
@@ -218,34 +231,50 @@ impl SimulatorBuilder {
         // TODO Maybe we need to shuffle?
         // The outer index represents the age of the students, and the inner is just a list of students
         let mut teacher_count = 0;
-        let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) = self.citizens.iter_mut().filter_map(|(_id, citizen)| {
-            let age = citizen.age;
-            if age < MAX_STUDENT_AGE {
-                Some((Some((citizen.age, citizen)), None))
-            } else if Some(OccupationType::Teaching) == citizen.detailed_occupation() {
-                teacher_count += 1;
-                Some((None, Some(citizen)))
-            } else { None }
-        }).fold({
-                    let mut data = Vec::new();
-                    for _ in 0..MAX_STUDENT_AGE {
-                        data.push(Vec::new());
+        let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) =
+            self.output_areas.par_iter_mut().map(|area| {
+                let children = area.citizens.iter_mut().filter_map(|citizen| {
+                    let age = citizen.age;
+                    if age < MAX_STUDENT_AGE {
+                        Some((Some((citizen.age, citizen)), None))
+                    } else if Some(OccupationType::Teaching) == citizen.detailed_occupation() {
+                        teacher_count += 1;
+                        Some((None, Some(citizen)))
+                    } else { None }
+                }).fold({
+                            let mut data = Vec::new();
+                            for _ in 0..MAX_STUDENT_AGE {
+                                data.push(Vec::new());
+                            }
+                            (data, Vec::new())
+                        }, |mut acc, (student, teacher)| {
+                    if let Some((age, id)) = student {
+                        acc.0[age as usize].push(id);
+                    } else if let Some(id) = teacher {
+                        acc.1.push(id)
                     }
-                    (data, Vec::new())
-                }, |mut acc, (student, teacher)| {
-            if let Some((age, id)) = student {
-                acc.0[age as usize].push(id);
-            } else if let Some(id) = teacher {
-                acc.1.push(id)
-            }
-            acc
-        });
+                    acc
+                });
+                return children;
+            }).reduce(|| (Vec::new(), Vec::new()), |(accum_students, accum_teachers), (item_students, item_teachers)| {
+                accum_teachers.extend(item_teachers);
+                for (age, students) in item_students.into_iter().enumerate() {
+                    if accum_students.len() <= age {
+                        accum_students.push(students);
+                    } else {
+                        accum_students.get_mut(age).unwrap().extend(students);
+                    }
+                }
+                (accum_students, accum_teachers)
+            });
         debug!("{} teachers retrieved",teacher_count);
         debug!("There are {} age groups, with {} students and {} teachers",students.len(),students.iter().map(|age_group|age_group.len()).sum::<usize>(),teachers.len());
         // The OSM Voronoi School Lookup
         let school_lookup = self.osm_data.voronoi().get(&TagClassifiedBuilding::School).expect("No schools exist!");
         // Function to find the the closest school, to the given citizen
-        let building_locations = self.osm_data.building_locations.get(&TagClassifiedBuilding::School).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve school buildings!") })?;
+        let building_locations = self.osm_data.building_locations.get(&TagClassifiedBuilding::School).ok_or_else(|| SimError::InitializationError {
+            message: format!("Couldn't retrieve school buildings!")
+        })?;
         debug!("There are {} raw schools",building_locations.len());
 
         let all_boundaries = &self.osm_data.building_boundaries;
@@ -264,13 +293,13 @@ impl SimulatorBuilder {
         }
 
         let output_areas = &mut self.output_areas;
-
+        let output_area_lookup = self.output_area_lookup;
         let building_boundaries = &self.osm_data.building_boundaries;
         let output_areas_polygons = &self.output_areas_polygons;
-        // Function to find the closest school to a given Citizen
+// Function to find the closest school to a given Citizen
         let finding_closest_school = |citizen: &Citizen, get_multiple: bool| -> Result<Vec<&RawBuilding>, SimError> {
             let area_code = citizen.household_code.output_area_code();
-            let area = output_areas.get(&area_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve output area: {}", area_code) })?;
+            let area = output_areas.get(area_code.index() as usize).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve output area: {}", area_code) })?;
 
             let building = area.buildings.get(&citizen.household_code).ok_or_else(|| SimError::InitializationError { message: format!("Couldn't retrieve household home: {}", citizen.household_code) })?;
             Ok({
@@ -279,8 +308,8 @@ impl SimulatorBuilder {
                     let school = building_locations.get(index)?;
                     let area_codes = get_area_code_for_raw_building(school, output_areas_polygons, building_boundaries).expect("School building is not inside any Output areas!");
                     let output_area_id = area_codes.keys().next()?;
-                    //.expect("School building is not inside any Output areas!");
-                    if output_areas.contains_key(output_area_id) {
+//.expect("School building is not inside any Output areas!");
+                    if output_area_lookup.contains_key(output_area_id) {
                         Some(school)
                     } else {
                         None
@@ -290,8 +319,8 @@ impl SimulatorBuilder {
         };
 
 
-        // Groups the students/teachers, by the school they are closest to
-        // The geo point is the key, because it is the only identifier we can use
+// Groups the students/teachers, by the school they are closest to
+// The geo point is the key, because it is the only identifier we can use
         let mut citizens_per_raw_school = students.into_par_iter().enumerate().map(|(age, student)|
             {
                 let age_grouped_students_per_school = student.into_iter().filter_map(|student| {
@@ -305,7 +334,7 @@ impl SimulatorBuilder {
                             }
                         }
                         Err(e) => {
-                            warn!("Failed to assign school to student: {}",e);
+                            warn!("Failed to assign school to student: {}", e);
                             None
                         }
                     }
@@ -344,17 +373,17 @@ impl SimulatorBuilder {
         info!("Assigned Students to {} raw schools",citizens_per_raw_school.len());
 
 
-        // The amount of teachers that fail to be assigned
+// The amount of teachers that fail to be assigned
         let mut failed_teacher_count = 0;
-        // Take a two pronged approach to assigning teachers
+// Take a two pronged approach to assigning teachers
         for teacher in teachers.into_iter() {
             let mut placed = false;
             match finding_closest_school(teacher, true) {
                 Ok(schools) => {
-                    // Attempt to assign Teacher as a Teacher to the closest Available School
-                    // Available, being that it exists, and does not have enough teachers for the number of students
+// Attempt to assign Teacher as a Teacher to the closest Available School
+// Available, being that it exists, and does not have enough teachers for the number of students
 
-                    // The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
+// The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
                     let mut teacher = Some(teacher);
                     for school in &schools {
                         let school_entry = citizens_per_raw_school.get_mut(&school.center());
@@ -370,7 +399,7 @@ impl SimulatorBuilder {
                             }
                         }
                     }
-                    // If all Schools are full, fallback to adding to the closest school as Secondary Staff
+// If all Schools are full, fallback to adding to the closest school as Secondary Staff
                     if !placed {
                         for school in &schools {
                             let school_entry = citizens_per_raw_school.get_mut(&school.center());
@@ -385,7 +414,7 @@ impl SimulatorBuilder {
                     }
                 }
                 Err(e) => {
-                    warn!("Failed to assign school to teacher: {}",e);
+                    warn!("Failed to assign school to teacher: {}", e);
                 }
             }
             if !placed {
@@ -438,13 +467,17 @@ impl SimulatorBuilder {
                     schools_missing_teachers += 1;
                     return;
                 }
-                // Retrieve the Output Area, and build the School building
-                // TODO Change to Let Else when `https://github.com/rust-lang/rust/issues/87335` is stabilised
+// Retrieve the Output Area, and build the School building
+// TODO Change to Let Else when `https://github.com/rust-lang/rust/issues/87335` is stabilised
                 let output_area_id = if let Some(area) = get_area_code_for_raw_building(building, output_areas_polygons, building_boundaries) { area } else { return; };
-                let output_area_id = if let Some(area) = output_area_id.keys().next() { area } else { return; };
-                let building_id = BuildingID::new(output_area_id.clone(), BuildingType::School);
+                let output_area_code = if let Some(area) = output_area_id.keys().next() { area } else { return; };
+                let index = if let Some(index) = output_area_lookup.get(output_area_code) { index } else {
+                    return;
+                };
+                let mut output_area = if let Some(output_area) = output_areas.get_mut(*index as usize) { output_area } else { return; };
+                let building_id = BuildingID::new(output_area.id().clone(), BuildingType::School);
 
-                // Pull the Citizen ID's out of the Citizens
+// Pull the Citizen ID's out of the Citizens
                 let student_ids = students.iter().map(|age_group|
                     age_group.iter().map(|student|
                         student.id()).collect()).collect();
@@ -458,19 +491,9 @@ impl SimulatorBuilder {
                 misc_staff_total += school.offices().iter().map(|office| office.len()).sum::<usize>();
                 schools_total += 1;
 
+                output_area.buildings.insert(building_id.clone(), Box::new(school));
 
-                let output_area = output_areas.get_mut(&output_area_id).ok_or_else(|| DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::MissingKey {
-                        context: "Retrieving output area for schools".to_string(),
-                        key: output_area_id.to_string(),
-                    },
-                });
-                match output_area {
-                    Ok(output_area) => { output_area.buildings.insert(building_id.clone(), Box::new(school)); }
-                    Err(e) => { error!("{}",e) }
-                }
-
-                // Assign students and teacher to school workplace
+// Assign students and teacher to school workplace
                 for age_group in students {
                     for student in age_group {
                         student.workplace_code = building_id.clone();
@@ -501,7 +524,7 @@ impl SimulatorBuilder {
     /// Allocates that Citizen to the Workplace Building in that chosen Output Area
     pub fn build_workplaces(
         &mut self,
-        mut possible_buildings_per_area: HashMap<OutputAreaID, Vec<RawBuilding>>,
+        mut possible_buildings_per_area: HashMap<String, Vec<RawBuilding>>,
     ) -> anyhow::Result<()> {
         debug!(
             "Assigning workplaces to {} output areas ",
@@ -512,92 +535,78 @@ impl SimulatorBuilder {
 
         // Group Citizens by their workplace output area
         // NOTE This is achieved by removing citizens from self.citizens, because we cannot pass references through
-        let mut citizens_to_allocate: HashMap<OutputAreaID, HashMap<CitizenID, Citizen>> =
-            HashMap::new();
+        // The index corresponds to the Output Area
+        let mut citizens_to_allocate: Vec<Vec<CitizenID>> = vec![Vec::new(); self.output_areas.len()];
+
         // Assign workplace areas to each Citizen, per Output area
-        for (household_output_area_code, household_output_area) in &self.output_areas {
+        for household_output_area in &self.output_areas {
             // Retrieve the census data for the household output area
             let household_census_data = self
                 .census_data
-                .for_output_area_code(household_output_area_code.code().to_string())
+                .for_output_area_code(household_output_area.id().code().to_string())
                 .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::MissingKey {
                         context: "Cannot retrieve Census Data for output area ".to_string(),
-                        key: household_output_area_code.to_string(),
+                        key: household_output_area.id().to_string(),
                     },
                 })?;
 
             // For each Citizen, assign a workplace area
-            'citizens: for citizen_id in household_output_area.get_residents() {
+            'citizens: for citizen in household_output_area.citizens {
                 let mut index = 0;
-                let citizen = self.citizens.get(&citizen_id).expect(format!("Citizen {} does not exist!", citizen_id).as_str());
                 if citizen.is_student() || citizen.detailed_occupation() == Some(OccupationType::Teaching) {
                     continue 'citizens;
                 }
-                let workplace_output_area_code: OutputAreaID =
+                // Loop until we find a Valid area, otherwise skip this Citizen
+                let workplace_output_area_index: u32 =
                     loop {
-                        // TODO Redo this
                         let code = household_census_data.get_random_workplace_area(&mut thread_rng()).context("Failed to retrieve random workplace area")?;
-                        let code = Some(OutputAreaID::from_code(code));
-                        let code = if let Some(code) = code {
-                            if !self.output_areas.contains_key(&code) {
-                                //warn!("Output area: {} doesn't exist!",output_area_code);
-                                None
-                            } else if possible_buildings_per_area.get(&code).is_none() {
-                                //warn!("Buildings don't exist for area: {}",output_area_code);
-                                None
-                            } else {
-                                Some(code)
+                        if let Some(id) = self.output_area_lookup.get(&code) {
+                            if possible_buildings_per_area.get(&code).is_some() {
+                                break *id;
                             }
-                        } else { None };
-                        if let Some(code) = code {
-                            break code;
                         }
                         index += 1;
                         if index > 50 {
-                            error!("Failed to generate code for Citizen: {}",citizen_id);
+                            error!("Failed to generate code for Citizen: {}",citizen.id());
                             continue 'citizens;
                         }
                     };
-                let citizens_to_add = citizens_to_allocate.entry(workplace_output_area_code).or_default();
-                citizens_to_add.insert(citizen_id, self.citizens.remove(&citizen_id).expect(format!("Citizen {} does not exist!", citizen_id).as_str()));
+                let citizens_to_add = citizens_to_allocate.get_mut(workplace_output_area_index as usize).expect(&format!("Output area {} doesn't exist", index));
+                citizens_to_add.push(citizen.id());
             }
         }
-        debug!("Creating workplace buildings for: {:?} Citizens and {} Output Areas",citizens_to_allocate.iter().map(|(_,citizens)|citizens.len()).sum::<usize>(),citizens_to_allocate.len());
-        debug!("{} Citizens have not been assigned a workplace area!", self.citizens.len());
+        debug!("Creating workplace buildings for: {:?} Citizens and {} Output Areas",citizens_to_allocate.iter().map(|citizens|citizens.len()).sum::<usize>(),citizens_to_allocate.len());
+        debug!("{} Citizens have not been assigned a workplace area!", self.citizen_output_area_lookup.len()-citizens_to_allocate.len());
         // Create buildings for each Workplace output area
-        'citizen_allocation_loop: for (workplace_area_code, mut citizens) in citizens_to_allocate {
+        'citizen_allocation_loop: for (workplace_area_index, mut citizens) in citizens_to_allocate.into_iter().enumerate() {
             // Retrieve the buildings or skip this area
-            let possible_buildings = match possible_buildings_per_area.get_mut(&workplace_area_code) {
-                Some(buildings) => buildings,
+            let workplace_output_area = match self.output_areas.get_mut(workplace_area_index) {
+                Some(workplace) => workplace,
                 None => {
-                    error!("No Workplace buildings exist for Output Area: {}",workplace_area_code);
+                    error!("Workplace output area {} doesn't exist!",workplace_area_index);
                     continue 'citizen_allocation_loop;
                 }
             };
-
-            match SimulatorBuilder::assign_buildings_per_output_area(workplace_area_code.clone(), citizens.values_mut().collect(), possible_buildings)
-            {
-                Ok(buildings) => {
-                    match self
-                        .output_areas
-                        .get_mut(&workplace_area_code)
-                        .ok_or_else(|| DataLoadingError::ValueParsingError {
-                            source: ParseErrorType::MissingKey {
-                                context: "Retrieving output area for building workplaces ".to_string(),
-                                key: workplace_area_code.to_string(),
-                            },
-                        }) {
-                        Ok(workplace_output_area) => workplace_output_area.buildings.extend(buildings),
-                        Err(e) => error!("Failed to retrieve workplace output area: {}, Error: {}",workplace_area_code,e),
-                    }
+            let possible_buildings = match possible_buildings_per_area.get_mut(workplace_output_area.id().code()) {
+                Some(buildings) => buildings,
+                None => {
+                    error!("No Workplace buildings exist for Output Area: {}",workplace_output_area.id());
+                    continue 'citizen_allocation_loop;
                 }
+            };
+            let citizens = citizens.iter().map(|id| {
+                let output_area: &mut OutputArea = self.output_areas.get_mut(id.global_index() as usize).expect("Output area doesn't exist!");
+                let citizen = output_area.citizens.get_mut(id.local_index() as usize).expect("Citizen doesn't exist in Output Area!");
+                return citizen;
+            }).collect();
+            match SimulatorBuilder::assign_buildings_per_output_area(workplace_output_area.id().clone(), citizens, possible_buildings)
+            {
+                Ok(buildings) => workplace_output_area.buildings.extend(buildings),
                 Err(e) => {
-                    error!("Failed to assign buildings for Output Area: {}, Error: {}",workplace_area_code,e);
+                    error!("Failed to assign buildings for Output Area: {}, Error: {}",workplace_output_area.id(),e);
                 }
             }
-            // Add the Citizens back to self
-            citizens.into_iter().for_each(|(id, citizen)| { if self.citizens.insert(id, citizen).is_some() { panic!("Citizen {} has been duplicated", id); } });
         }
         Ok(())
     }
@@ -811,9 +820,14 @@ impl SimulatorBuilder {
 
     pub fn apply_initial_infections(&mut self, rng: &mut dyn RngCore) -> anyhow::Result<()> {
         for _ in 0..STARTING_INFECTED_COUNT {
-            let citizen = self
+            let citizen = self.output_areas.choose(rng)
+                .ok_or_else(|| DataLoadingError::ValueParsingError {
+                    source: ParseErrorType::IsEmpty {
+                        message: "No citizens exist in the output areas for seeding the disease"
+                            .to_string(),
+                    },
+                }).context("Initialisation of disease!")?
                 .citizens
-                .values_mut()
                 .choose(rng)
                 .ok_or_else(|| DataLoadingError::ValueParsingError {
                     source: ParseErrorType::IsEmpty {
@@ -836,11 +850,13 @@ impl SimulatorBuilder {
             census_data,
             osm_data,
             output_areas: Default::default(),
+            output_area_lookup: Default::default(),
             output_areas_polygons,
             disease_model: DiseaseModel::covid(),
-            citizens: Default::default(),
+            citizen_output_area_lookup: Default::default(),
         })
     }
+
     pub fn build(&mut self) -> anyhow::Result<()> {
         let mut timer = Timer::default();
         let mut rng = thread_rng();
@@ -869,7 +885,7 @@ impl SimulatorBuilder {
 
 
         // TODO Currently any buildings remaining are treated as Workplaces
-        let possible_workplaces: HashMap<OutputAreaID, Vec<RawBuilding>> =
+        let possible_workplaces: HashMap<String, Vec<RawBuilding>> =
             possible_buildings_per_area
                 .drain()
                 .filter_map(|(area, mut classified_buildings)| {
@@ -907,8 +923,9 @@ impl SimulatorBuilder {
             .context("Failed to build workplaces")?;
         timer.code_block_finished("Generated workplaces for {} Output Areas")?;
 
-        let work_from_home_count: u32 = self.citizens.par_iter().map(|(_, citizen)| if citizen.household_code.eq(&citizen.workplace_code) { 1 } else { 0 }).sum();
-        debug!("{} out of {} Citizens {:.1}%, are working from home.",work_from_home_count.to_formatted_string(&NUMBER_FORMATTING),self.citizens.len().to_formatted_string(&NUMBER_FORMATTING),(work_from_home_count as f64/self.citizens.len() as f64)*100.0);
+        let work_from_home_count: u32 = self.output_areas.par_iter().map(|area|
+            area.citizens.par_iter().map(|citizen| if citizen.household_code.eq(&citizen.workplace_code) { 1 } else { 0 }).sum::<u32>()).sum();
+        debug!("{} out of {} Citizens {:.1}%, are working from home.",work_from_home_count.to_formatted_string(&NUMBER_FORMATTING),self.citizen_output_area_lookup.len().to_formatted_string(&NUMBER_FORMATTING),(work_from_home_count as f64/self.citizen_output_area_lookup.len() as f64)*100.0);
         // Infect random citizens
         self.apply_initial_infections(&mut rng)
             .context("Failed to create initial infections")?;
@@ -916,24 +933,9 @@ impl SimulatorBuilder {
         timer.code_block_finished("Applied initial infections")?;
         debug!(
             "Starting Statistics: There are {} total Citizens, {} Output Areas",
-            self.citizens.len().to_formatted_string(&NUMBER_FORMATTING),
+            self.citizen_output_area_lookup.len().to_formatted_string(&NUMBER_FORMATTING),
             self.output_areas.len().to_formatted_string(&NUMBER_FORMATTING)
         );
-        assert_eq!(
-            self.citizens.len() as u32,
-            self.output_areas
-                .iter()
-                .map(|area| area.1.total_residents)
-                .sum::<u32>()
-        );
-        // TODO Move this earlier in the process
-        let mut output_areas = &mut self.output_areas;
-        self.citizens.drain().for_each(|(citizen_id, citizen)| {
-            let code = citizen.current_building_position.output_area_code();
-            let area = output_areas.get_mut(&code).ok_or_else(|| warn!("Citizen doesn't belong to any output area!")).unwrap();
-            area.citizens.insert(citizen_id, citizen);
-        });
-
         Ok(())
     }
 }
@@ -941,14 +943,13 @@ impl SimulatorBuilder {
 /// Returns a list of Output Areas that the given building is inside
 ///
 /// If the building is in multiple Areas, it is duplicated
-fn get_area_code_for_raw_building(building: &RawBuilding, output_area_lookup: &PolygonContainer<String>, building_boundaries: &HashMap<BuildingBoundaryID, geo_types::Polygon<i32>>) -> Option<HashMap<OutputAreaID, Vec<RawBuilding>>> {
+fn get_area_code_for_raw_building(building: &RawBuilding, output_area_lookup: &PolygonContainer<String>, building_boundaries: &HashMap<BuildingBoundaryID, geo_types::Polygon<i32>>) -> Option<HashMap<String, Vec<RawBuilding>>> {
     let boundary = building_boundaries.get(&building.boundary_id());
     if let Some(boundary) = boundary {
         if let Ok(areas) = output_area_lookup.find_polygons_containing_polygon(boundary) {
-            let area_locations = areas.map(|area|
-                OutputAreaID::from_code(area.to_string()))
+            let area_locations = areas.map(|area| area.to_string())
                 .zip(std::iter::repeat(vec![*building]))
-                .collect::<HashMap<OutputAreaID, Vec<RawBuilding>>>();
+                .collect::<HashMap<String, Vec<RawBuilding>>>();
             return Some(area_locations);
         }
     } else {
@@ -962,7 +963,7 @@ pub fn parallel_assign_buildings_to_output_areas(
     building_boundaries: &HashMap<BuildingBoundaryID, geo_types::Polygon<i32>>,
     building_locations: &HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
     output_area_lookup: &PolygonContainer<String>,
-) -> HashMap<OutputAreaID, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
+) -> HashMap<String, HashMap<TagClassifiedBuilding, Vec<RawBuilding>>> {
     building_locations.into_par_iter().filter_map(|(building_type, possible_building_locations)|
         {
             if TagClassifiedBuilding::School == *building_type {
@@ -982,8 +983,8 @@ pub fn parallel_assign_buildings_to_output_areas(
             });
             Some((*building_type, area_codes))
         }).fold(HashMap::new, |mut a: HashMap<
-        OutputAreaID,
-        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>, b: (TagClassifiedBuilding, HashMap<OutputAreaID, Vec<RawBuilding>>)| {
+        String,
+        HashMap<TagClassifiedBuilding, Vec<RawBuilding>>>, b: (TagClassifiedBuilding, HashMap<String, Vec<RawBuilding>>)| {
         for (area_code, buildings) in b.1 {
             let area_entry = a.entry(area_code).or_default();
             let class_entry = area_entry.entry(b.0).or_default();

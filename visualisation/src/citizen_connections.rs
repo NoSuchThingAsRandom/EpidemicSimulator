@@ -44,7 +44,7 @@ pub fn build_citizen_graph(
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
     citizens.for_each(|citizen| {
-        graph.add_node(citizen.id().as_u128());
+        graph.add_node(citizen.uuid_id().as_u128());
     });
     area_ref.values().for_each(|area| {
         let area = area.lock().unwrap();
@@ -53,8 +53,8 @@ pub fn build_citizen_graph(
             for outer_citizen in &citizens {
                 for inner_citizen in &citizens {
                     graph.add_edge(
-                        outer_citizen.id().as_u128(),
-                        inner_citizen.id().as_u128(),
+                        outer_citizen.uuid_id().as_u128(),
+                        inner_citizen.uuid_id().as_u128(),
                         1,
                     );
                 }
