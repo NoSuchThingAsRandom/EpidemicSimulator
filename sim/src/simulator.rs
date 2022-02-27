@@ -131,7 +131,8 @@ struct GeneratedExposures {
         Vec<(CitizenID, bool)>,
     >,
     /// The list of buildings, with the amount of exposures that occurred
-    building_exposure_list: HashMap<OutputAreaID, HashMap<BuildingID, Vec<CitizenID>>>,
+    ///
+    building_exposure_list: Vec<Vec<Vec<CitizenID>>>,
 }
 
 impl AddAssign for GeneratedExposures {
@@ -155,7 +156,7 @@ pub struct Simulator {
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
-    pub output_areas: RwLock<HashMap<OutputAreaID, Mutex<OutputArea>>>,
+    pub output_areas: RwLock<Vec<Mutex<OutputArea>>>,
     pub citizen_output_area_lookup: RwLock<HashMap<CitizenID, Mutex<OutputAreaID>>>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
     pub statistics: Statistics,
@@ -229,7 +230,7 @@ impl Simulator {
             // Apply timestep, and generate exposures
             let mut area_citizens = HashMap::with_capacity(area.citizens.len());
             let mut moving_citizens: HashMap<OutputAreaID, HashMap<CitizenID, Citizen>> = HashMap::new();
-            for (id, mut citizen) in area.citizens.drain() {
+            for (mut citizen) in area.citizens.drain() {
                 let need_to_move = citizen.execute_time_step(
                     hour, disease, lockdown,
                 ).is_some();

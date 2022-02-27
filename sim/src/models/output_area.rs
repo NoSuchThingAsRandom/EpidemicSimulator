@@ -89,7 +89,7 @@ pub struct OutputArea {
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
     pub citizens: Vec<Citizen>,
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
-    pub buildings: HashMap<BuildingID, Box<dyn Building + Sync + Send>>,
+    pub buildings: Vec<Box<dyn Building + Sync + Send>>,
     /// A polygon for drawing this output area
     pub polygon: geo_types::Polygon<i32>,
     pub total_residents: u32,
@@ -113,7 +113,7 @@ impl OutputArea {
             output_area_id,
             citizens_eligible_for_vaccine: None,
             citizens: Default::default(),
-            buildings: HashMap::default(),
+            buildings: Default::default(),
             polygon,
             total_residents: 0,
             interventions: Default::default(),
@@ -147,7 +147,7 @@ impl OutputArea {
             if let Some(location) = possible_buildings.next() {
                 assert_eq!(location.classification(), TagClassifiedBuilding::Household);
                 let household_building_id =
-                    BuildingID::new(self.output_area_id.clone(), BuildingType::Household);
+                    BuildingID::new(self.output_area_id.clone(), BuildingType::Household, self.buildings.len() as u32);
                 let mut household =
                     Household::new(household_building_id.clone(), location.center());
                 for _ in 0..household_size {
@@ -177,12 +177,7 @@ impl OutputArea {
                     generated_population += 1;
                     global_citizen_index += 1;
                 }
-                assert!(
-                    self.buildings
-                        .insert(household_building_id, Box::new(household))
-                        .is_none(),
-                    "A collision has occurred with building ID's"
-                );
+                self.buildings.push(Box::new(household));
                 if generated_population >= pop_count[PersonType::All] {
                     break;
                 }
@@ -202,7 +197,7 @@ impl OutputArea {
     }
     fn extract_occupants_for_building_type<T: 'static + Building>(&self) -> Vec<CitizenID> {
         let mut citizens = Vec::new();
-        for building in self.buildings.values() {
+        for building in &self.buildings {
             let building = building.as_any();
             if let Some(household) = building.downcast_ref::<T>() {
                 citizens.extend(household.occupants());
@@ -232,14 +227,14 @@ impl OutputArea {
 
 impl Clone for OutputArea {
     fn clone(&self) -> Self {
-        let mut buildings_copy: HashMap<BuildingID, Box<dyn Building + Sync + Send>> =
-            HashMap::with_capacity(self.buildings.len());
-        for (code, current_building) in &self.buildings {
+        let mut buildings_copy: Vec<Box<dyn Building + Sync + Send>> =
+            Vec::with_capacity(self.buildings.len());
+        for (current_building) in &self.buildings {
             let current_building = current_building.as_any();
             if let Some(household) = current_building.downcast_ref::<Household>() {
-                buildings_copy.insert(code.clone(), Box::new(household.clone()));
+                buildings_copy.push(Box::new(household.clone()));
             } else if let Some(workplace) = current_building.downcast_ref::<Workplace>() {
-                buildings_copy.insert(code.clone(), Box::new(workplace.clone()));
+                buildings_copy.push(Box::new(workplace.clone()));
             } else {
                 panic!("Unsupported building type, for cloning!")
             }

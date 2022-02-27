@@ -21,6 +21,7 @@
 use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Formatter};
 
+use enum_map::Enum;
 use lazy_static::lazy_static;
 use rand::distributions::Distribution;
 use rand::distributions::Uniform;
@@ -280,7 +281,7 @@ pub enum Occupation {
 }
 
 /// The detailed job type of a Citizen
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, EnumIter, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, EnumIter, Enum, Hash)]
 pub enum OccupationType {
     Manager,
     Professional,
@@ -291,6 +292,22 @@ pub enum OccupationType {
     Sales,
     MachineOperatives,
     Teaching,
+}
+
+impl OccupationType {
+    pub fn get_index(&self) -> usize {
+        match self {
+            OccupationType::Manager => { 0 }
+            OccupationType::Professional => { 1 }
+            OccupationType::Technical => { 2 }
+            OccupationType::Administrative => { 3 }
+            OccupationType::SkilledTrades => { 4 }
+            OccupationType::Caring => { 5 }
+            OccupationType::Sales => { 6 }
+            OccupationType::MachineOperatives => { 7 }
+            OccupationType::Teaching => { 8 }
+        }
+    }
 }
 
 impl TryFrom<RawOccupationType> for OccupationType {

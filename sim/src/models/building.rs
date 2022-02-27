@@ -64,7 +64,8 @@ pub enum BuildingType {
 #[derive(Clone, Debug, Serialize, Hash, PartialEq, Eq)]
 pub struct BuildingID {
     output_area_id: OutputAreaID,
-    building_id: uuid::Uuid,
+    building_index: u32,
+    building_unique_id: uuid::Uuid,
     building_type: BuildingType,
 }
 
@@ -85,29 +86,25 @@ impl BuildingID {
     /// assert_eq!(building_code.area_type(), area_type);
     ///
     /// ```
-    pub fn new(output_area_id: OutputAreaID, building_type: BuildingType) -> BuildingID {
+    pub fn new(output_area_id: OutputAreaID, building_type: BuildingType, building_index: u32) -> BuildingID {
         BuildingID {
             output_area_id,
-            building_id: Uuid::new_v4(),
+            building_index,
+            building_unique_id: Uuid::new_v4(),
             building_type,
         }
     }
 
-    /// Creates a new Building Code, but in the same Output Area and Area Type as the given BuildingCode
-    pub(crate) fn new_from(other: BuildingID) -> Self {
-        BuildingID {
-            output_area_id: other.output_area_id.clone(),
-            building_id: Default::default(),
-            building_type: other.building_type,
-        }
-    }
     /// Returns the `OutputArea` code
     pub fn output_area_code(&self) -> OutputAreaID {
         self.output_area_id.clone()
     }
     /// Returns the unique ID of this `BuildingCode`
     pub fn building_id(&self) -> Uuid {
-        self.building_id
+        self.building_unique_id
+    }
+    pub fn building_index(&self) -> u32 {
+        self.building_index
     }
 }
 
@@ -116,7 +113,7 @@ impl Display for BuildingID {
         write!(
             f,
             "Output Area: {}, Type: {:?}, Building ID: {}",
-            self.output_area_id, self.building_type, self.building_id
+            self.output_area_id, self.building_type, self.building_unique_id
         )
     }
 }
