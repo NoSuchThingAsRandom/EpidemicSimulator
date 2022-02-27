@@ -38,28 +38,27 @@ pub fn build_citizen_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
     let area_ref = simulation.output_areas.read().unwrap();
-    let citizen_lookup_ref = simulation.citizen_output_area_lookup.read().unwrap();
-    let citizens = citizen_lookup_ref.keys();
+    let citizens = simulation.citizen_output_area_lookup.read().unwrap();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
-    citizens.for_each(|citizen| {
-        graph.add_node(citizen.uuid_id().as_u128());
-    });
-    area_ref.values().for_each(|area| {
+    area_ref.iter().for_each(|area| {
         let area = area.lock().unwrap();
-        for (_, building) in &area.buildings {
-            let citizens = building.occupants();
-            for outer_citizen in &citizens {
-                for inner_citizen in &citizens {
-                    graph.add_edge(
-                        outer_citizen.uuid_id().as_u128(),
-                        inner_citizen.uuid_id().as_u128(),
-                        1,
-                    );
+        area.citizens.iter().for_each(|citizen| {
+            graph.add_node(citizen.id().uuid_id().as_u128());
+            for (building) in &area.buildings {
+                let citizens = building.occupants();
+                for outer_citizen in &citizens {
+                    for inner_citizen in &citizens {
+                        graph.add_edge(
+                            outer_citizen.uuid_id().as_u128(),
+                            inner_citizen.uuid_id().as_u128(),
+                            1,
+                        );
+                    }
                 }
             }
-        }
+        });
     });
     graph
 }
@@ -92,11 +91,11 @@ pub fn build_building_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
     let area_ref = simulation.output_areas.read().unwrap();
-    let citizens: HashMap<CitizenID, Citizen> = area_ref.iter().map(|area| area.1.lock().unwrap().citizens.clone()).flatten().collect();
+    let citizens: Vec<Citizen> = area_ref.iter().map(|area| area.lock().unwrap().citizens.clone()).flatten().collect();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
-    citizens.values().for_each(|citizen| {
+    citizens.iter().for_each(|citizen| {
         let weight = graph.edge_weight_mut(
             citizen.household_code.building_id().as_u128(),
             citizen.workplace_code.building_id().as_u128(),

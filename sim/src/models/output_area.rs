@@ -52,8 +52,8 @@ impl OutputAreaID {
     pub fn code(&self) -> &String {
         &self.code
     }
-    pub fn index(&self) -> u32 {
-        self.index
+    pub fn index(&self) -> usize {
+        self.index as usize
     }
 }
 
@@ -212,10 +212,10 @@ impl OutputArea {
         self.extract_occupants_for_building_type::<Workplace>()
     }
     pub fn get_citizen(&self, citizen_id: CitizenID) -> Option<&Citizen> {
-        self.citizens.get(citizen_id.local_index() as usize)
+        self.citizens.get(citizen_id.local_index())
     }
     pub fn get_citizen_mut(&mut self, citizen_id: CitizenID) -> Option<&mut Citizen> {
-        self.citizens.get_mut(citizen_id.local_index() as usize)
+        self.citizens.get_mut(citizen_id.local_index())
     }
     pub fn id(&self) -> OutputAreaID {
         self.output_area_id.clone()

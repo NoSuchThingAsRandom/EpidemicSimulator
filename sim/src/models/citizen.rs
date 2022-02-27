@@ -66,14 +66,14 @@ impl CitizenID {
         }
     }
 
-    pub fn global_index(&self) -> u32 {
-        self.global_index
+    pub fn global_index(&self) -> usize {
+        self.global_index as usize
     }
     pub fn set_global_index(&mut self, global_index: u32) {
         self.global_index = global_index;
     }
-    pub fn local_index(&self) -> u32 {
-        self.local_index
+    pub fn local_index(&self) -> usize {
+        self.local_index as usize
     }
     pub fn set_local_index(&mut self, local_index: u32) {
         self.local_index = local_index;
@@ -258,6 +258,9 @@ impl Citizen {
     }
     pub fn is_infected(&self) -> bool {
         matches!(self.disease_status, DiseaseStatus::Infected(_))
+    }
+    pub fn set_local_index(&mut self, new_index: usize) {
+        self.id.set_local_index(new_index as u32)
     }
 }
 
