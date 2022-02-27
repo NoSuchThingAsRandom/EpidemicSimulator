@@ -32,7 +32,7 @@ use num_format::Locale::{am, ar, en};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
@@ -131,8 +131,8 @@ struct GeneratedExposures {
         Vec<(CitizenID, bool)>,
     >,
     /// The list of buildings, with the amount of exposures that occurred
-    ///
-    building_exposure_list: Vec<Vec<Vec<CitizenID>>>,
+    /// Output Area Index -> Building Exposure Index?
+    building_exposure_list: Vec<HashMap<BuildingID, Vec<CitizenID>>>,
 }
 
 impl AddAssign for GeneratedExposures {
@@ -141,8 +141,8 @@ impl AddAssign for GeneratedExposures {
             let entry = self.public_transport_pre_generated.entry(building).or_default();
             entry.extend(citizens);
         }
-        for (area, exposures) in rhs.building_exposure_list {
-            let area_entry = self.building_exposure_list.entry(area).or_default();
+        for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
+            let area_entry = self.building_exposure_list.get_mut(area_index).expect("Generated Exposures have mismatched Area Counts");
             for (building, citizens) in exposures {
                 let area_entry = area_entry.entry(building).or_default();
                 area_entry.extend(citizens);
@@ -153,11 +153,13 @@ impl AddAssign for GeneratedExposures {
 
 //#[derive(Clone)]
 pub struct Simulator {
+    /// This maps the String code of an Output Area to it's index
+    pub output_area_lookup: HashMap<String, u32>,
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
     pub output_areas: RwLock<Vec<Mutex<OutputArea>>>,
-    pub citizen_output_area_lookup: RwLock<HashMap<CitizenID, Mutex<OutputAreaID>>>,
+    pub citizen_output_area_lookup: RwLock<Vec<Mutex<OutputAreaID>>>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
     pub statistics: Statistics,
     interventions: InterventionStatus,
@@ -219,18 +221,18 @@ impl Simulator {
         let disease = &self.disease_model;
         let lockdown = self.interventions.lockdown_enabled();
         let mut output_areas = self.output_areas.write().unwrap();
-
+        let output_area_count = output_areas.len();
 
         // Update the Position and Schedule of each Citizen
         // If a Citizen is changing area, then they are moved into `moved_citizens`
         // For any Citizens that are infected, build a list of infected buildings
-        let (statistics, exposures, moved_citizens) = output_areas.par_iter_mut().map(|(area_code, mut area)| {
+        let (statistics, exposures, moved_citizens) = output_areas.par_iter_mut().map(|(mut area)| {
             let mut area = area.lock().unwrap();
             let (mut statistics, mut exposures) = (Statistics::from_hour(hour), GeneratedExposures::default());
             // Apply timestep, and generate exposures
-            let mut area_citizens = HashMap::with_capacity(area.citizens.len());
-            let mut moving_citizens: HashMap<OutputAreaID, HashMap<CitizenID, Citizen>> = HashMap::new();
-            for (mut citizen) in area.citizens.drain() {
+            let mut area_citizens = Vec::with_capacity(area.citizens.len());
+            let mut moving_citizens: Vec<Vec<Citizen>> = vec![Vec::new(); output_area_count];
+            for (mut citizen) in area.citizens.drain(0..) {
                 let need_to_move = citizen.execute_time_step(
                     hour, disease, lockdown,
                 ).is_some();
@@ -244,49 +246,48 @@ impl Simulator {
 
                     transport_session.push((citizen.id(), citizen.is_infected()));
                 } else if let Infected(_) = citizen.disease_status {
-                    let area_entry = exposures.building_exposure_list.entry(citizen.current_building_position.output_area_code()).or_default();
+                    let area_entry = exposures.building_exposure_list.get_mut(citizen.current_building_position.output_area_code().index()).expect("Output area doesn't exist!");
                     let entry = area_entry
                         .entry(citizen.current_building_position.clone())
                         .or_default();
                     entry.push(citizen.id());
                 }
                 if need_to_move {
-                    let entry = moving_citizens.entry(citizen.current_building_position.output_area_code()).or_default();
-                    entry.insert(id, citizen);
+                    let entry = moving_citizens.get_mut(citizen.current_building_position.output_area_code().index()).expect("Couldn't retrieve Output Area");
+                    entry.push(citizen);
                 } else {
-                    area_citizens.insert(id, citizen);
+                    citizen.set_local_index(area_citizens.len());
+                    area_citizens.push(citizen);
                 }
             }
             area.citizens = area_citizens;
             (statistics, exposures, moving_citizens)
-        }).reduce(|| (Statistics::from_hour(hour), GeneratedExposures::default(), HashMap::new()), |(mut a_stats, mut a_exposures, mut a_to_move), (b_stats, b_exposures, b_to_move)| {
+        }).reduce(|| (Statistics::from_hour(hour), GeneratedExposures::default(), Vec::new()), |(mut a_stats, mut a_exposures, mut a_to_move), (b_stats, b_exposures, b_to_move)| {
             a_stats += b_stats;
             a_exposures += b_exposures;
-            for (area, citizens) in b_to_move {
-                let entry = a_to_move.entry(area).or_default();
-                for (id, citizen) in citizens {
-                    entry.insert(id, citizen);
-                }
+            for (area_index, citizens) in b_to_move.into_iter().enumerate() {
+                let area = a_to_move.get_mut(area_index).expect("Generate Exposures have mismatched Area Counts");
+                area.extend(citizens);
             }
             (a_stats, a_exposures, a_to_move)
         });
         let mut citizen_lookup = self.citizen_output_area_lookup.write().unwrap();
-        for (area, citizens) in moved_citizens {
-            match output_areas.get_mut(&area) {
+        for (area_index, citizens) in moved_citizens.into_iter().enumerate() {
+            match output_areas.get_mut(area_index) {
                 Some(area) => {
                     let mut area = area.lock().unwrap();
-                    for (id, citizen) in citizens {
-                        match citizen_lookup.get_mut(&id) {
-                            Some(lookup_entry) => { *lookup_entry = Mutex::new(area.output_area_id.clone()); }
+                    for (citizen_index, mut citizen) in citizens.into_iter().enumerate() {
+                        match citizen_lookup.get_mut(citizen_index) {
+                            Some(lookup_entry) => { *lookup_entry = Mutex::new(area.id().clone()); }
                             None => {
-                                warn!("Citizen {} does not have a lookup entry!",id);
-                                citizen_lookup.insert(id, Mutex::new(area.output_area_id.clone()));
+                                panic!("Citizen {} does not have a lookup entry!", citizen_index);
                             }
                         }
-                        area.citizens.insert(id, citizen);
+                        citizen.set_local_index(area.citizens.len());
+                        area.citizens.push(citizen);
                     }
                 }
-                None => error!("Area {} doesn't exist!",area)
+                None => error!("Area {} doesn't exist!",area_index)
             };
         }
         self.statistics += statistics;
@@ -301,10 +302,10 @@ impl Simulator {
         let output_areas = &self.output_areas;
         let mut statistics = &mut self.statistics;
         // Apply building exposures
-        let exposure_statistics: Vec<ID> = exposures.building_exposure_list.par_iter().map(|(area_id, building_exposures)| -> Vec<ID> {
+        let exposure_statistics: Vec<ID> = exposures.building_exposure_list.par_iter().enumerate().map(|(area_index, building_exposures)| -> Vec<ID> {
             let mut exposures = Vec::new();
             let output_areas = output_areas.read().unwrap();
-            let area = match output_areas.get(&area_id).context("Failed to retrieve Output Area") {
+            let area = match output_areas.get(area_index).context("Failed to retrieve Output Area") {
                 Ok(area) => { area }
                 Err(e) => {
                     error!("{:?}",e);
@@ -313,7 +314,7 @@ impl Simulator {
             };
             let mut area = area.lock().unwrap();
             for (building_id, infected_citizens) in building_exposures {
-                let building = &area.buildings.get(&building_id).context(format!(
+                let building = &area.buildings.get(building_id.building_index()).context(format!(
                     "Failed to retrieve exposure building {}",
                     building_id
                 ));
@@ -328,7 +329,7 @@ impl Simulator {
                 let building = building.as_ref();
                 let exposure_count = infected_citizens.len();
                 for citizen_id in building.find_exposures(infected_citizens) {
-                    let mut citizen = match area.citizens.get_mut(&citizen_id).context("Cannot expose Citizen, as they do not exist!")
+                    let mut citizen = match area.citizens.get_mut(citizen_id.local_index()).context("Cannot expose Citizen, as they do not exist!")
                     {
                         Ok(citizen) => { citizen }
                         Err(e) => {
@@ -412,34 +413,24 @@ impl Simulator {
         for citizen_id in citizens {
             let mut area_ref = self.output_areas.write().unwrap();
             let area_lookup_ref = self.citizen_output_area_lookup.read().unwrap();
-            let area_id = area_lookup_ref.get(&citizen_id).context(format!("Citizen {}, does not exist in Output Area Lookup", citizen_id))?;
+            let area_id = area_lookup_ref.get(citizen_id.global_index()).context(format!("Citizen {}, does not exist in Output Area Lookup", citizen_id))?;
             let area_id = area_id.lock().unwrap();
-            let mut area = area_ref.get_mut(&area_id).context(format!("Area id {} does not exist!", area_id))?;
+            let mut area = area_ref.get_mut(area_id.index()).context(format!("Area id {} does not exist!", area_id))?;
             let mut area = area.lock().unwrap();
-            let citizen = area.citizens.get_mut(&citizen_id);
-
-
-            match citizen {
-                Some(citizen) => {
-                    if citizen.is_susceptible()
-                        && citizen.expose(
-                        exposure_count,
-                        &self.disease_model,
-                        &self.interventions.mask_status,
-                        &mut self.rng,
-                    )
-                    {
-                        self.statistics
-                            .citizen_exposed(location.clone())
-                            .context(format!("Exposing citizen {}", citizen_id))?;
-
-                        if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
-                            vaccine_list.remove(&citizen_id);
-                        }
-                    }
-                }
-                None => {
-                    return Err(SimError::MissingCitizen { citizen_id: citizen_id.to_string() }).context("Cannot expose Citizen, as they do not exist!");
+            let citizen = area.citizens.get_mut(citizen_id.local_index()).context("Citizen does not exist in Ouptut Area!")?;
+            if citizen.is_susceptible()
+                && citizen.expose(
+                exposure_count,
+                &self.disease_model,
+                &self.interventions.mask_status,
+                &mut self.rng,
+            )
+            {
+                self.statistics
+                    .citizen_exposed(location.clone())
+                    .context(format!("Exposing citizen {}", citizen_id))?;
+                if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
+                    vaccine_list.remove(&citizen_id);
                 }
             }
         }
@@ -447,6 +438,7 @@ impl Simulator {
     }
 
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
+        // TODO Check vaccinations -> `citizens_eligible_for_vaccine` still works?
         let infected_percent = self.statistics.infected_percentage();
         //debug!("Infected percent: {}",infected_percent);
         let new_interventions = self.interventions.update_status(infected_percent);
@@ -457,13 +449,13 @@ impl Simulator {
                         "Lockdown is enabled at hour {}",
                         self.statistics.time_step()
                     );
-                    self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().for_each(|(id, area)| {
+                    // TODO THIS IS BROKEN, and Citizens are gonna get stuck...
+                    self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().for_each(|(area)| {
                         let mut area = area.lock().unwrap();
                         // Send every Citizen home
-                        for (_id, mut citizen) in area.citizens.iter_mut() {
-                            ;
+                        for (mut citizen) in area.citizens.iter_mut() {
                             let home = citizen.household_code.clone();
-                            citizen.current_building_position = home;
+                            //citizen.current_building_position = home;
                         }
                     });
                 }
@@ -472,14 +464,13 @@ impl Simulator {
                         "Starting vaccination program at hour: {}",
                         self.statistics.time_step()
                     );
-                    let mut eligible = self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().fold(|| HashSet::new(), |mut accum, (id, area)| {
+                    let mut eligible = self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().fold(|| HashSet::new(), |mut accum, area| {
                         let area = area.lock().unwrap();
-                        area.citizens.iter().for_each(|(id, citizen)| {
+                        area.citizens.iter().for_each(|citizen| {
                             if citizen.disease_status == DiseaseStatus::Susceptible {
-                                accum.insert(*id);
+                                accum.insert(citizen.id());
                             }
                         });
-
                         accum
                     }).reduce(|| HashSet::new(), |mut a, b| {
                         for entry in b {
@@ -508,15 +499,15 @@ impl Simulator {
             for citizen_id in chosen {
                 let citizen_lookup_ref = self.citizen_output_area_lookup.read().unwrap();
 
-                let area_id = citizen_lookup_ref.get(&citizen_id).context("Citizen doesn't belong to an Output Area!")?;
+                let area_id = citizen_lookup_ref.get(citizen_id.global_index()).context("Can't find Output Area that Citizen belongs to!")?;
                 let area_id = area_id.lock().unwrap();
 
                 let areas_ref = self.output_areas.read().unwrap();
 
-                let output_area_ref = areas_ref.get(&area_id).context("Area doesn't exist!")?;
+                let output_area_ref = areas_ref.get(area_id.index()).context("Area doesn't exist!")?;
                 let mut output_area_ref = output_area_ref.lock().unwrap();
 
-                let citizen = output_area_ref.citizens.get_mut(&citizen_id).context("Citizen '{}' due to be vaccinated, doesn't exist!")?;
+                let citizen = output_area_ref.citizens.get_mut(citizen_id.local_index()).context("Citizen '{}' due to be vaccinated, doesn't exist!")?;
 
                 citizen.disease_status = DiseaseStatus::Vaccinated;
             }
@@ -525,7 +516,7 @@ impl Simulator {
         Ok(())
     }
 }
-
+/*
 impl Simulator {
     pub fn error_dump(self) -> anyhow::Result<()> {
         println!("Creating Core Dump!");
@@ -533,7 +524,7 @@ impl Simulator {
         let mut file = LineWriter::new(file);
         writeln!(file, "{}", self.statistics)?;
         for area in self.output_areas.read().unwrap().iter() {
-            writeln!(file, "Output Area: {}", area.0)?;
+            writeln!(file, "Output Area: {}", area)?;
             for building in area.1.lock().unwrap().buildings.values() {
                 writeln!(file, "      {}", building)?;
             }
@@ -566,18 +557,19 @@ impl Simulator {
 
         Ok(())
     }
-}
+}*/
 
 impl From<SimulatorBuilder> for Simulator {
     fn from(builder: SimulatorBuilder) -> Self {
-        let mut citizen_output_area_lookup = HashMap::with_capacity(builder.citizens.len());
-        builder.output_areas.iter().for_each(|(area_id, area)| { area.citizens.iter().for_each(|(id, citizen)| { citizen_output_area_lookup.insert(id.clone(), Mutex::new(area_id.clone())); }) });
-        let output_areas = RwLock::new(builder.output_areas.into_par_iter().map(|(id, area)| (id, Mutex::new(area))).collect());
+        let current_population = builder.citizen_output_area_lookup.len() as u32;
+        let output_areas = RwLock::new(builder.output_areas.into_par_iter().map(|area| Mutex::new(area)).collect());
+        let citizen_output_area_lookup = RwLock::new(builder.citizen_output_area_lookup.into_par_iter().map(|area_id| Mutex::new(area_id)).collect());
 
         Simulator {
-            current_population: citizen_output_area_lookup.len() as u32,
+            output_area_lookup: builder.output_area_lookup,
+            current_population,
             output_areas,
-            citizen_output_area_lookup: RwLock::new(citizen_output_area_lookup),
+            citizen_output_area_lookup,
             citizens_eligible_for_vaccine: None,
             statistics: Statistics::default(),
             interventions: Default::default(),

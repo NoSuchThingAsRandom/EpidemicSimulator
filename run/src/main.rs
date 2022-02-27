@@ -226,12 +226,12 @@ async fn main() -> anyhow::Result<()> {
         let data: Vec<visualisation::image_export::DrawingRecord> = sim
             .output_areas.read().unwrap()
             .iter()
-            .map(|(code, area)| {
+            .map(|(area)| {
                 let area = area.lock().unwrap();
-                DrawingRecord::from((
-                    code.to_string(),
-                    (area.polygon.clone()),
-                    Some(area.buildings.len() as f64 / total_buildings),
+                DrawingRecord::from((area.id().
+                    code().to_string(),
+                                     (area.polygon.clone()),
+                                     Some(area.buildings.len() as f64 / total_buildings),
                 ))
             })
             .collect();

@@ -103,8 +103,8 @@ impl BuildingID {
     pub fn building_id(&self) -> Uuid {
         self.building_unique_id
     }
-    pub fn building_index(&self) -> u32 {
-        self.building_index
+    pub fn building_index(&self) -> usize {
+        self.building_index as usize
     }
 }
 

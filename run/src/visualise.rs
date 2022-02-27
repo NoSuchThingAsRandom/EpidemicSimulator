@@ -32,13 +32,13 @@ use visualisation::image_export::DrawingRecord;
 
 pub fn draw_output_areas(
     filename: String,
-    sim: &HashMap<OutputAreaID, OutputArea>,
+    sim: &Vec<OutputArea>,
 ) -> anyhow::Result<()> {
     info!("Drawing Output Areas to: {}", filename);
     let data: Vec<visualisation::image_export::DrawingRecord> = sim
         .iter()
-        .map(|(_, area)| {
-            DrawingRecord::from((area.output_area_id.code().to_string(), &area.polygon, None))
+        .map(|(area)| {
+            DrawingRecord::from((area.id().code().to_string(), &area.polygon, None))
         })
         .collect();
     visualisation::image_export::draw_output_areas(filename, data)?;
