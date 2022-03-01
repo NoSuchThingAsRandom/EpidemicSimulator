@@ -32,7 +32,7 @@ use petgraph::dot::Config::{EdgeNoLabel, NodeIndexLabel};
 use petgraph::graphmap::GraphMap;
 
 use load_census_data::tables::resides_vs_workplace::WorkplaceResidentialRecord;
-use sim::models::citizen::{Citizen, CitizenID};
+use sim::models::citizen::Citizen;
 
 pub fn build_citizen_graph(
     simulation: &sim::simulator::Simulator,
@@ -46,7 +46,7 @@ pub fn build_citizen_graph(
         let area = area.lock().unwrap();
         area.citizens.iter().for_each(|citizen| {
             graph.add_node(citizen.id().uuid_id().as_u128());
-            for (building) in &area.buildings {
+            for building in &area.buildings {
                 let citizens = building.occupants();
                 for outer_citizen in &citizens {
                     for inner_citizen in &citizens {

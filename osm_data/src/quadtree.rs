@@ -29,7 +29,6 @@ use serde;
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeSeq;
 
-pub const MAX_DEPTH: u8 = 20;
 pub const MIN_BOUNDARY_SIZE: usize = 100;
 
 /// Center point for a rect ([`geo_types::rect::Rect::center()`] for [`geo_types::CoordNum`], as geo_types only implement it for [`geo_types::CoordFloat`]
@@ -52,20 +51,6 @@ pub fn compare_geo_coord_nums<T: geo_types::CoordNum>(a: T, b: T) -> Ordering {
     }
 }
 
-/// Who doesn't like writing their own absolute function?
-pub fn coord_num_abs<T: geo_types::CoordNum>(mut a: T) -> T {
-    let mut counter: T = T::zero();
-    while a < T::zero() {
-        a = a + T::one();
-        counter = counter + T::one();
-    }
-    println!("Reducing counter");
-    while counter > T::zero() {
-        a = a + T::one();
-        counter = counter - T::one();
-    }
-    a
-}
 
 #[cfg(test)]
 mod tests {

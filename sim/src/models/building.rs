@@ -22,10 +22,8 @@ use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
-use std::iter::FromIterator;
 
 use geo::Point;
-use log::error;
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::FromParallelIterator;
 use serde::{Serialize, Serializer};
@@ -456,13 +454,32 @@ impl Building for School {
             let class_index = match self.occupant_to_class.get(&infected_citizen) {
                 Some(class_index) => class_index,
                 None => {
-                    error!("Citizen does not belong to a class!");
+                    for office in &self.offices {
+                        for staff in office {
+                            if staff == *infected_citizen {
+                                panic!("Occupant to lookup failed, Citizen is in an office!");
+                            }
+                        }
+                    }
+                    for class in &self.classes {
+                        for student in &class.students {
+                            if student == *infected_citizen {
+                                panic!("Occupant to lookup failed, Citizen is a student in a Class!");
+                            }
+                        }
+                        if class.teacher == **infected_citizen {
+                            panic!("Occupant to lookup failed, Citizen is a teachers in a Class!");
+                        }
+                    }
+                    panic!("Citizen does not belong to this school!");
+                    // TODO Fix this - Kids
+                    //error!("Citizen does not belong to a class!");
                     continue;
                 }
             };
             match class_index {
                 RoomID::ClassId { id: class_id } => {
-                    let mut members = self.classes[*class_id].get_participants().iter().for_each(|citizen|
+                    self.classes[*class_id].get_participants().iter().for_each(|citizen|
                         if !infected_citizens.contains(citizen) {
                             exposed.insert(*citizen);
                         });

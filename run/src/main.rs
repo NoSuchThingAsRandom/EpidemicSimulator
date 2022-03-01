@@ -20,18 +20,16 @@
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
-use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use rayon;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use rayon::spawn;
 
 use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
@@ -226,7 +224,7 @@ async fn main() -> anyhow::Result<()> {
         let data: Vec<visualisation::image_export::DrawingRecord> = sim
             .output_areas.read().unwrap()
             .iter()
-            .map(|(area)| {
+            .map(|area| {
                 let area = area.lock().unwrap();
                 DrawingRecord::from((area.id().
                     code().to_string(),
@@ -294,15 +292,15 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-
+#[allow(dead_code)]
 fn test() {
-    let mut data = RwLock::new(HashMap::new());
+    let data = RwLock::new(HashMap::new());
     for index in 0..10 {
         let mut writer = data.write().unwrap();
         writer.insert(index, Mutex::new(5));
     }
     println!("{:?}", data);
-    let mut values: Vec<i32> = (0..10).collect();
+    let values: Vec<i32> = (0..10).collect();
     //values.shuffle(&mut thread_rng());
     let start = Instant::now();
     values.into_par_iter().for_each(|index| {
@@ -320,7 +318,7 @@ fn test() {
     println!("{:?}", data);
     println!("Finished in: {:?}", start.elapsed().as_secs());
     //values.shuffle(&mut thread_rng());
-    let mut values: Vec<i32> = (0..10).collect();
+    let values: Vec<i32> = (0..10).collect();
 
     let start = Instant::now();
     values.into_iter().for_each(|index| {

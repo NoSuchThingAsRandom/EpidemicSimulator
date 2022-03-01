@@ -62,7 +62,7 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
 pub const MAXIMUM_DUPLICATION_DISTANCE: i32 = 500;
 /// The types of buildings to remove duplicates from
 pub const BUILDINGS_TO_REMOVE_DUPLICATES: [TagClassifiedBuilding; 2] = [TagClassifiedBuilding::Hospital, TagClassifiedBuilding::School];
-
+#[allow(dead_code)]
 enum CheckBoundaries {
     York,
     YorkshireAndTheHumber,

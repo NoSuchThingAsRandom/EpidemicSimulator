@@ -130,9 +130,10 @@ impl SimulatorBuilder {
             .sum();
 
         let mut output_areas = &mut self.output_areas;
+        // TODO This is broke
         // Remove any areas without any buildings
         let to_delete: Vec<usize> = output_areas.iter().enumerate()
-            .filter_map(|(index, area)| if possible_buildings_per_area.contains_key(area.id().code()) {
+            .filter_map(|(index, area)| if !possible_buildings_per_area.contains_key(area.id().code()) {
                 Some(index)
             } else { None }
             ).collect();
@@ -142,8 +143,9 @@ impl SimulatorBuilder {
                 area.decrement_index();
             }
         }
-        for deletion in to_delete {
-            self.output_areas.remove(deletion);
+        for (index, deletion) in to_delete.iter().enumerate() {
+            println!("Removing: {}", deletion - index);
+            self.output_areas.remove(deletion - index);
         }
         debug!(
             "{} Buildings have been assigned. {} Output Areas remaining (with buildings)",
@@ -171,8 +173,9 @@ impl SimulatorBuilder {
         let mut citizen_output_area_lookup = &mut self.citizen_output_area_lookup;
         let ref_output_areas = Rc::new(RefCell::new(&mut self.output_areas));
         let census_data_ref = &mut self.census_data;
+        // This is the total Citizen counter
         let mut global_citizen_index = 0;
-        ref_output_areas.borrow_mut().iter_mut().for_each(|(output_area)| {
+        ref_output_areas.borrow_mut().iter_mut().for_each(|output_area| {
             let generate_citizen_closure = || -> anyhow::Result<()> {
                 // Retrieve the Census Data
                 let census_data_entry = census_data_ref
@@ -214,13 +217,13 @@ impl SimulatorBuilder {
                     possible_households,
                 )?;
                 global_citizen_index += generated_count;
-                for citizen in &output_area.citizens {
+                for _citizen in &output_area.citizens {
                     citizen_output_area_lookup.push(output_area.id().clone());
                 }
                 assert_eq!(global_citizen_index as usize, citizen_output_area_lookup.len());
                 Ok(())
             }();
-        });
+        })?;
         info!(
             "Households and Citizen generation succeeded for {} Output Areas.",
             ref_output_areas.borrow().len()
@@ -238,10 +241,11 @@ impl SimulatorBuilder {
         debug!("Building Schools");
         // TODO Maybe we need to shuffle?
         // The outer index represents the age of the students, and the inner is just a list of students
-        let (mut output_area_citizens, mut output_area_buildings) = self.output_areas.iter_mut().map(|area| (&mut area.citizens, &mut area.buildings)).fold((Vec::new(), Vec::new()), |(mut accum_citizens, mut accum_buildings), (citizens, buildings)| {
+        let (mut output_area_citizens, mut output_area_buildings, output_area_ids) = self.output_areas.iter_mut().map(|area| (&mut area.citizens, &mut area.buildings, &mut area.output_area_id)).fold((Vec::new(), Vec::new(), Vec::new()), |(mut accum_citizens, mut accum_buildings, mut accum_ids), (citizens, buildings, id)| {
             accum_citizens.push(citizens);
             accum_buildings.push(buildings);
-            (accum_citizens, accum_buildings)
+            accum_ids.push(id);
+            (accum_citizens, accum_buildings, accum_ids)
         });
         let (students, teachers): (Vec<Vec<&mut Citizen>>, Vec<&mut Citizen>) =
             output_area_citizens.par_iter_mut().map(|area_citizens| {
@@ -486,9 +490,8 @@ impl SimulatorBuilder {
                 };
 
                 let mut buildings = if let Some(output_area) = output_area_buildings.get_mut(*index as usize) { output_area } else { return; };
-                // TODO This will probably break?
-                let output_area_id = buildings.first().expect("No buildings exist in area").id().output_area_code();
-                let building_id = BuildingID::new(output_area_id.clone(), BuildingType::School, buildings.len() as u32);
+                let output_area_id = (*output_area_ids.get(*index as usize).expect("No buildings exist in area")).clone();
+                let building_id = BuildingID::new(output_area_id, BuildingType::School, buildings.len() as u32);
 
                 // Pull the Citizen ID's out of the Citizens
                 let student_ids = students.iter().map(|age_group|
@@ -550,7 +553,7 @@ impl SimulatorBuilder {
         // NOTE This is achieved by removing citizens from self.citizens, because we cannot pass references through
         // The index corresponds to the Output Area
         let mut citizens_to_allocate: Vec<Vec<CitizenID>> = vec![Vec::new(); self.output_areas.len()];
-
+        let mut citizens_allocated_count = 0;
         // Assign workplace areas to each Citizen, per Output area
         for household_output_area in &self.output_areas {
             // Retrieve the census data for the household output area
@@ -565,7 +568,8 @@ impl SimulatorBuilder {
                 })?;
 
             // For each Citizen, assign a workplace area
-            'citizens: for citizen in &household_output_area.citizens {
+            'citizens: for citizen_id in &household_output_area.get_residents() {
+                let citizen = household_output_area.citizens.get(citizen_id.local_index()).expect("Citizen living in area doesn't exist!");
                 let mut index = 0;
                 if citizen.is_student() || citizen.detailed_occupation() == Some(OccupationType::Teaching) {
                     continue 'citizens;
@@ -587,40 +591,41 @@ impl SimulatorBuilder {
                     };
                 let citizens_to_add = citizens_to_allocate.get_mut(workplace_output_area_index as usize).expect(&format!("Output area {} doesn't exist", index));
                 citizens_to_add.push(citizen.id());
+                citizens_allocated_count += 1;
             }
         }
-        debug!("Creating workplace buildings for: {:?} Citizens and {} Output Areas",citizens_to_allocate.iter().map(|citizens|citizens.len()).sum::<usize>(),citizens_to_allocate.len());
-        debug!("{} Citizens have not been assigned a workplace area!", self.citizen_output_area_lookup.len()-citizens_to_allocate.len());
+        debug!("Creating workplace buildings for: {:?} Citizens and {} Output Areas",citizens_allocated_count,citizens_to_allocate.len());
+        debug!("{} Citizens have not been assigned a workplace area!", self.citizen_output_area_lookup.len()-citizens_allocated_count);
+        // Unroll the vectors from the Struct, for Parallel Access
+        let (mut output_area_citizens, mut output_area_buildings, output_area_ids) = self.output_areas.iter_mut().map(|area| (&mut area.citizens, &mut area.buildings, &mut area.output_area_id)).fold((Vec::new(), Vec::new(), Vec::new()), |(mut accum_citizens, mut accum_buildings, mut accum_ids), (citizens, buildings, id)| {
+            accum_citizens.push(citizens);
+            accum_buildings.push(buildings);
+            accum_ids.push(id);
+            (accum_citizens, accum_buildings, accum_ids)
+        });
         // Create buildings for each Workplace output area
-        'citizen_allocation_loop: for (workplace_area_index, mut citizen_ids) in citizens_to_allocate.into_iter().enumerate() {
+        'citizen_allocation_loop: for ((workplace_area_index, mut citizen_ids), citizens) in citizens_to_allocate.into_iter().enumerate().zip(output_area_citizens) {
             // Retrieve the buildings or skip this area
-            let workplace_output_area = match self.output_areas.get_mut(workplace_area_index) {
+            let workplace_output_area_buildings = match output_area_buildings.get_mut(workplace_area_index) {
                 Some(workplace) => workplace,
                 None => {
                     error!("Workplace output area {} doesn't exist!",workplace_area_index);
                     continue 'citizen_allocation_loop;
                 }
             };
-            let possible_buildings = match possible_buildings_per_area.get_mut(workplace_output_area.id().code()) {
+            let workplace_output_id = (*(output_area_ids.get(workplace_area_index).expect("Cannot retrieve workplace output area id"))).clone();
+            let possible_buildings = match possible_buildings_per_area.get_mut(workplace_output_id.code()) {
                 Some(buildings) => buildings,
                 None => {
-                    error!("No Workplace buildings exist for Output Area: {}",workplace_output_area.id());
+                    error!("No Workplace buildings exist for Output Area: {}",workplace_output_id);
                     continue 'citizen_allocation_loop;
                 }
             };
-            let mut citizens = Vec::with_capacity(citizen_ids.len());
-            /*            for id in citizen_ids{
-                            let output_area: &mut OutputArea = self.output_areas.get_mut(id.global_index()).expect("Output area doesn't exist!");
-                            let citizen = output_area.citizens.get_mut(id.local_index()).expect("Citizen doesn't exist in Output Area!");
-                            citizens.push(citizen)
-                        }*/
-
-            //let citizens = citizen_ids.iter().map(|id| {            }).collect();
-            match SimulatorBuilder::assign_buildings_per_output_area(workplace_output_area.id().clone(), citizens, possible_buildings, workplace_output_area.buildings.len() as u32)
+            match SimulatorBuilder::assign_buildings_per_output_area(workplace_output_id.clone().clone(), citizens, possible_buildings, workplace_output_area_buildings.len() as u32)
             {
-                Ok(buildings) => workplace_output_area.buildings.extend(buildings),
+                Ok(buildings) => workplace_output_area_buildings.extend(buildings),
                 Err(e) => {
-                    error!("Failed to assign buildings for Output Area: {}, Error: {}",workplace_output_area.id(),e);
+                    error!("Failed to assign buildings for Output Area: {}, Error: {}",workplace_output_id,e);
                 }
             }
         }
@@ -630,9 +635,9 @@ impl SimulatorBuilder {
     /// Calculates which buildings should be assigned to what occupation, and scales the floor space, to ensure every Citizen can have a workplace
     ///
     /// `next_building_index` is the index to start assigning indexes to new buildings
-    fn assign_buildings_per_output_area(workplace_area_code: OutputAreaID, mut citizens: Vec<&mut Citizen>, possible_buildings: &mut Vec<RawBuilding>, mut next_building_index: u32) -> anyhow::Result<Vec<Box<dyn Building + Sync + Send>>> {
-        if citizens.len() == 0 {
-            warn!("No buildings can be assigned to area {} as no workers exist: {:?}",workplace_area_code,citizens);
+    fn assign_buildings_per_output_area(workplace_area_code: OutputAreaID, mut citizen_ids: &mut Vec<Citizen>, possible_buildings: &mut Vec<RawBuilding>, mut next_building_index: u32) -> anyhow::Result<Vec<Box<dyn Building + Sync + Send>>> {
+        if citizen_ids.len() == 0 {
+            warn!("No buildings can be assigned to area {} as no workers exist: {:?}",workplace_area_code,citizen_ids);
             return Ok(Vec::new());
         }
         if possible_buildings.len() == 0 {
@@ -650,10 +655,10 @@ impl SimulatorBuilder {
         const BUILDING_PER_OCCUPATION_OVERCAPACITY: f64 = 1.1;
 
         // Randomise the order of the citizens, to reduce the number of Citizens sharing household and Workplace output areas
-        citizens.shuffle(&mut rng);
+        citizen_ids.shuffle(&mut rng);
 
         // Group by occupation
-        let mut citizens: EnumMap<OccupationType, Vec<&mut Citizen>> = citizens.into_iter().filter_map(|citizen| {
+        let mut citizen_ids_per_occupation: EnumMap<OccupationType, Vec<&mut Citizen>> = citizen_ids.into_iter().filter_map(|citizen| {
             Some((citizen.detailed_occupation()?, citizen))
         }).fold(EnumMap::default(), |mut a, b| {
             a[b.0].push(b.1);
@@ -664,7 +669,7 @@ impl SimulatorBuilder {
         let available_space: usize = possible_buildings.iter().map(|building| building.size()).sum::<i32>() as usize;
 
         // Calculate how much space we need
-        let mut required_space_per_occupation: EnumMap<OccupationType, usize> = citizens.iter().map(|(occupation, citizens)| {
+        let mut required_space_per_occupation: EnumMap<OccupationType, usize> = citizen_ids_per_occupation.iter().map(|(occupation, citizens)| {
             let size = get_density_for_occupation(occupation);
             (occupation, size * citizens.len() as u32)
         }).fold(EnumMap::default(), |mut a, b| {
@@ -757,9 +762,9 @@ impl SimulatorBuilder {
             if occupation == OccupationType::Teaching {
                 continue;
             }
-            let citizens = &mut citizens[occupation];
+            let selected_citizen_ids = &mut citizen_ids_per_occupation[occupation];
             let buildings = &mut building_per_occupation[occupation];
-            match SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), occupation, citizens, &buildings.1, next_building_index) {
+            match SimulatorBuilder::assign_workplaces_to_citizens_per_occupation(workplace_area_code.clone(), occupation, selected_citizen_ids, &buildings.1, next_building_index) {
                 Ok(workplaces) => {
                     next_building_index += workplaces.len() as u32;
                     workplace_buildings.extend(workplaces);
@@ -840,21 +845,32 @@ impl SimulatorBuilder {
 
     pub fn apply_initial_infections(&mut self, rng: &mut dyn RngCore) -> anyhow::Result<()> {
         for _ in 0..STARTING_INFECTED_COUNT {
-            let citizen: &mut Citizen = self.output_areas.iter_mut().choose(rng)
-                .ok_or_else(|| DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::IsEmpty {
-                        message: "No citizens exist in the output areas for seeding the disease"
-                            .to_string(),
-                    },
-                }).context("Initialisation of disease!")?.citizens.iter_mut()
-                .choose(rng)
-                .ok_or_else(|| DataLoadingError::ValueParsingError {
-                    source: ParseErrorType::IsEmpty {
-                        message: "No citizens exist in the output areas for seeding the disease"
-                            .to_string(),
-                    },
-                })
-                .context("Initialisation of disease!")?;
+            let output_area: &mut OutputArea = match self.output_areas.iter_mut().choose(rng) {
+                Some(area) => area,
+                None => {
+                    let error = DataLoadingError::ValueParsingError {
+                        source: ParseErrorType::IsEmpty {
+                            message: "No Output Areas exist infor seeding the disease"
+                                .to_string(),
+                        },
+                    };
+                    error!("{:?}",error);
+                    continue;
+                }
+            };
+            let citizen: &mut Citizen = match output_area.citizens.iter_mut().choose(rng) {
+                Some(citizen) => citizen,
+                None => {
+                    let error = DataLoadingError::ValueParsingError {
+                        source: ParseErrorType::IsEmpty {
+                            message: "No citizens exist in the output areas for seeding the disease"
+                                .to_string(),
+                        },
+                    };
+                    error!("{:?}",error);
+                    continue;
+                }
+            };
             citizen.disease_status = DiseaseStatus::Infected(0);
         }
         Ok(())
@@ -882,7 +898,7 @@ impl SimulatorBuilder {
 
         self.initialise_output_areas()
             .context("Failed to initialise output areas!")?;
-        timer.code_block_finished("Initialised Output Areas")?;
+        timer.code_block_finished(&format!("Initialised {} Output Areas", self.output_areas.len()))?;
         let mut possible_buildings_per_area = self
             .assign_buildings_to_output_areas()
             .context("Failed to assign buildings to output areas")?;
@@ -909,7 +925,7 @@ impl SimulatorBuilder {
                 .drain()
                 .filter_map(|(area, mut classified_buildings)| {
                     let buildings: Vec<RawBuilding> =
-                        classified_buildings.drain().flat_map(|(_, a)| a).collect();
+                        classified_buildings.drain().filter(|(class, _)| *class != TagClassifiedBuilding::School || *class != TagClassifiedBuilding::Household).flat_map(|(_, a)| a).collect();
                     if buildings.is_empty() {
                         return None;
                     }

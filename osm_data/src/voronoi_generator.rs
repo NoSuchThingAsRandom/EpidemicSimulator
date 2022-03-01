@@ -24,7 +24,7 @@ use std::fmt::{Debug, Display};
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
 use geo_types::{Coordinate, CoordNum, LineString, Point};
-use log::{debug, info, trace, warn};
+use log::{debug, info, trace};
 use rand::{Rng, thread_rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
@@ -143,6 +143,7 @@ impl Default for Scaling {
     }
 }
 
+#[allow(dead_code)]
 fn get_random_point_inside_polygon(
     polygon: &geo_types::Polygon<isize>,
 ) -> Option<geo_types::Point<isize>> {

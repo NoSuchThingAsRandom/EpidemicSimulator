@@ -18,11 +18,10 @@
  *
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::sync::Mutex;
 
 use anyhow::Context;
 use log::error;
@@ -85,7 +84,7 @@ impl PartialEq for OutputAreaID {
 #[derive(Debug)]
 pub struct OutputArea {
     /// The Census Data Output Area Code
-    output_area_id: OutputAreaID,
+    pub output_area_id: OutputAreaID,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
     pub citizens: Vec<Citizen>,
     /// A map of households, corresponding to what area they are in (Rural, Urban, Etc)
@@ -229,7 +228,7 @@ impl Clone for OutputArea {
     fn clone(&self) -> Self {
         let mut buildings_copy: Vec<Box<dyn Building + Sync + Send>> =
             Vec::with_capacity(self.buildings.len());
-        for (current_building) in &self.buildings {
+        for current_building in &self.buildings {
             let current_building = current_building.as_any();
             if let Some(household) = current_building.downcast_ref::<Household>() {
                 buildings_copy.push(Box::new(household.clone()));

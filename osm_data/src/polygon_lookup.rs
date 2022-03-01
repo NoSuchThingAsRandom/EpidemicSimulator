@@ -45,7 +45,7 @@ use std::time::Instant;
 
 use geo::prelude::BoundingRect;
 use geo_types::{CoordNum, LineString};
-use log::{debug, error, info, trace, warn};
+use log::{debug, info, trace};
 use num_traits::PrimInt;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use shapefile::dbase::FieldValue;
@@ -108,7 +108,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
                     source: "Failed to generate bounding box for polygon".to_string(),
                 }) {
                 Ok(p) => p,
-                Err(e) => {
+                Err(_e) => {
                     //error!("{}",e);
                     continue;
                 }

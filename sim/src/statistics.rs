@@ -20,10 +20,9 @@
 
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, AddAssign};
+use std::ops::AddAssign;
 
 use log::error;
-use num_format::Locale::am;
 use num_format::ToFormattedString;
 
 use crate::config::NUMBER_FORMATTING;

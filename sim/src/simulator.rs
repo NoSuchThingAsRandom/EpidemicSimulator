@@ -19,16 +19,12 @@
  */
 
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::{LineWriter, Write};
 use std::ops::AddAssign;
-use std::sync::{Arc, Mutex, RwLock, RwLockWriteGuard};
+use std::sync::{Mutex, RwLock};
 use std::time::Instant;
 
-use anyhow::{Context, Error};
-use dashmap::DashMap;
-use log::{debug, error, info, warn};
-use num_format::Locale::{am, ar, en};
+use anyhow::Context;
+use log::{debug, error, info};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
@@ -37,7 +33,6 @@ use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, IntoParallel
 use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
-use crate::error::SimError;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
 use crate::models::building::BuildingID;
 use crate::models::citizen::{Citizen, CitizenID};
@@ -141,8 +136,11 @@ impl AddAssign for GeneratedExposures {
             let entry = self.public_transport_pre_generated.entry(building).or_default();
             entry.extend(citizens);
         }
+        if self.building_exposure_list.len() < rhs.building_exposure_list.len() {
+            self.building_exposure_list.extend(vec![HashMap::new(); rhs.building_exposure_list.len() - self.building_exposure_list.len()]);
+        }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
-            let area_entry = self.building_exposure_list.get_mut(area_index).expect("Generated Exposures have mismatched Area Counts");
+            let area_entry = self.building_exposure_list.get_mut(area_index).expect("Can't combine Generated Exposures with differing amounts of Output Areas!");
             for (building, citizens) in exposures {
                 let area_entry = area_entry.entry(building).or_default();
                 area_entry.extend(citizens);
@@ -173,7 +171,7 @@ impl Simulator {
     /// Start the entire simulation process, until the disease is eradicated, or we reach teh max time step
     pub fn simulate(&mut self) -> anyhow::Result<()> {
         let mut start_time = Instant::now();
-        info!("Starting simulation...");
+        info!("Starting simulation with {} areas",self.output_areas.read().unwrap().len());
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
                 println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics, get_memory_usage()?);
@@ -204,7 +202,9 @@ impl Simulator {
 
         let intervention_time = start.elapsed().as_secs_f64();
         let total = generate_exposure_time + apply_exposure_time + intervention_time;
-        //debug!("Generate Exposures: {:.3} seconds ({:.3}%),Apply Exposures: {:.3} seconds ({:.3}%),  Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,(generate_exposure_time/total)*100.0,apply_exposure_time,(apply_exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
+        if false {
+            debug!("Generate Exposures: {:.3} seconds ({:.3}%),Apply Exposures: {:.3} seconds ({:.3}%),  Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,(generate_exposure_time/total)*100.0,apply_exposure_time,(apply_exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
+        }
         if !self.statistics.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -226,13 +226,13 @@ impl Simulator {
         // Update the Position and Schedule of each Citizen
         // If a Citizen is changing area, then they are moved into `moved_citizens`
         // For any Citizens that are infected, build a list of infected buildings
-        let (statistics, exposures, moved_citizens) = output_areas.par_iter_mut().map(|(mut area)| {
+        let (statistics, exposures, moved_citizens) = output_areas.par_iter_mut().map(|area| {
             let mut area = area.lock().unwrap();
             let (mut statistics, mut exposures) = (Statistics::from_hour(hour), GeneratedExposures::default());
             // Apply timestep, and generate exposures
             let mut area_citizens = Vec::with_capacity(area.citizens.len());
             let mut moving_citizens: Vec<Vec<Citizen>> = vec![Vec::new(); output_area_count];
-            for (mut citizen) in area.citizens.drain(0..) {
+            for mut citizen in area.citizens.drain(0..) {
                 let need_to_move = citizen.execute_time_step(
                     hour, disease, lockdown,
                 ).is_some();
@@ -246,7 +246,12 @@ impl Simulator {
 
                     transport_session.push((citizen.id(), citizen.is_infected()));
                 } else if let Infected(_) = citizen.disease_status {
-                    let area_entry = exposures.building_exposure_list.get_mut(citizen.current_building_position.output_area_code().index()).expect("Output area doesn't exist!");
+                    let area_index = citizen.current_building_position.output_area_code().index();
+                    if exposures.building_exposure_list.len() <= area_index {
+                        exposures.building_exposure_list.extend(vec![HashMap::new(); (area_index - exposures.building_exposure_list.len()) + 1]);
+                    }
+                    let exposures_area_count = exposures.building_exposure_list.len();
+                    let area_entry = exposures.building_exposure_list.get_mut(area_index).expect(&format!("Output area {} hasn't been initialised for exposures! Only {} areas have been created", area_index, exposures_area_count));
                     let entry = area_entry
                         .entry(citizen.current_building_position.clone())
                         .or_default();
@@ -265,6 +270,9 @@ impl Simulator {
         }).reduce(|| (Statistics::from_hour(hour), GeneratedExposures::default(), Vec::new()), |(mut a_stats, mut a_exposures, mut a_to_move), (b_stats, b_exposures, b_to_move)| {
             a_stats += b_stats;
             a_exposures += b_exposures;
+            if a_to_move.len() < b_to_move.len() {
+                a_to_move.extend(vec![Vec::new(); b_to_move.len() - a_to_move.len()]);
+            }
             for (area_index, citizens) in b_to_move.into_iter().enumerate() {
                 let area = a_to_move.get_mut(area_index).expect("Generate Exposures have mismatched Area Counts");
                 area.extend(citizens);
@@ -287,7 +295,7 @@ impl Simulator {
                         area.citizens.push(citizen);
                     }
                 }
-                None => error!("Area {} doesn't exist!",area_index)
+                None => error!("Area {} doesn't exist, need to move {} Citizens!",area_index,citizens.len())
             };
         }
         self.statistics += statistics;
@@ -300,7 +308,6 @@ impl Simulator {
         let disease = &self.disease_model;
         let mask_status = &self.interventions.mask_status;
         let output_areas = &self.output_areas;
-        let mut statistics = &mut self.statistics;
         // Apply building exposures
         let exposure_statistics: Vec<ID> = exposures.building_exposure_list.par_iter().enumerate().map(|(area_index, building_exposures)| -> Vec<ID> {
             let mut exposures = Vec::new();
@@ -329,10 +336,10 @@ impl Simulator {
                 let building = building.as_ref();
                 let exposure_count = infected_citizens.len();
                 for citizen_id in building.find_exposures(infected_citizens) {
-                    let mut citizen = match area.citizens.get_mut(citizen_id.local_index()).context("Cannot expose Citizen, as they do not exist!")
+                    let citizen = match area.citizens.get_mut(citizen_id.local_index()).context("Cannot expose Citizen, as they do not exist!")
                     {
                         Ok(citizen) => { citizen }
-                        Err(e) => {
+                        Err(_e) => {
                             // TODO This is a big error, as Citizens aren't in the Building they're meant to be?
                             // Perhaps it's remote working and/or Public transport meaning Citizens get to buildings at different points?
                             //error!("{:?}",e);
@@ -357,7 +364,7 @@ impl Simulator {
             return exposures;
         }).flatten().collect();
         for id in exposure_statistics {
-            self.statistics.citizen_exposed(id);
+            self.statistics.citizen_exposed(id)?;
         }
 
         // Generate public transport routes
@@ -415,7 +422,7 @@ impl Simulator {
             let area_lookup_ref = self.citizen_output_area_lookup.read().unwrap();
             let area_id = area_lookup_ref.get(citizen_id.global_index()).context(format!("Citizen {}, does not exist in Output Area Lookup", citizen_id))?;
             let area_id = area_id.lock().unwrap();
-            let mut area = area_ref.get_mut(area_id.index()).context(format!("Area id {} does not exist!", area_id))?;
+            let area = area_ref.get_mut(area_id.index()).context(format!("Area id {} does not exist!", area_id))?;
             let mut area = area.lock().unwrap();
             let citizen = area.citizens.get_mut(citizen_id.local_index()).context("Citizen does not exist in Ouptut Area!")?;
             if citizen.is_susceptible()
@@ -450,11 +457,11 @@ impl Simulator {
                         self.statistics.time_step()
                     );
                     // TODO THIS IS BROKEN, and Citizens are gonna get stuck...
-                    self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().for_each(|(area)| {
+                    self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().for_each(|area| {
                         let mut area = area.lock().unwrap();
                         // Send every Citizen home
-                        for (mut citizen) in area.citizens.iter_mut() {
-                            let home = citizen.household_code.clone();
+                        for citizen in area.citizens.iter_mut() {
+                            let _home = citizen.household_code.clone();
                             //citizen.current_building_position = home;
                         }
                     });
@@ -464,7 +471,7 @@ impl Simulator {
                         "Starting vaccination program at hour: {}",
                         self.statistics.time_step()
                     );
-                    let mut eligible = self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().fold(|| HashSet::new(), |mut accum, area| {
+                    let eligible = self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().fold(|| HashSet::new(), |mut accum, area| {
                         let area = area.lock().unwrap();
                         area.citizens.iter().for_each(|citizen| {
                             if citizen.disease_status == DiseaseStatus::Susceptible {
@@ -565,7 +572,7 @@ impl From<SimulatorBuilder> for Simulator {
         let output_areas = RwLock::new(builder.output_areas.into_par_iter().map(|area| Mutex::new(area)).collect());
         let citizen_output_area_lookup = RwLock::new(builder.citizen_output_area_lookup.into_par_iter().map(|area_id| Mutex::new(area_id)).collect());
 
-        Simulator {
+        let sim = Simulator {
             output_area_lookup: builder.output_area_lookup,
             current_population,
             output_areas,
@@ -576,6 +583,10 @@ impl From<SimulatorBuilder> for Simulator {
             disease_model: builder.disease_model,
             public_transport: Default::default(),
             rng: thread_rng(),
+        };
+        for (_code, index) in &sim.output_area_lookup {
+            assert!(sim.output_areas.read().unwrap().get(*index as usize).is_some(), "Output Area cannot be retrieved");
         }
+        sim
     }
 }

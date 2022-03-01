@@ -172,6 +172,7 @@ impl From<(&String, &Polygon<f64>)> for DrawingRecord {
     }
 }
 
+#[allow(dead_code)]
 fn draw_polygon_ring_filled(
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
     points: &[Coordinate<f64>],
@@ -229,7 +230,7 @@ fn draw_polygon_ring(
 fn render_output_areas(
     data: Vec<DrawingRecord>,
     draw_backend: &DrawingArea<BitMapBackend, Shift>,
-    chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
+    _chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
 ) -> DrawingResult<()> {
     let start_time = Instant::now();
     let style = TextStyle::from(("sans-serif", 20).into_font()).color(&RED);
@@ -241,7 +242,7 @@ fn render_output_areas(
         }
 
         // Draw exterior ring
-        let c = (area.percentage_highlighting.unwrap_or(1.0) * 255.0).ceil() as u8;
+        let _c = (area.percentage_highlighting.unwrap_or(1.0) * 255.0).ceil() as u8;
         let mut colour = plotters::style::RGBColor(0, 0, 0);
         if area.filled {
             colour = RED;
