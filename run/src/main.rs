@@ -27,7 +27,6 @@ use std::time::{Duration, Instant};
 use anyhow::Context;
 use clap::{App, Arg};
 use log::{error, info};
-use rand::thread_rng;
 use rayon;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 

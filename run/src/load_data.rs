@@ -18,24 +18,16 @@
  *
  */
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
 
 use anyhow::Context;
-use log::{error, info};
-use rand::thread_rng;
+use log::info;
 
 use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
-use osm_data::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings, RawBuilding};
+use osm_data::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings};
 use osm_data::polygon_lookup::PolygonContainer;
-use sim::models::output_area::OutputAreaID;
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;
-use visualisation::image_export::{draw_buildings_and_output_areas, DrawingRecord};
-
-use crate::visualise::draw_output_areas;
 
 pub async fn load_data(
     area: String,

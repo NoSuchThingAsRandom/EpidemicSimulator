@@ -160,7 +160,7 @@ impl OutputArea {
                         Occupation::Normal { occupation: OccupationType::try_from(raw_occupation).unwrap_or_else(|_| panic!("Couldn't convert Census Occupation ({:?}), to sim occupation", raw_occupation)) }
                     };
                     let citizen = Citizen::new(
-                        CitizenID::from_indexes(global_citizen_index, generated_population as u32),
+                        CitizenID::from_indexes(global_citizen_index),
                         household_building_id.clone(),
                         household_building_id.clone(),
                         age,
@@ -210,11 +210,11 @@ impl OutputArea {
     pub fn get_workers(&self) -> Vec<CitizenID> {
         self.extract_occupants_for_building_type::<Workplace>()
     }
-    pub fn get_citizen(&self, citizen_id: CitizenID) -> Option<&Citizen> {
-        self.citizens.get(citizen_id.local_index())
+    pub fn get_citizen(&self, local_index: &u32) -> Option<&Citizen> {
+        self.citizens.get(*local_index as usize)
     }
-    pub fn get_citizen_mut(&mut self, citizen_id: CitizenID) -> Option<&mut Citizen> {
-        self.citizens.get_mut(citizen_id.local_index())
+    pub fn get_citizen_mut(&mut self, local_index: &u32) -> Option<&mut Citizen> {
+        self.citizens.get_mut(*local_index as usize)
     }
     pub fn id(&self) -> OutputAreaID {
         self.output_area_id.clone()

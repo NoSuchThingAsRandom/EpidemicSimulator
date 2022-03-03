@@ -47,7 +47,7 @@ use crate::config::STARTING_INFECTED_COUNT;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::error::SimError;
 use crate::models::building::{AVERAGE_CLASS_SIZE, Building, BuildingID, BuildingType, School, Workplace};
-use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
+use crate::models::citizen::{Citizen, CitizenID, OccupationType};
 use crate::models::get_density_for_occupation;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::simulator::Timer;
@@ -60,7 +60,8 @@ pub struct SimulatorBuilder {
     pub output_area_lookup: HashMap<String, u32>,
     output_areas_polygons: PolygonContainer<String>,
     pub disease_model: DiseaseModel,
-    pub citizen_output_area_lookup: Vec<OutputAreaID>,
+    /// The Output Area and Local Index a Citizen is located at
+    pub citizen_output_area_lookup: Vec<(OutputAreaID, u32)>,
 }
 
 /// Initialisation Methods
@@ -217,8 +218,8 @@ impl SimulatorBuilder {
                     possible_households,
                 )?;
                 global_citizen_index += generated_count;
-                for _citizen in &output_area.citizens {
-                    citizen_output_area_lookup.push(output_area.id().clone());
+                for (index, _citizen) in output_area.citizens.iter().enumerate() {
+                    citizen_output_area_lookup.push((output_area.id().clone(), index as u32));
                 }
                 assert_eq!(global_citizen_index as usize, citizen_output_area_lookup.len());
                 Ok(())
@@ -568,8 +569,7 @@ impl SimulatorBuilder {
                 })?;
 
             // For each Citizen, assign a workplace area
-            'citizens: for citizen_id in &household_output_area.get_residents() {
-                let citizen = household_output_area.citizens.get(citizen_id.local_index()).expect("Citizen living in area doesn't exist!");
+            'citizens: for citizen in &household_output_area.citizens {
                 let mut index = 0;
                 if citizen.is_student() || citizen.detailed_occupation() == Some(OccupationType::Teaching) {
                     continue 'citizens;

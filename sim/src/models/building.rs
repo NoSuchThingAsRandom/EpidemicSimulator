@@ -19,14 +19,12 @@
  */
 
 use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::Point;
 use log::error;
-use rayon::iter::IntoParallelIterator;
-use rayon::prelude::FromParallelIterator;
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
 
