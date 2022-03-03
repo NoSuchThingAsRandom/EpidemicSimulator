@@ -1,0 +1,81 @@
+@startuml
+class Simulator{
+    {field} citizen_output_area_lookup : Vec<(OutputAreaID u32)>
+    output_area_lookup : HashMap<String, 32>
+    output_areas : Vec<OutputArea>
+    citizens_eligible_for_vaccine: HashSet<CitizenID>
+
+}
+
+class OutputArea{
+    output_area_id: OutputAreaID
+    citizens: Vec<Citizen>
+    buildings: Vec<Building>
+}
+
+class OutputAreaID {
+    code: String
+    index: u32
+}
+class CitizenID{
+    global_index: u32
+    uuid_id: Uuid
+}
+class Citizen{
+    id: CitizenID
+    age: u16
+    occupation: OccupationType
+    household_code: BuildingID
+    workplace_code: BuildingID
+    current_building_position: BuildingID
+    pub disease_status: DiseaseStatus
+}
+class BuildingID{
+    output_area_id: OutputAreaID
+    building_index: u32
+    building_unique_id: uuid::Uuid
+    building_type: BuildingType
+}
+interface Building{
+    fn new(building_code: BuildingCode) -> Self;
+    fn add_citizen(&mut self citizen_id: CitizenID) -> Result<() SimError>;
+    fn id(&self) -> &BuildingID;
+    fn occupants(&self) -> Vec<CitizenID>;
+    fn as_any(&self) -> &dyn Any;
+    fn get_location(&self) -> geo_types::Point<i32>;
+    fn find_exposures(&self infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID>;
+}
+class Household{
+}
+
+class WorkPlace{
+}
+class School {
+}
+
+enum DiseaseStatus {
+    Susceptible
+    Exposed(u16)
+    Infected(u16)
+    Recovered
+    Vaccinated
+}
+Building --|> Household
+Building --|> WorkPlace
+Building --|> School
+Building -- BuildingID
+
+
+Simulator o-- OutputArea
+OutputArea -- OutputAreaID
+OutputArea o-- Building
+OutputArea o-- Citizen
+
+Citizen -- CitizenID
+Citizen -- Household
+Citizen -- WorkPlace
+Citizen -- DiseaseStatus
+
+Building o-- CitizenID
+BuildingID -- OutputAreaID
+@enduml

@@ -143,7 +143,7 @@ impl AddAssign for GeneratedExposures {
             self.building_exposure_list.extend(vec![
                 HashMap::new();
                 rhs.building_exposure_list.len()
-                    - self.building_exposure_list.len(),
+                    - self.building_exposure_list.len()
             ]);
         }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
