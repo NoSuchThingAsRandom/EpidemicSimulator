@@ -77,7 +77,10 @@ impl CitizenID {
 
 impl Default for CitizenID {
     fn default() -> Self {
-        CitizenID { global_index: 0, uuid_id: Uuid::new_v4() }
+        CitizenID {
+            global_index: 0,
+            uuid_id: Uuid::new_v4(),
+        }
     }
 }
 
@@ -201,7 +204,11 @@ impl Citizen {
                 }
             }
         }
-        if self.current_building_position.output_area_code().eq(&old_position) {
+        if self
+            .current_building_position
+            .output_area_code()
+            .eq(&old_position)
+        {
             None
         } else {
             Some(self.current_building_position.output_area_code())
@@ -253,10 +260,10 @@ impl Citizen {
     /// Attempts to return the detailed Occupation type, if it is available
     pub fn detailed_occupation(&self) -> Option<OccupationType> {
         match self.occupation() {
-            Occupation::Normal { occupation } => { Some(occupation) }
-            Occupation::Essential { occupation } => { Some(occupation) }
-            Occupation::Unemployed => { None }
-            Occupation::Student => { None }
+            Occupation::Normal { occupation } => Some(occupation),
+            Occupation::Essential { occupation } => Some(occupation),
+            Occupation::Unemployed => None,
+            Occupation::Student => None,
         }
     }
 
@@ -304,15 +311,15 @@ pub enum OccupationType {
 impl OccupationType {
     pub fn get_index(&self) -> usize {
         match self {
-            OccupationType::Manager => { 0 }
-            OccupationType::Professional => { 1 }
-            OccupationType::Technical => { 2 }
-            OccupationType::Administrative => { 3 }
-            OccupationType::SkilledTrades => { 4 }
-            OccupationType::Caring => { 5 }
-            OccupationType::Sales => { 6 }
-            OccupationType::MachineOperatives => { 7 }
-            OccupationType::Teaching => { 8 }
+            OccupationType::Manager => 0,
+            OccupationType::Professional => 1,
+            OccupationType::Technical => 2,
+            OccupationType::Administrative => 3,
+            OccupationType::SkilledTrades => 4,
+            OccupationType::Caring => 5,
+            OccupationType::Sales => 6,
+            OccupationType::MachineOperatives => 7,
+            OccupationType::Teaching => 8,
         }
     }
 }
@@ -322,16 +329,18 @@ impl TryFrom<RawOccupationType> for OccupationType {
 
     fn try_from(raw_occupation: RawOccupationType) -> Result<Self, Self::Error> {
         Ok(match raw_occupation {
-            RawOccupationType::All => { return Err(()); }
-            RawOccupationType::Managers => { OccupationType::Manager }
-            RawOccupationType::Professional => { OccupationType::Professional }
-            RawOccupationType::Technical => { OccupationType::Technical }
-            RawOccupationType::Administrative => { OccupationType::Administrative }
-            RawOccupationType::SkilledTrades => { OccupationType::SkilledTrades }
-            RawOccupationType::Caring => { OccupationType::Caring }
-            RawOccupationType::Sales => { OccupationType::Sales }
-            RawOccupationType::MachineOperatives => { OccupationType::MachineOperatives }
-            RawOccupationType::Teaching => { OccupationType::Teaching }
+            RawOccupationType::All => {
+                return Err(());
+            }
+            RawOccupationType::Managers => OccupationType::Manager,
+            RawOccupationType::Professional => OccupationType::Professional,
+            RawOccupationType::Technical => OccupationType::Technical,
+            RawOccupationType::Administrative => OccupationType::Administrative,
+            RawOccupationType::SkilledTrades => OccupationType::SkilledTrades,
+            RawOccupationType::Caring => OccupationType::Caring,
+            RawOccupationType::Sales => OccupationType::Sales,
+            RawOccupationType::MachineOperatives => OccupationType::MachineOperatives,
+            RawOccupationType::Teaching => OccupationType::Teaching,
         })
     }
 }

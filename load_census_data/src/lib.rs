@@ -47,7 +47,6 @@ pub mod parse_table;
 pub mod parsing_error;
 pub mod tables;
 
-
 /// This is a container for all the Records relating to one Output Area for All Census Tables
 pub struct CensusDataEntry<'a> {
     pub output_area_code: String,
@@ -216,7 +215,6 @@ impl CensusData {
         };
         // TODO await doesn't work fetch all tables at once
 
-
         // Build population table
         let population_counts = CensusData::fetch_generic_table::<
             PreProcessingPopulationDensityRecord,
@@ -264,7 +262,14 @@ impl CensusData {
             &data_fetcher,
         )
             .await?;
-        println!("Built {} residential workplace areas with {} records", residents_workplace.len(), residents_workplace.iter().map(|(_, v)| v.workplace_count.len()).sum::<usize>());
+        println!(
+            "Built {} residential workplace areas with {} records",
+            residents_workplace.len(),
+            residents_workplace
+                .iter()
+                .map(|(_, v)| v.workplace_count.len())
+                .sum::<usize>()
+        );
 
         let mut census_data = CensusData {
             valid_areas: HashSet::with_capacity(population_counts.len()),
@@ -311,7 +316,9 @@ impl CensusData {
         // TODO Is this the most optimal way?
         let mut valid_areas = HashSet::with_capacity(self.population_counts.len());
         for key in self.population_counts.keys() {
-            if self.occupation_counts.contains_key(key) && self.residents_workplace.contains_key(key) && self.age_counts.contains_key(key)
+            if self.occupation_counts.contains_key(key)
+                && self.residents_workplace.contains_key(key)
+                && self.age_counts.contains_key(key)
             {
                 valid_areas.insert(key.to_string());
             }
@@ -348,7 +355,12 @@ impl CensusData {
             });
             record.total_workplace_count = total;
         }
-        debug!("Removed {} workplace areas. {} work areas out of {} home remaining",removed,new_size,self.residents_workplace.len());
+        debug!(
+            "Removed {} workplace areas. {} work areas out of {} home remaining",
+            removed,
+            new_size,
+            self.residents_workplace.len()
+        );
         self.valid_areas = valid_areas;
         debug!("There are {} complete output areas", self.valid_areas.len());
     }
@@ -380,7 +392,9 @@ mod tests {
     #[test]
     fn test_workplace_area_distrubution() {
         let data = load_census_data();
-        let area_data = data.for_output_area_code("E00067299".to_string()).expect("Census area: 'E00067299' doesn't exist");
+        let area_data = data
+            .for_output_area_code("E00067299".to_string())
+            .expect("Census area: 'E00067299' doesn't exist");
         let mut rng = thread_rng();
         for _ in 0..100 {
             println!("{}", area_data.get_random_workplace_area(&mut rng).unwrap())

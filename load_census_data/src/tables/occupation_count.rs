@@ -118,10 +118,7 @@ pub struct OccupationCountRecord {
 }
 
 impl OccupationCountRecord {
-    pub fn get_random_occupation(
-        &mut self,
-        rng: &mut dyn RngCore,
-    ) -> RawOccupationType {
+    pub fn get_random_occupation(&mut self, rng: &mut dyn RngCore) -> RawOccupationType {
         self.occupations[self.occupation_weighting.sample(rng)]
     }
 }
@@ -186,7 +183,8 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for Occupatio
             occupations,
             occupation_population: vec![],
             total_range,
-            occupation_weighting: WeightedIndex::new(&occupation_population).expect("Failed to build Occupation weighted sampling"),
+            occupation_weighting: WeightedIndex::new(&occupation_population)
+                .expect("Failed to build Occupation weighted sampling"),
         })
     }
 }

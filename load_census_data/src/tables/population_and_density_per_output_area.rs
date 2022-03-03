@@ -42,7 +42,7 @@ pub enum PersonType {
     #[serde(alias = "Lives in a communal establishment")]
     LivesInCommunalEstablishment,
     #[serde(
-    alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
+        alias = "Schoolchild or full-time student aged 4 and over at their non term-time address"
     )]
     Schoolchild,
 }
@@ -132,7 +132,11 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
                 } else if &record.cell_name == "Density (number of persons per hectare)" {
                     density = record.obs_value.parse().unwrap_or(0.0);
                 } else {
-                    assert_eq!(record.rural_urban_name, "Total", "Invalid Rural Area type ({}) for population count table", record.rural_urban_name);
+                    assert_eq!(
+                        record.rural_urban_name, "Total",
+                        "Invalid Rural Area type ({}) for population count table",
+                        record.rural_urban_name
+                    );
                     let person_classification: PersonType =
                         serde_plain::from_str(&record.cell_name)?;
                     let population_size = record.obs_value.parse()?;

@@ -203,13 +203,25 @@ impl Display for DataLoadingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DataLoadingError::NetworkError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n\tType: NetworkError\n\tSource: {} ", source)
+                write!(
+                    f,
+                    "\nAn error occurred loading Census Data\n\tType: NetworkError\n\tSource: {} ",
+                    source
+                )
             }
             DataLoadingError::SerdeParseError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n\tType: SerdeError\n\tSource: {:#?} ", source)
+                write!(
+                    f,
+                    "\nAn error occurred loading Census Data\n\tType: SerdeError\n\tSource: {:#?} ",
+                    source
+                )
             }
             DataLoadingError::ValueParsingError { source } => {
-                write!(f, "\nAn error occurred loading Census Data\n\tType: ParsingError\n\tSource: {} ", source)
+                write!(
+                    f,
+                    "\nAn error occurred loading Census Data\n\tType: ParsingError\n\tSource: {} ",
+                    source
+                )
             }
             DataLoadingError::IOError { source, context } => {
                 write!(

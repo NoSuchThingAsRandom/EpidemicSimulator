@@ -64,7 +64,7 @@ fn geo_polygon_to_quad_area<T: CoordNum + PrimInt + Display + PartialOrd + Defau
     polygon
         .bounding_rect()
         .ok_or_else(|| OSMError::ValueParsingError {
-            source: "Failed to generate bounding box for polygon".to_string()
+            source: "Failed to generate bounding box for polygon".to_string(),
         })
 }
 
@@ -96,13 +96,12 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         scaling: Scaling,
         grid_size: i32,
     ) -> Result<PolygonContainer<T>, OSMError> {
-        trace!("Building new Polygon Container of size: {}",grid_size);
+        trace!("Building new Polygon Container of size: {}", grid_size);
         // Build Quadtree, with Coords of isize and values of seed points
         let mut lookup = QuadTree::with_size(grid_size, grid_size, 10, 50);
         let mut added = 0;
         for (id, polygon) in &polygons {
-            let bounds = match
-            polygon
+            let bounds = match polygon
                 .bounding_rect()
                 .ok_or_else(|| OSMError::ValueParsingError {
                     source: "Failed to generate bounding box for polygon".to_string(),
@@ -152,7 +151,9 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             if lookup.add_item(id.clone(), bounds) {
                 added += 1;
             } else {
-                panic!("Failed to add Polygon with boundary: {:?}. But succeeded with: {}", bounds, added
+                panic!(
+                    "Failed to add Polygon with boundary: {:?}. But succeeded with: {}",
+                    bounds, added
                 );
             }
         }
@@ -176,9 +177,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
         let scaled_polygon: geo_types::Polygon<i32> =
             self.scaling.scale_polygon(polygon, self.grid_size);
         let boundary = geo_polygon_to_quad_area(&scaled_polygon)?;
-        let results = self
-            .lookup
-            .get_items(boundary).into_iter();
+        let results = self.lookup.get_items(boundary).into_iter();
         Ok(Box::new(results))
     }
     /// Finds index of the SINGULAR polygon that contains the given point
@@ -226,19 +225,24 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
             "Y Coordinate is out of range!"
         );
         let boundary = geo_point_to_quad_area(&scaled_point)?;
-        let results = self.lookup.get_multiple_items(boundary).into_iter().map(|(id, _)| id).collect();
+        let results = self
+            .lookup
+            .get_multiple_items(boundary)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
         /*        let results = results
-                    .filter_map(move |(id, _distance)| {
-                        let poly =
-                            self.polygons
-                                .get(id);
-                        if let Some(poly) = poly {
-                            if poly.intersects(poly) {
-                                return Some(id);
-                            }
-                        }
-                        None
-                    });*/
+        .filter_map(move |(id, _distance)| {
+            let poly =
+                self.polygons
+                    .get(id);
+            if let Some(poly) = poly {
+                if poly.intersects(poly) {
+                    return Some(id);
+                }
+            }
+            None
+        });*/
         Ok(results)
     }
 }
@@ -250,11 +254,10 @@ impl PolygonContainer<String> {
         filename: &str,
         grid_size: i32,
     ) -> Result<PolygonContainer<String>, OSMError> {
-        let mut reader =
-            shapefile::Reader::from_path(filename).map_err(|e| OSMError::IOError {
-                source: Box::new(e),
-                context: format!("Shape File '{}' doesn't exist!", filename),
-            })?;
+        let mut reader = shapefile::Reader::from_path(filename).map_err(|e| OSMError::IOError {
+            source: Box::new(e),
+            context: format!("Shape File '{}' doesn't exist!", filename),
+        })?;
         let start_time = Instant::now();
         //let mut data = HashMap::new();
         info!("Loading map data from file {}", filename);
@@ -355,10 +358,7 @@ impl PolygonContainer<String> {
         }).collect::<Result<HashMap<String, geo_types::Polygon<i32>>, OSMError>>()?;
         info!("Finished loading map data in {:?}", start_time.elapsed());
         let scaling = Scaling::yorkshire_national_grid(grid_size);
-        PolygonContainer::new(
-            data,
-            scaling, grid_size,
-        )
+        PolygonContainer::new(data, scaling, grid_size)
     }
     /*    pub fn remove_polygon(&mut self, output_area_id: T) {
         let poly=self.polygons.remove(&output_area_id).unwrap();

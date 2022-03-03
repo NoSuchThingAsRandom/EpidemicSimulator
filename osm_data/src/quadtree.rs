@@ -51,7 +51,6 @@ pub fn compare_geo_coord_nums<T: geo_types::CoordNum>(a: T, b: T) -> Ordering {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
@@ -82,12 +81,15 @@ mod tests {
 }
 
 /// Returns the square abs function as abs is not supported for CoordNum
-pub fn manhattan_distance<T: geo_types::CoordNum>(a: geo_types::Coordinate<T>, b: geo_types::Coordinate<T>) -> T {
+pub fn manhattan_distance<T: geo_types::CoordNum>(
+    a: geo_types::Coordinate<T>,
+    b: geo_types::Coordinate<T>,
+) -> T {
     // TODO This is fucking cursed
     let x = a.x - b.x;
-    let x: isize = format!("{:?}", x).parse().unwrap();// as isize;
+    let x: isize = format!("{:?}", x).parse().unwrap(); // as isize;
     let y = a.y - b.y;
-    let y: isize = format!("{:?}", y).parse().unwrap();// as isize;
+    let y: isize = format!("{:?}", y).parse().unwrap(); // as isize;
     T::from(x.abs() + y.abs()).unwrap()
 }
 
@@ -114,14 +116,16 @@ impl<T: Clone + Debug, U: CoordNum> Display for Child<T, U> {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Items<T: Clone, U: CoordNum> {
     items: Vec<(T, geo_types::Rect<U>)>,
 }
 
 impl<T: Clone, U: CoordNum + Serialize> Serialize for Items<T, U> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
         let mut seq = serializer.serialize_seq(Some(self.items.len()))?;
         for (_, rect) in &self.items {
             seq.serialize_element(rect)?;
@@ -129,7 +133,6 @@ impl<T: Clone, U: CoordNum + Serialize> Serialize for Items<T, U> {
         seq.end()
     }
 }
-
 
 impl<T: Clone, U: CoordNum> Items<T, U> {
     /// Adds a new item to the list, with the given bounding area
@@ -141,34 +144,46 @@ impl<T: Clone, U: CoordNum> Items<T, U> {
     /// The items are sorted in increasing distance from the bounding box
     pub fn get_items_sorted(&self, bounding_box: geo_types::Rect<U>) -> Vec<(&T, U)> {
         let search_value_center = center(bounding_box);
-        let mut items: Vec<(&T, U)> = self.items.iter().map(|(item, boundary)| {
-            if boundary.intersects(&bounding_box) {
-                (item, U::zero())
-            } else {
-                let distance = manhattan_distance(search_value_center, center(*boundary));
-                (item, distance)
-            }
-        }).collect();
-        items.sort_by(|(_, a_distance), (_, b_distance)| compare_geo_coord_nums(*a_distance, *b_distance));
+        let mut items: Vec<(&T, U)> = self
+            .items
+            .iter()
+            .map(|(item, boundary)| {
+                if boundary.intersects(&bounding_box) {
+                    (item, U::zero())
+                } else {
+                    let distance = manhattan_distance(search_value_center, center(*boundary));
+                    (item, distance)
+                }
+            })
+            .collect();
+        items.sort_by(|(_, a_distance), (_, b_distance)| {
+            compare_geo_coord_nums(*a_distance, *b_distance)
+        });
         items
     }
     pub fn get_items(&self, bounding_box: &geo_types::Rect<U>) -> Vec<&T> {
-        self.items.iter().filter_map(|(item, boundary)| {
-            if boundary.intersects(bounding_box) {
-                Some(item)
-            } else {
-                None
-            }
-        }).collect()
+        self.items
+            .iter()
+            .filter_map(|(item, boundary)| {
+                if boundary.intersects(bounding_box) {
+                    Some(item)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
     pub fn get_items_mut(&mut self, bounding_box: &geo_types::Rect<U>) -> Vec<&mut T> {
-        self.items.iter_mut().filter_map(|(item, boundary)| {
-            if boundary.intersects(bounding_box) {
-                Some(item)
-            } else {
-                None
-            }
-        }).collect()
+        self.items
+            .iter_mut()
+            .filter_map(|(item, boundary)| {
+                if boundary.intersects(bounding_box) {
+                    Some(item)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
     pub fn size(&self) -> usize {
         self.items.len()
@@ -184,7 +199,6 @@ impl<T: Clone, U: CoordNum> Default for Items<T, U> {
     }
 }
 
-
 #[derive(Serialize)]
 pub struct QuadTree<T: Clone, U: CoordNum> {
     depth: u8,
@@ -195,12 +209,49 @@ pub struct QuadTree<T: Clone, U: CoordNum> {
 }
 
 impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
-    pub fn with_size(width: U, height: U, initial_depth: u8, max_items_per_quad: usize) -> QuadTree<T, U> {
+    pub fn with_size(
+        width: U,
+        height: U,
+        initial_depth: u8,
+        max_items_per_quad: usize,
+    ) -> QuadTree<T, U> {
         let two = U::one() + U::one();
-        let bottom_left = QuadTree::with_boundary(U::zero(), width / two, U::zero(), height / two, 1, initial_depth, max_items_per_quad);
-        let bottom_right = QuadTree::with_boundary(width / two, width, U::zero(), height / two, 1, initial_depth, max_items_per_quad);
-        let top_left = QuadTree::with_boundary(U::zero(), width / two, height / two, height, 1, initial_depth, max_items_per_quad);
-        let top_right = QuadTree::with_boundary(width / two, width, height / two, height, 1, initial_depth, max_items_per_quad);
+        let bottom_left = QuadTree::with_boundary(
+            U::zero(),
+            width / two,
+            U::zero(),
+            height / two,
+            1,
+            initial_depth,
+            max_items_per_quad,
+        );
+        let bottom_right = QuadTree::with_boundary(
+            width / two,
+            width,
+            U::zero(),
+            height / two,
+            1,
+            initial_depth,
+            max_items_per_quad,
+        );
+        let top_left = QuadTree::with_boundary(
+            U::zero(),
+            width / two,
+            height / two,
+            height,
+            1,
+            initial_depth,
+            max_items_per_quad,
+        );
+        let top_right = QuadTree::with_boundary(
+            width / two,
+            width,
+            height / two,
+            height,
+            1,
+            initial_depth,
+            max_items_per_quad,
+        );
         let children = Box::new([bottom_left, bottom_right, top_left, top_right]);
         QuadTree {
             depth: 0,
@@ -211,62 +262,149 @@ impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
     }
 
     /// Builds a new Quadtree with a child of Items
-    fn new_item_child(x_min: U,
-                      x_max: U,
-                      y_min: U,
-                      y_max: U, depth: u8,
-                      max_items_per_quad: usize) -> QuadTree<T, U> {
+    fn new_item_child(
+        x_min: U,
+        x_max: U,
+        y_min: U,
+        y_max: U,
+        depth: u8,
+        max_items_per_quad: usize,
+    ) -> QuadTree<T, U> {
         QuadTree {
             depth,
             max_items_per_quad,
-            child: Child::Items { items: Items::default() },
+            child: Child::Items {
+                items: Items::default(),
+            },
             boundary: geo_types::Rect::new((x_min, y_min), (x_max, y_max)),
         }
     }
     /// Builds a new Quadtree, with 4 children
-    fn build_single_layer_quadtree(x_min: U,
-                                   x_max: U,
-                                   y_min: U,
-                                   y_max: U, depth: u8,
-                                   max_items_per_quad: usize) -> Child<T, U> {
+    fn build_single_layer_quadtree(
+        x_min: U,
+        x_max: U,
+        y_min: U,
+        y_max: U,
+        depth: u8,
+        max_items_per_quad: usize,
+    ) -> Child<T, U> {
         let two = U::one() + U::one();
         let width = x_max - x_min;
         let height = y_max - y_min;
 
-        let bottom_left = QuadTree::new_item_child(x_min, x_min + (width / two), y_min, y_min + (height / two), depth + 1, max_items_per_quad);
-        let bottom_right = QuadTree::new_item_child(x_min + (width / two), x_max, y_min, y_min + (height / two), depth + 1, max_items_per_quad);
+        let bottom_left = QuadTree::new_item_child(
+            x_min,
+            x_min + (width / two),
+            y_min,
+            y_min + (height / two),
+            depth + 1,
+            max_items_per_quad,
+        );
+        let bottom_right = QuadTree::new_item_child(
+            x_min + (width / two),
+            x_max,
+            y_min,
+            y_min + (height / two),
+            depth + 1,
+            max_items_per_quad,
+        );
 
-        let top_left = QuadTree::new_item_child(x_min, x_min + (width / two), y_min + (height / two), y_max, depth + 1, max_items_per_quad);
-        let top_right = QuadTree::new_item_child(x_min + (width / two), x_max, y_min + (height / two), y_max, depth + 1, max_items_per_quad);
+        let top_left = QuadTree::new_item_child(
+            x_min,
+            x_min + (width / two),
+            y_min + (height / two),
+            y_max,
+            depth + 1,
+            max_items_per_quad,
+        );
+        let top_right = QuadTree::new_item_child(
+            x_min + (width / two),
+            x_max,
+            y_min + (height / two),
+            y_max,
+            depth + 1,
+            max_items_per_quad,
+        );
 
         let children = Box::new([bottom_left, bottom_right, top_left, top_right]);
         Child::Quad { children }
     }
 
     /// Builds a new quadtree with a depth of `initial_depth`
-    fn with_boundary(x_min: U,
-                     x_max: U,
-                     y_min: U,
-                     y_max: U, current_depth: u8, initial_depth: u8, max_items_per_quad: usize) -> QuadTree<T, U> {
-        assert!(x_min < x_max, "X min ({}) must be smaller than X max ({})", x_min, x_max);
-        assert!(y_min < y_max, "Y min ({}) must be smaller than Y max ({})", y_min, y_max);
+    fn with_boundary(
+        x_min: U,
+        x_max: U,
+        y_min: U,
+        y_max: U,
+        current_depth: u8,
+        initial_depth: u8,
+        max_items_per_quad: usize,
+    ) -> QuadTree<T, U> {
+        assert!(
+            x_min < x_max,
+            "X min ({}) must be smaller than X max ({})",
+            x_min,
+            x_max
+        );
+        assert!(
+            y_min < y_max,
+            "Y min ({}) must be smaller than Y max ({})",
+            y_min,
+            y_max
+        );
 
-        let child = if current_depth < initial_depth + 1 && (x_max - x_min) > U::from(MIN_BOUNDARY_SIZE).unwrap() && (y_max - y_min) > U::from(MIN_BOUNDARY_SIZE).unwrap() {
+        let child = if current_depth < initial_depth + 1
+            && (x_max - x_min) > U::from(MIN_BOUNDARY_SIZE).unwrap()
+            && (y_max - y_min) > U::from(MIN_BOUNDARY_SIZE).unwrap()
+        {
             let two = U::one() + U::one();
             let width = x_max - x_min;
             let height = y_max - y_min;
 
-            let bottom_left = QuadTree::with_boundary(x_min, x_min + (width / two), y_min, y_min + (height / two), current_depth + 1, initial_depth, max_items_per_quad);
-            let bottom_right = QuadTree::with_boundary(x_min + (width / two), x_max, y_min, y_min + (height / two), current_depth + 1, initial_depth, max_items_per_quad);
+            let bottom_left = QuadTree::with_boundary(
+                x_min,
+                x_min + (width / two),
+                y_min,
+                y_min + (height / two),
+                current_depth + 1,
+                initial_depth,
+                max_items_per_quad,
+            );
+            let bottom_right = QuadTree::with_boundary(
+                x_min + (width / two),
+                x_max,
+                y_min,
+                y_min + (height / two),
+                current_depth + 1,
+                initial_depth,
+                max_items_per_quad,
+            );
 
-            let top_left = QuadTree::with_boundary(x_min, x_min + (width / two), y_min + (height / two), y_max, current_depth + 1, initial_depth, max_items_per_quad);
-            let top_right = QuadTree::with_boundary(x_min + (width / two), x_max, y_min + (height / two), y_max, current_depth + 1, initial_depth, max_items_per_quad);
-
+            let top_left = QuadTree::with_boundary(
+                x_min,
+                x_min + (width / two),
+                y_min + (height / two),
+                y_max,
+                current_depth + 1,
+                initial_depth,
+                max_items_per_quad,
+            );
+            let top_right = QuadTree::with_boundary(
+                x_min + (width / two),
+                x_max,
+                y_min + (height / two),
+                y_max,
+                current_depth + 1,
+                initial_depth,
+                max_items_per_quad,
+            );
 
             let children = Box::new([bottom_left, bottom_right, top_left, top_right]);
             Child::Quad { children }
         } else {
-            Child::Items { items: Items::default() }
+            Child::Items {
+                items: Items::default(),
+            }
         };
         QuadTree {
             depth: current_depth,
@@ -298,17 +436,22 @@ impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
 
     /// If the Items struct has too many entries, create a sub quad grid to increase indexing performance
     pub fn rebuild(&mut self) {
-        trace!("Commencing rebuild at depth: {}",self.depth);
+        trace!("Commencing rebuild at depth: {}", self.depth);
         let items = match &self.child {
             Child::Quad { .. } => {
                 warn!("Can't destroy sub quadtrees!");
                 return;
             }
-            Child::Items { items } => {
-                (items.clone()).destroy()
-            }
+            Child::Items { items } => (items.clone()).destroy(),
         };
-        self.child = QuadTree::build_single_layer_quadtree(self.boundary.min().x, self.boundary.max().x, self.boundary.min().y, self.boundary.max().y, self.depth, self.max_items_per_quad);
+        self.child = QuadTree::build_single_layer_quadtree(
+            self.boundary.min().x,
+            self.boundary.max().x,
+            self.boundary.min().y,
+            self.boundary.max().y,
+            self.depth,
+            self.max_items_per_quad,
+        );
         for (item, boundary) in items {
             assert!(self.add_item(item, boundary), "Failed to build lower layer")
         }
@@ -317,7 +460,8 @@ impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
         self.boundary.intersects(other)
     }
     /// Returns the top [`MAX_ITEMS_RETURNED`] closest items to the bounding box
-    pub fn get_multiple_items(&'a self, bounding_box: geo_types::Rect<U>) -> Vec<(&T, U)> {//Box<dyn Iterator<Item=(&T, U)> + 'a> {
+    pub fn get_multiple_items(&'a self, bounding_box: geo_types::Rect<U>) -> Vec<(&T, U)> {
+        //Box<dyn Iterator<Item=(&T, U)> + 'a> {
         match &self.child {
             Child::Quad { children } => {
                 let mut items = HashMap::with_capacity(MAX_ITEMS_RETURNED);
@@ -352,31 +496,41 @@ impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
                 items.sort_by(|(_, a), (_, b)| compare_geo_coord_nums(*a, *b));
                 items
             }
-            Child::Items { items } => {
-                items.get_items_sorted(bounding_box)
-            }
+            Child::Items { items } => items.get_items_sorted(bounding_box),
         }
     }
     /// Returns references to all Items that are encapsulated by the given bounding box
     pub fn get_items(&self, bounding_box: geo_types::Rect<U>) -> Vec<&T> {
         match &self.child {
-            Child::Quad { children } => {
-                children.iter().filter_map(|child| if child.contains(&bounding_box) { Some(child.get_items(bounding_box)) } else { None }).flatten().collect()
-            }
-            Child::Items { items } => {
-                items.get_items(&bounding_box)
-            }
+            Child::Quad { children } => children
+                .iter()
+                .filter_map(|child| {
+                    if child.contains(&bounding_box) {
+                        Some(child.get_items(bounding_box))
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect(),
+            Child::Items { items } => items.get_items(&bounding_box),
         }
     }
     /// Returns mutable references to all items that are encapsulated by the given bounding box
     pub fn get_items_mut(&mut self, bounding_box: &geo_types::Rect<U>) -> Vec<&mut T> {
         match &mut self.child {
-            Child::Quad { children } => {
-                children.iter_mut().filter_map(|child| if child.contains(&bounding_box) { Some(child.get_items_mut(bounding_box)) } else { None }).flatten().collect()
-            }
-            Child::Items { items } => {
-                items.get_items_mut(bounding_box)
-            }
+            Child::Quad { children } => children
+                .iter_mut()
+                .filter_map(|child| {
+                    if child.contains(&bounding_box) {
+                        Some(child.get_items_mut(bounding_box))
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect(),
+            Child::Items { items } => items.get_items_mut(bounding_box),
         }
     }
 }

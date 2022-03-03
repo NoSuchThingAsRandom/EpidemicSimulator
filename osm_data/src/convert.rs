@@ -78,10 +78,7 @@ pub fn decimal_latitude_and_longitude_to_northing_and_eastings(
 
 /// Trims f64 coordinates to an isize
 fn f64_trimmed_to_isize(position: (f64, f64)) -> (i32, i32) {
-    (
-        position.0.round() as i32,
-        position.1.round() as i32,
-    )
+    (position.0.round() as i32, position.1.round() as i32)
 }
 
 /// Converts an angle in seconds, to radians

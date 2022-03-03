@@ -28,11 +28,11 @@ use serde::Deserialize;
 
 use crate::parsing_error::DataLoadingError;
 
+pub mod age_structure;
 pub mod employment_densities;
 pub mod occupation_count;
 pub mod population_and_density_per_output_area;
 pub mod resides_vs_workplace;
-pub mod age_structure;
 //mod teachers_per_local_authority;
 
 /// This is used to load in a CSV file, and each row corresponds to one struct
@@ -100,7 +100,7 @@ impl CensusTableNames {
             CensusTableNames::ResidentialAreaVsWorkplaceArea => {
                 "wf01bew_residential_vs_workplace_NM_1228_1.csv"
             }
-            CensusTableNames::AgeStructure => "qs103ew_age_structure_NUM_503_1.csv"
+            CensusTableNames::AgeStructure => "qs103ew_age_structure_NUM_503_1.csv",
         }
     }
     /// Returns the api code for table
@@ -112,7 +112,7 @@ impl CensusTableNames {
                 "data/census_map_areas/England_oa_2011/england_oa_2011.shp"
             }
             CensusTableNames::ResidentialAreaVsWorkplaceArea => "NM_1228_1",
-            CensusTableNames::AgeStructure => "NM_503_1"
+            CensusTableNames::AgeStructure => "NM_503_1",
         }
     }
     /// The columns to retrieve from the API

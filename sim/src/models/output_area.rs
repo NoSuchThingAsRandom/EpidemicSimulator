@@ -145,14 +145,15 @@ impl OutputArea {
         while generated_population <= pop_count[PersonType::All] {
             if let Some(location) = possible_buildings.next() {
                 assert_eq!(location.classification(), TagClassifiedBuilding::Household);
-                let household_building_id =
-                    BuildingID::new(self.output_area_id.clone(), BuildingType::Household, self.buildings.len() as u32);
+                let household_building_id = BuildingID::new(
+                    self.output_area_id.clone(),
+                    BuildingType::Household,
+                    self.buildings.len() as u32,
+                );
                 let mut household =
                     Household::new(household_building_id.clone(), location.center());
                 for _ in 0..household_size {
-                    let raw_occupation = census_data
-                        .occupation_count
-                        .get_random_occupation(rng);
+                    let raw_occupation = census_data.occupation_count.get_random_occupation(rng);
                     let age = census_data.age_population.get_random_age(rng);
                     let occupation = if age < MAX_STUDENT_AGE {
                         Occupation::Student

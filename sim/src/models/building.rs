@@ -83,7 +83,11 @@ impl BuildingID {
     /// assert_eq!(building_code.area_type(), area_type);
     ///
     /// ```
-    pub fn new(output_area_id: OutputAreaID, building_type: BuildingType, building_index: u32) -> BuildingID {
+    pub fn new(
+        output_area_id: OutputAreaID,
+        building_type: BuildingType,
+        building_index: u32,
+    ) -> BuildingID {
         BuildingID {
             output_area_id,
             building_index,
@@ -196,9 +200,7 @@ impl Building for Household {
     }
 
     fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
-        let mut exposed = self.occupants();
-        exposed.retain(|id| !infected_citizens.contains(id));
-        exposed
+        (*self.occupants).to_owned()
     }
 }
 
@@ -240,7 +242,8 @@ impl Workplace {
         }
     }
     fn max_occupant_count(&self) -> u32 {
-        ((self.floor_space) / get_density_for_occupation(self.workplace_occupation_type)).max(MIN_WORKPLACE_OCCUPANT_COUNT)
+        ((self.floor_space) / get_density_for_occupation(self.workplace_occupation_type))
+            .max(MIN_WORKPLACE_OCCUPANT_COUNT)
     }
     pub fn is_at_capacity(&self) -> bool {
         self.max_occupant_count() <= (self.occupants.len() as u32)
@@ -273,9 +276,7 @@ impl Building for Workplace {
         self.location
     }
     fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
-        let mut exposed = self.occupants();
-        exposed.retain(|id| !infected_citizens.contains(id));
-        exposed
+        (*self.occupants).to_owned()
     }
 }
 
@@ -342,25 +343,48 @@ pub struct School {
 
 impl School {
     // TODO Return errors instead of panicking!
-    pub fn with_students_and_teachers(building_id: BuildingID, building: RawBuilding, students: Vec<Vec<CitizenID>>, teachers: Vec<CitizenID>) -> (School, SchoolStatistic) {
+    pub fn with_students_and_teachers(
+        building_id: BuildingID,
+        building: RawBuilding,
+        students: Vec<Vec<CitizenID>>,
+        teachers: Vec<CitizenID>,
+    ) -> (School, SchoolStatistic) {
         let mut statistic = SchoolStatistic::default();
         if teachers.len() < 1 {
             panic!("Cannot have a school without any teachers!")
         }
         // Remove any empty age groups
-        let students: Vec<(usize, Vec<CitizenID>)> = students.into_iter().enumerate().filter(|(_age, group)| group.len() > 0).collect();
-        statistic.students_per_age_group = students.iter().map(|(age, students)| (*age, students.len())).collect();
+        let students: Vec<(usize, Vec<CitizenID>)> = students
+            .into_iter()
+            .enumerate()
+            .filter(|(_age, group)| group.len() > 0)
+            .collect();
+        statistic.students_per_age_group = students
+            .iter()
+            .map(|(age, students)| (*age, students.len()))
+            .collect();
 
         // Calculate the number of classes per age group
-        statistic.classes_per_age_group = students.iter().map(|(_age, student_number)|
-            { if student_number.len() > 0 { (((student_number.len() as f64) / AVERAGE_CLASS_SIZE).ceil() as usize).max(1) } else { 0 } }
-        ).collect();
+        statistic.classes_per_age_group = students
+            .iter()
+            .map(|(_age, student_number)| {
+                if student_number.len() > 0 {
+                    (((student_number.len() as f64) / AVERAGE_CLASS_SIZE).ceil() as usize).max(1)
+                } else {
+                    0
+                }
+            })
+            .collect();
 
         // Check we have enough teachers
         let required_teachers: usize = statistic.classes_per_age_group.iter().sum();
 
         if teachers.len() < (required_teachers as usize) {
-            panic!("School does not have enough teachers ({}), requires: ({})", teachers.len(), required_teachers);
+            panic!(
+                "School does not have enough teachers ({}), requires: ({})",
+                teachers.len(),
+                required_teachers
+            );
         }
 
         // Allocate students/teachers into classes
@@ -370,8 +394,9 @@ impl School {
         let mut teachers = teachers.into_iter();
         let mut classes: Vec<Class> = Vec::new();
 
-
-        for ((_age, age_group), class_count) in students.iter().zip(statistic.classes_per_age_group.iter()) {
+        for ((_age, age_group), class_count) in
+        students.iter().zip(statistic.classes_per_age_group.iter())
+        {
             let mut new_classes = Vec::new();
             let class_size = (age_group.len() as f64 / *class_count as f64).ceil() as usize;
             statistic.class_sizes.push(class_size);
@@ -394,7 +419,8 @@ impl School {
 
         // Assign any leftover teachers to Offices
         let mut office_index = 0;
-        let mut offices: Vec<Vec<CitizenID>> = Vec::with_capacity(teachers.len() / AVERAGE_OFFICE_SIZE);
+        let mut offices: Vec<Vec<CitizenID>> =
+            Vec::with_capacity(teachers.len() / AVERAGE_OFFICE_SIZE);
         for misc_staff in teachers.as_slice().chunks(AVERAGE_OFFICE_SIZE) {
             for staff in misc_staff {
                 participant_to_class.insert(*staff, RoomID::OfficeId { id: office_index });
@@ -404,13 +430,16 @@ impl School {
             office_index += 1;
             statistic.number_of_offices += 1;
         }
-        (School {
-            building_code: building_id,
-            location: building.center(),
-            classes,
-            offices,
-            occupant_to_class: participant_to_class,
-        }, statistic)
+        (
+            School {
+                building_code: building_id,
+                location: building.center(),
+                classes,
+                offices,
+                occupant_to_class: participant_to_class,
+            },
+            statistic,
+        )
     }
     pub fn classes(&self) -> &Vec<Class> {
         &self.classes
@@ -423,7 +452,13 @@ impl School {
 
 impl Display for School {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "School: {},\tWith  {} classes\tLocated at: {:?} ", self.id(), self.classes.len(), self.location)
+        write!(
+            f,
+            "School: {},\tWith  {} classes\tLocated at: {:?} ",
+            self.id(),
+            self.classes.len(),
+            self.location
+        )
     }
 }
 
@@ -443,7 +478,11 @@ impl Building for School {
     }
 
     fn occupants(&self) -> Vec<CitizenID> {
-        self.classes.iter().flat_map(|class| class.get_participants()).chain(self.offices.iter().flatten().cloned()).collect()
+        self.classes
+            .iter()
+            .flat_map(|class| class.get_participants())
+            .chain(self.offices.iter().flatten().cloned())
+            .collect()
     }
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
@@ -458,30 +497,30 @@ impl Building for School {
             let class_index = match self.occupant_to_class.get(infected_citizen) {
                 Some(class_index) => class_index,
                 None => {
-                    error!("Citizen {} does not belong to this school {}!",infected_citizen,self.id());
+                    error!(
+                        "Citizen {} does not belong to this school {}!",
+                        infected_citizen,
+                        self.id()
+                    );
                     continue;
                 }
             };
             match class_index {
-                RoomID::ClassId { id: class_id } => {
-                    self.classes[*class_id].get_participants().iter().for_each(|citizen|
-                        if !infected_citizens.contains(citizen) {
-                            exposed.push(*citizen);
-                        });
-                }
+                RoomID::ClassId { id: class_id } => self.classes[*class_id]
+                    .get_participants()
+                    .iter()
+                    .for_each(|citizen| exposed.push(*citizen)),
                 RoomID::OfficeId { id: staff_id } => {
                     let staff = &self.offices[*staff_id];
-                    staff.iter().for_each(|staff_member|
-                        if !infected_citizens.contains(staff_member) {
-                            exposed.push(*staff_member);
-                        });
+                    staff
+                        .iter()
+                        .for_each(|staff_member| exposed.push(*staff_member))
                 }
             }
         }
         exposed
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -495,7 +534,9 @@ mod tests {
     };
     use load_census_data::tables::employment_densities::EmploymentDensities;
     use load_census_data::tables::occupation_count::OccupationType;
-    use osm_data::{BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding};
+    use osm_data::{
+        BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding,
+    };
 
     use crate::models::building::{
         Building, BuildingID, BuildingType, MINIMUM_FLOOR_SPACE_SIZE, Workplace,

@@ -283,9 +283,7 @@ pub fn draw_output_areas(filename: String, data: Vec<DrawingRecord>) -> DrawingR
 }
 
 #[inline]
-fn building_colour(
-    class: osm_data::TagClassifiedBuilding,
-) -> plotters::style::RGBColor {
+fn building_colour(class: osm_data::TagClassifiedBuilding) -> plotters::style::RGBColor {
     let index = match class {
         TagClassifiedBuilding::Shop => 1,
         TagClassifiedBuilding::School => 2,

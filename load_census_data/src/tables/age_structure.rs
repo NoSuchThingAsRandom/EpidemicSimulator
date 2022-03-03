@@ -56,10 +56,7 @@ pub struct AgePopulationRecord {
 }
 
 impl AgePopulationRecord {
-    pub fn get_random_age(
-        &mut self,
-        rng: &mut dyn RngCore,
-    ) -> u16 {
+    pub fn get_random_age(&mut self, rng: &mut dyn RngCore) -> u16 {
         self.age_weighting.sample(rng) as u16
     }
 }
@@ -113,7 +110,11 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulati
                     },
                 });
             }
-            assert_eq!(record.rural_urban_name, "Total", "Invalid Rural Area type ({}) for age structure table", record.rural_urban_name);
+            assert_eq!(
+                record.rural_urban_name, "Total",
+                "Invalid Rural Area type ({}) for age structure table",
+                record.rural_urban_name
+            );
             // As an age of under 1, is 1
             let age = record.c_age - 1;
             assert!(age <= 100, "Age {} has exceed bounds of 100", age);
@@ -123,7 +124,8 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulati
         }
         Ok(AgePopulationRecord {
             population_counts: data,
-            age_weighting: WeightedIndex::new(&data).expect("Failed to build age weighted sampling"),
+            age_weighting: WeightedIndex::new(&data)
+                .expect("Failed to build age weighted sampling"),
             population_size: total_population,
         })
     }

@@ -76,14 +76,19 @@ pub fn build_workplace_output_area_graph(
         area_map_lookup.insert(id, area.to_string());
         graph.add_node(id);
     });
-    residents_workplace.iter().for_each(|(household_code, record)| {
-        let house_id = area_map_lookup.get_by_right(household_code).expect("Household code doesn't exist!");
-        for (area, amount) in &record.workplace_count {
-            let work_id = area_map_lookup.get_by_right(area).expect("Workplace code doesn't exist!");
-            graph.add_edge(*house_id, *work_id, *amount);
-        }
-    }
-    );
+    residents_workplace
+        .iter()
+        .for_each(|(household_code, record)| {
+            let house_id = area_map_lookup
+                .get_by_right(household_code)
+                .expect("Household code doesn't exist!");
+            for (area, amount) in &record.workplace_count {
+                let work_id = area_map_lookup
+                    .get_by_right(area)
+                    .expect("Workplace code doesn't exist!");
+                graph.add_edge(*house_id, *work_id, *amount);
+            }
+        });
     graph
 }
 
@@ -91,7 +96,11 @@ pub fn build_building_graph(
     simulation: &sim::simulator::Simulator,
 ) -> GraphMap<u128, u8, Undirected> {
     let area_ref = simulation.output_areas.read().unwrap();
-    let citizens: Vec<Citizen> = area_ref.iter().map(|area| area.lock().unwrap().citizens.clone()).flatten().collect();
+    let citizens: Vec<Citizen> = area_ref
+        .iter()
+        .map(|area| area.lock().unwrap().citizens.clone())
+        .flatten()
+        .collect();
     let mut graph: GraphMap<u128, u8, Undirected> =
         GraphMap::with_capacity(citizens.len(), 20 * citizens.len());
 
@@ -117,9 +126,12 @@ pub fn connected_groups(graph: &GraphMap<u128, u8, Undirected>) -> usize {
     petgraph::algo::connected_components(graph)
 }
 
-pub fn draw_graph<T: Copy + Ord + Hash + Debug, U: Copy + Ord + Hash + Debug, V: EdgeType>(filename: String, graph: GraphMap<T, U, V>) -> anyhow::Result<()> {
+pub fn draw_graph<T: Copy + Ord + Hash + Debug, U: Copy + Ord + Hash + Debug, V: EdgeType>(
+    filename: String,
+    graph: GraphMap<T, U, V>,
+) -> anyhow::Result<()> {
     let dot = petgraph::dot::Dot::with_config(&graph, &[NodeIndexLabel, EdgeNoLabel]);
-    info!("Creaeting file: {}",filename);
+    info!("Creaeting file: {}", filename);
     let file = File::create(filename.to_string())
         .context(format!("Failed to create file: {}", filename))?;
     let mut writer = BufWriter::new(file);

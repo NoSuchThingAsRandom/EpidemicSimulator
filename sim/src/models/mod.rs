@@ -73,4 +73,3 @@ pub fn get_density_for_occupation(occupation: OccupationType) -> u32 {
         OccupationType::Teaching => EmploymentDensities::RETAIL_HIGH_STREET,
     }
 }
-

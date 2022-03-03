@@ -37,10 +37,10 @@ use crate::voronoi_generator::{Scaling, Voronoi};
 
 pub mod convert;
 pub mod draw_voronoi;
-pub mod polygon_lookup;
-pub mod voronoi_generator;
 pub mod error;
+pub mod polygon_lookup;
 mod quadtree;
+pub mod voronoi_generator;
 
 pub const OSM_FILENAME: &str = "OSM/england-latest.osm.pbf";
 pub const OSM_CACHE_FILENAME: &str = "OSM/cached";
@@ -61,7 +61,10 @@ pub const BOTTOM_LEFT_BOUNDARY: (isize, isize) = (
 /// i.e. If building A, within this distance of building B, they should be merged
 pub const MAXIMUM_DUPLICATION_DISTANCE: i32 = 500;
 /// The types of buildings to remove duplicates from
-pub const BUILDINGS_TO_REMOVE_DUPLICATES: [TagClassifiedBuilding; 2] = [TagClassifiedBuilding::Hospital, TagClassifiedBuilding::School];
+pub const BUILDINGS_TO_REMOVE_DUPLICATES: [TagClassifiedBuilding; 2] = [
+    TagClassifiedBuilding::Hospital,
+    TagClassifiedBuilding::School,
+];
 #[allow(dead_code)]
 enum CheckBoundaries {
     York,
@@ -94,7 +97,7 @@ impl CheckBoundaries {
             }
             CheckBoundaries::All => {
                 if !(52.0..56.0).contains(&lat) {
-                    return Err(())
+                    return Err(());
                 }
                 if !(-3.0..=1.0).contains(&lon) {
                     return Err(());
@@ -111,15 +114,23 @@ fn convert_points_to_floats<T: CoordNum, U: CoordFloat>(
     points
         .iter()
         .map(|p| {
-            let x = U::from(p.x).unwrap_or_else(|| panic!("Failed to convert X coordinate ({:?}) to float", p.x));
-            debug_assert!(x > U::zero(), "X int to float conversion ({:?} -> {:?}) failed, as it is less than zero", p.x, x);
-            let y = U::from(p.y).unwrap_or_else(|| panic!("Failed to convert Y coordinate ({:?}) to float", p.y));
-            debug_assert!(y > U::zero(), "Y int to float conversion ({:?} -> {:?}) failed, as it is less than zero", p.y, y);
-            (x
-             , y
-             ,
-            )
-                .into()
+            let x = U::from(p.x)
+                .unwrap_or_else(|| panic!("Failed to convert X coordinate ({:?}) to float", p.x));
+            debug_assert!(
+                x > U::zero(),
+                "X int to float conversion ({:?} -> {:?}) failed, as it is less than zero",
+                p.x,
+                x
+            );
+            let y = U::from(p.y)
+                .unwrap_or_else(|| panic!("Failed to convert Y coordinate ({:?}) to float", p.y));
+            debug_assert!(
+                y > U::zero(),
+                "Y int to float conversion ({:?} -> {:?}) failed, as it is less than zero",
+                p.y,
+                y
+            );
+            (x, y).into()
         })
         .collect()
 }
@@ -136,7 +147,6 @@ pub fn convert_polygon_to_float<T: CoordNum, U: CoordFloat>(
             .collect(),
     )
 }
-
 
 /// To avoid storing multiple copies of a buildings outline (as one OSM building, can exist multiple times),
 /// We create a global hashmap, and use this Struct as an ID
@@ -285,10 +295,30 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
                 node.lat(),
                 node.lon(),
             );
-            assert!(position.0 >= 0, "Raw Node X coordinate conversion ({} -> {}) is less than zero!", node.lat(), position.0);
-            assert!(position.0 <= i32::MAX, "Raw Node X coordinate conversion ({} -> {}) is greater than the max value!", node.lat(), position.0);
-            assert!(position.1 >= 0, "Raw Node Y coordinate conversion ({} -> {}) is less than zero!", node.lon(), position.1);
-            assert!(position.1 <= i32::MAX, "Raw Node Y coordinate conversion ({} -> {}) is greater than the max value!", node.lon(), position.1);
+            assert!(
+                position.0 >= 0,
+                "Raw Node X coordinate conversion ({} -> {}) is less than zero!",
+                node.lat(),
+                position.0
+            );
+            assert!(
+                position.0 <= i32::MAX,
+                "Raw Node X coordinate conversion ({} -> {}) is greater than the max value!",
+                node.lat(),
+                position.0
+            );
+            assert!(
+                position.1 >= 0,
+                "Raw Node Y coordinate conversion ({} -> {}) is less than zero!",
+                node.lon(),
+                position.1
+            );
+            assert!(
+                position.1 <= i32::MAX,
+                "Raw Node Y coordinate conversion ({} -> {}) is greater than the max value!",
+                node.lon(),
+                position.1
+            );
             let position: Point<i32> = position.into();
             return Ok(RawOSMNode {
                 id: node.id,
@@ -339,9 +369,7 @@ pub struct OSMRawBuildings {
     building_voronoi: Option<HashMap<TagClassifiedBuilding, Voronoi>>,
 }
 
-fn deserialize_to_none<'de, D, T>(
-    _deserializer: D,
-) -> Result<Option<T>, D::Error>
+fn deserialize_to_none<'de, D, T>(_deserializer: D) -> Result<Option<T>, D::Error>
     where
         D: Deserializer<'de>,
 {
@@ -350,20 +378,22 @@ fn deserialize_to_none<'de, D, T>(
 
 impl OSMRawBuildings {
     pub fn voronoi(&self) -> &HashMap<TagClassifiedBuilding, Voronoi> {
-        self.building_voronoi.as_ref().expect("Voronoi diagrams are not built!")
+        self.building_voronoi
+            .as_ref()
+            .expect("Voronoi diagrams are not built!")
     }
-    fn from(building_boundaries: HashMap<BuildingBoundaryID, Polygon<i32>>,
-            building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>) -> OSMRawBuildings {
+    fn from(
+        building_boundaries: HashMap<BuildingBoundaryID, Polygon<i32>>,
+        building_locations: HashMap<TagClassifiedBuilding, Vec<RawBuilding>>,
+    ) -> OSMRawBuildings {
         OSMRawBuildings {
             building_boundaries,
             building_locations,
             building_voronoi: None,
         }
     }
-    fn read_cached_osm_data(
-        cache_filename: String,
-    ) -> Result<OSMRawBuildings, OSMError> {
-        debug!("Reading cached parsing data from: {}",cache_filename);
+    fn read_cached_osm_data(cache_filename: String) -> Result<OSMRawBuildings, OSMError> {
+        debug!("Reading cached parsing data from: {}", cache_filename);
         let bytes = read(&cache_filename).map_err(|e| OSMError::IOError {
             source: Box::new(e),
             context: format!("Reading File '{}'  failed!", cache_filename),
@@ -382,7 +412,10 @@ impl OSMRawBuildings {
 
         debug!("Removing duplicate buildings...");
         for building_class in BUILDINGS_TO_REMOVE_DUPLICATES {
-            let classified_buildings_to_remove_duplicates = building_locations.building_locations.get_mut(&building_class).expect("Building class doesn't exist!");
+            let classified_buildings_to_remove_duplicates = building_locations
+                .building_locations
+                .get_mut(&building_class)
+                .expect("Building class doesn't exist!");
 
             // This is the group of buildings that are within [`MAXIMUM_DUPLICATION_DISTANCE`] of each other
             let mut duplicates: HashMap<Point<i32>, Vec<Point<i32>>> = HashMap::new();
@@ -391,7 +424,9 @@ impl OSMRawBuildings {
                     if building.center == check_building.center {
                         continue;
                     }
-                    if manhattan_distance(building.center.0, check_building.center.0) < MAXIMUM_DUPLICATION_DISTANCE {
+                    if manhattan_distance(building.center.0, check_building.center.0)
+                        < MAXIMUM_DUPLICATION_DISTANCE
+                    {
                         if let Some(entry) = duplicates.get_mut(&check_building.center()) {
                             entry.push(building.center);
                         } else if let Some(entry) = duplicates.get_mut(&building.center()) {
@@ -402,22 +437,34 @@ impl OSMRawBuildings {
                     }
                 }
             }
-            let mut to_remove_list: HashSet<Point<i32>> = duplicates.values().cloned().flatten().collect();
-            let filtered = to_remove_list.iter().filter(|to_remove| duplicates.contains_key(to_remove)).cloned().collect::<Vec<Point<i32>>>();
+            let mut to_remove_list: HashSet<Point<i32>> =
+                duplicates.values().cloned().flatten().collect();
+            let filtered = to_remove_list
+                .iter()
+                .filter(|to_remove| duplicates.contains_key(to_remove))
+                .cloned()
+                .collect::<Vec<Point<i32>>>();
             if !filtered.is_empty() {
-                warn!("A building is chosen to be removed, that is also selected to be kept: {:?}",filtered.len());
+                warn!(
+                    "A building is chosen to be removed, that is also selected to be kept: {:?}",
+                    filtered.len()
+                );
             }
-            filtered.iter().for_each(|building| { to_remove_list.remove(building); });
-            classified_buildings_to_remove_duplicates.retain(|building| to_remove_list.contains(&building.center));
+            filtered.iter().for_each(|building| {
+                to_remove_list.remove(building);
+            });
+            classified_buildings_to_remove_duplicates
+                .retain(|building| to_remove_list.contains(&building.center));
         }
         debug!("Saving cache to file");
 
-        std::fs::write(cache_filename, bincode::serialize(&building_locations).map_err(|e| {
-            OSMError::IOError {
+        std::fs::write(
+            cache_filename,
+            bincode::serialize(&building_locations).map_err(|e| OSMError::IOError {
                 source: Box::new(e),
                 context: "Failed to serialize OSM data with bincode!".to_string(),
-            }
-        })?)
+            })?,
+        )
             .map_err(|e| OSMError::IOError {
                 source: Box::new(e),
                 context: "Failed to write bincode OSM data to file!".to_string(),
@@ -474,9 +521,7 @@ impl OSMRawBuildings {
         Ok(osm_data)
     }
 
-    fn read_buildings_from_osm(
-        filename: String,
-    ) -> Result<OSMRawBuildings, OSMError> {
+    fn read_buildings_from_osm(filename: String) -> Result<OSMRawBuildings, OSMError> {
         use osmpbf::{Element, ElementReader};
         info!("Reading OSM data from file: {}", filename);
         let reader = ElementReader::from_path(filename)?;
@@ -631,7 +676,8 @@ impl OSMRawBuildings {
     ///
     /// This constructs a polygon map, for each building, where each point inside a polygon means that building is the closest one
     fn construct_voronoi_diagrams(&mut self, grid_size: i32) {
-        let voronoi: HashMap<TagClassifiedBuilding, Voronoi> = self.building_locations
+        let voronoi: HashMap<TagClassifiedBuilding, Voronoi> = self
+            .building_locations
             .par_iter()
             .filter_map(|(building_type, locations)| {
                 if *building_type != TagClassifiedBuilding::School {
@@ -652,7 +698,7 @@ impl OSMRawBuildings {
                 ) {
                     Ok(voronoi) => Some((*building_type, voronoi)),
                     Err(e) => {
-                        error!("Failed to build {:?} voronoi: {}",building_type, e);
+                        error!("Failed to build {:?} voronoi: {}", building_type, e);
                         None
                     }
                 };
@@ -686,7 +732,9 @@ mod tests {
                 b.iter()
                     .map(|p| (p.center.x(), p.center.y()))
                     .collect::<Vec<(i32, i32)>>()
-            }).flatten().collect();
+            })
+            .flatten()
+            .collect();
         let bounds = find_seed_bounds(&points);
         let width = bounds.1.0 - bounds.0.0;
         let height = bounds.1.1 - bounds.0.1;

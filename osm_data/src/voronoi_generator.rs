@@ -166,7 +166,9 @@ fn get_random_point_inside_polygon(
     Some(start)
 }
 
-fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> Option<geo_types::Polygon<T>> {
+fn voronoi_cell_to_polygon<T: CoordNum>(
+    cell: &voronoice::VoronoiCell,
+) -> Option<geo_types::Polygon<T>> {
     // Return None, if no vertices exist
     cell.iter_vertices().next()?;
     //points.push(points.first().expect("Polygon has too many points, Vec is out of space!"));
@@ -174,28 +176,57 @@ fn voronoi_cell_to_polygon<T: CoordNum>(cell: &voronoice::VoronoiCell) -> Option
     let points = cell
         .iter_vertices()
         .map(|point| {
-            assert!(point.x >= 0.0, "Voronoice produced negative X: {}!", point.x);
-            assert!(point.y >= 0.0, "Voronoice produced negative Y: {}!", point.x);
+            assert!(
+                point.x >= 0.0,
+                "Voronoice produced negative X: {}!",
+                point.x
+            );
+            assert!(
+                point.y >= 0.0,
+                "Voronoice produced negative Y: {}!",
+                point.x
+            );
             geo_types::Point::new(
                 T::from(point.x.round()).expect("Failed to represent f64 x coordinate as T"),
                 T::from(point.y.round()).expect("Failed to represent f64 y coordinate as T"),
             )
         })
         .collect::<Vec<geo_types::Point<T>>>();
-    Some(geo_types::Polygon::new(LineString::from(points), Vec::new()))
+    Some(geo_types::Polygon::new(
+        LineString::from(points),
+        Vec::new(),
+    ))
 }
 
 /// Returns the minimum and maximum grid size required for the seeds
-pub fn find_seed_bounds<T: num_traits::PrimInt + Copy + Clone + Debug>(seeds: &[(T, T)]) -> ((T, T), (T, T)) {
+pub fn find_seed_bounds<T: num_traits::PrimInt + Copy + Clone + Debug>(
+    seeds: &[(T, T)],
+) -> ((T, T), (T, T)) {
     let mut min_x = T::max_value();
     let mut max_x = T::zero();
     let mut min_y = T::max_value();
     let mut max_y = T::zero();
     for seed in seeds {
-        assert!(seed.0 > T::zero(), "X part of Seed {:?} is less than zero!", seed);
-        assert!(seed.0 < T::max_value(), "X part of Seed {:?} is greater than the max value!", seed);
-        assert!(seed.1 > T::zero(), "Y part of Seed {:?} is less than zero!", seed);
-        assert!(seed.1 < T::max_value(), "Y part of Seed {:?} is greater than the max value!", seed);
+        assert!(
+            seed.0 > T::zero(),
+            "X part of Seed {:?} is less than zero!",
+            seed
+        );
+        assert!(
+            seed.0 < T::max_value(),
+            "X part of Seed {:?} is greater than the max value!",
+            seed
+        );
+        assert!(
+            seed.1 > T::zero(),
+            "Y part of Seed {:?} is less than zero!",
+            seed
+        );
+        assert!(
+            seed.1 < T::max_value(),
+            "Y part of Seed {:?} is greater than the max value!",
+            seed
+        );
         if seed.0 < min_x {
             min_x = seed.0;
         }
@@ -226,11 +257,7 @@ impl Voronoi {
     /// Create a new Voronoi diagram to find the closest seed to a point
     ///
     /// Size represents the grid size to represent
-    pub fn new(
-        size: i32,
-        seeds: Vec<(i32, i32)>,
-        scaling: Scaling,
-    ) -> Result<Voronoi, OSMError> {
+    pub fn new(size: i32, seeds: Vec<(i32, i32)>, scaling: Scaling) -> Result<Voronoi, OSMError> {
         info!(
             "Building Voronoi Grid of {} x {} with {} seeds",
             size,
@@ -273,8 +300,17 @@ impl Voronoi {
             (grid_size) as f64,
             (grid_size) as f64,
         );
-        debug!("Voronoi boundary box size: {} -> {:?}", grid_size, bounding_box);
-        trace!("Sample of Seeds: {:?}",voronoi_seeds.iter().take(10).collect::<Vec<&voronoice::Point>>());
+        debug!(
+            "Voronoi boundary box size: {} -> {:?}",
+            grid_size, bounding_box
+        );
+        trace!(
+            "Sample of Seeds: {:?}",
+            voronoi_seeds
+                .iter()
+                .take(10)
+                .collect::<Vec<&voronoice::Point>>()
+        );
         let polygons = VoronoiBuilder::default()
             .set_sites(voronoi_seeds)
             .set_bounding_box(bounding_box)
@@ -292,7 +328,7 @@ impl Voronoi {
                 .enumerate()
                 .filter_map(|(index, p)| Some((index, voronoi_cell_to_polygon(&p)?)))
                 .collect();
-            trace!("Converted polygons to {} geo polygons",polygons.len());
+            trace!("Converted polygons to {} geo polygons", polygons.len());
             polygons
         } else {
             return Err(OSMError::Misc {
@@ -300,7 +336,11 @@ impl Voronoi {
             });
         };
 
-        let container = PolygonContainer::new(polygons, Scaling::yorkshire_national_grid(grid_size), grid_size)?;
+        let container = PolygonContainer::new(
+            polygons,
+            Scaling::yorkshire_national_grid(grid_size),
+            grid_size,
+        )?;
         debug!("Built quad tree");
 
         Ok(Voronoi {
@@ -311,10 +351,7 @@ impl Voronoi {
         })
     }
     /// Attempts to find the index of the SINGULAR closest seed to the given point
-    pub fn find_seed_for_point(
-        &self,
-        point: geo_types::Point<i32>,
-    ) -> Result<usize, OSMError> {
+    pub fn find_seed_for_point(&self, point: geo_types::Point<i32>) -> Result<usize, OSMError> {
         let point = self.scaling.scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
         Ok(*self.polygons.find_polygon_for_point(&point)?)
@@ -326,7 +363,12 @@ impl Voronoi {
     ) -> Result<Vec<usize>, OSMError> {
         let point = self.scaling.scale_point(point.x_y(), self.grid_size);
         let point = geo_types::Point::new(point.0, point.1);
-        let seed_indexes = self.polygons.find_polygons_for_point(&point)?.into_iter().copied().collect();
+        let seed_indexes = self
+            .polygons
+            .find_polygons_for_point(&point)?
+            .into_iter()
+            .copied()
+            .collect();
         Ok(seed_indexes)
     }
 }

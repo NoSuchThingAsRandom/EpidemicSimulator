@@ -30,21 +30,15 @@ use sim::simulator::Simulator;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
 use visualisation::image_export::DrawingRecord;
 
-pub fn draw_output_areas(
-    filename: String,
-    sim: &Vec<OutputArea>,
-) -> anyhow::Result<()> {
+pub fn draw_output_areas(filename: String, sim: &Vec<OutputArea>) -> anyhow::Result<()> {
     info!("Drawing Output Areas to: {}", filename);
     let data: Vec<visualisation::image_export::DrawingRecord> = sim
         .iter()
-        .map(|area| {
-            DrawingRecord::from((area.id().code().to_string(), &area.polygon, None))
-        })
+        .map(|area| DrawingRecord::from((area.id().code().to_string(), &area.polygon, None)))
         .collect();
     visualisation::image_export::draw_output_areas(filename, data)?;
     Ok(())
 }
-
 
 //TODO Enable when uni servers are on rustc 2021
 pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
@@ -58,7 +52,8 @@ pub fn build_graphs(sim: &Simulator, save_to_file: bool) {
     );
     println!("There are {} connected groups", connected_groups(&graph));
     if save_to_file {
-        draw_graph("tiny_graphviz_no_label.dot".to_string(), graph).expect("Failed to draw graph viz");
+        draw_graph("tiny_graphviz_no_label.dot".to_string(), graph)
+            .expect("Failed to draw graph viz");
     }
 }
 

@@ -21,7 +21,9 @@
 use std::fmt::{Debug, Display, Formatter};
 
 pub enum OSMError {
-    OSMError { source: osmpbf::Error },
+    OSMError {
+        source: osmpbf::Error,
+    },
     /// An error occurs reading from disk
     IOError {
         source: Box<dyn std::error::Error + Send + Sync>,
@@ -77,25 +79,41 @@ impl Display for OSMError {
                 write!(f, "\nAn error occurred loading a shapefile: {}", source)
             }
             OSMError::OSMError { source } => {
-                write!(f, "\nAn error occurred loading OSM data\n:\tType: OSMError\n\tSource: {}", source)
+                write!(
+                    f,
+                    "\nAn error occurred loading OSM data\n:\tType: OSMError\n\tSource: {}",
+                    source
+                )
             }
             OSMError::IOError { source, context } => {
                 write!(f, "\nAn error occurred loading OSM data\n:\tType: IOError\n\tSource: {}\n\tContext: {}", source, context)
             }
             OSMError::Misc { source } => {
-                write!(f, "\nAn error occurred loading OSM data\n:\tType: MiscError\n\tSource: {}", source)
+                write!(
+                    f,
+                    "\nAn error occurred loading OSM data\n:\tType: MiscError\n\tSource: {}",
+                    source
+                )
             }
             OSMError::ValueParsingError { source } => {
                 write!(f, "\nAn error occurred loading OSM data\n:\tType: ValueParsingError\n\tSource: {}", source)
             }
-            OSMError::OutOfBounds { context, max_size, actual_size } => {
+            OSMError::OutOfBounds {
+                context,
+                max_size,
+                actual_size,
+            } => {
                 write!(f, "\nAn error occurred loading OSM data\n tOutOfBounds Error: {},\tMax Size: {},\tActual Size: {}", context, max_size, actual_size)
             }
             OSMError::MissingKey { context, key } => {
                 write!(f, "\nAn error occurred loading OSM data\n:\tType: MissingKeyError\n\tContext: {}\n\tKey: {}", context, key)
             }
             OSMError::IsEmpty { context } => {
-                write!(f, "\nAn error occurred loading OSM data\n:\tType: Object is Empty\n\tContext: {}", context)
+                write!(
+                    f,
+                    "\nAn error occurred loading OSM data\n:\tType: Object is Empty\n\tContext: {}",
+                    context
+                )
             }
         }
     }

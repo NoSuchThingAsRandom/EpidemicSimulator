@@ -55,23 +55,31 @@ fn load_census_data(c: &mut Criterion) {
     let area = "1946157112TYPE299".to_string();
     //let area = "2013265923TYPE299".to_string();
 
-    group.bench_function("Load Census Tables", |b| b.iter(|| CensusData::load_all_tables(directory.clone(), area.clone(), false).unwrap()));
+    group.bench_function("Load Census Tables", |b| {
+        b.iter(|| CensusData::load_all_tables(directory.clone(), area.clone(), false).unwrap())
+    });
     // Load OSM Buildings
-    group.bench_function("Load OSM Data", |b| b.iter(||
-        OSMRawBuildings::build_osm_data(
-            directory.to_string() + OSM_FILENAME,
-            directory.to_string() + OSM_CACHE_FILENAME,
-            false,
-            false, 30000,
-        )
-    ));
+    group.bench_function("Load OSM Data", |b| {
+        b.iter(|| {
+            OSMRawBuildings::build_osm_data(
+                directory.to_string() + OSM_FILENAME,
+                directory.to_string() + OSM_CACHE_FILENAME,
+                false,
+                false,
+                30000,
+            )
+        })
+    });
 
     // Build output area polygons
-    group.bench_function("Load Output Area Polygons", |b| b.iter(||
-        PolygonContainer::load_polygons_from_file(
-            CensusTableNames::OutputAreaMap.get_filename(), 30000,
-        )
-    ));
+    group.bench_function("Load Output Area Polygons", |b| {
+        b.iter(|| {
+            PolygonContainer::load_polygons_from_file(
+                CensusTableNames::OutputAreaMap.get_filename(),
+                30000,
+            )
+        })
+    });
 
     group.finish();
 }
@@ -88,24 +96,44 @@ fn building_assignment(c: &mut Criterion) {
         directory.to_string() + OSM_FILENAME,
         directory.to_string() + OSM_CACHE_FILENAME,
         false,
-        false, 30000,
-    ).expect("Failed to load osm data");
+        false,
+        30000,
+    )
+        .expect("Failed to load osm data");
     let polygons = PolygonContainer::load_polygons_from_file(
-        ("../".to_owned() + CensusTableNames::OutputAreaMap.get_filename()).as_str(), 30000,
-    ).unwrap();
+        ("../".to_owned() + CensusTableNames::OutputAreaMap.get_filename()).as_str(),
+        30000,
+    )
+        .unwrap();
     let mut chosen: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
     let mut rng = thread_rng();
     for x in 0..100 {
-        let group = buildings.building_locations.keys().choose(&mut rng).expect("Failed to pick a building location");
-        let buildings = buildings.building_locations.get(group).expect("Failed to get buildings");
-        let building = buildings.iter().choose(&mut rng).expect("Failed to pick a building");
+        let group = buildings
+            .building_locations
+            .keys()
+            .choose(&mut rng)
+            .expect("Failed to pick a building location");
+        let buildings = buildings
+            .building_locations
+            .get(group)
+            .expect("Failed to get buildings");
+        let building = buildings
+            .iter()
+            .choose(&mut rng)
+            .expect("Failed to pick a building");
         let entry = chosen.entry(*group).or_default();
         entry.push(building.clone());
     }
     // Load OSM Buildings
-    group.bench_function("Assigning Buildings", |b| b.iter(||
-
-        sim::simulator_builder::parallel_assign_buildings_to_output_areas(&buildings.building_boundaries, &chosen, &polygons)));
+    group.bench_function("Assigning Buildings", |b| {
+        b.iter(|| {
+            sim::simulator_builder::parallel_assign_buildings_to_output_areas(
+                &buildings.building_boundaries,
+                &chosen,
+                &polygons,
+            )
+        })
+    });
 
     group.finish();
 }

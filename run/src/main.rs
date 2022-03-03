@@ -60,7 +60,10 @@ fn get_string_env(env_name: &str) -> anyhow::Result<String> {
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().expect("Failed to load dot env");
     pretty_env_logger::init_timed();
-    rayon::ThreadPoolBuilder::new().num_threads(40).build_global().unwrap();
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(40)
+        .build_global()
+        .unwrap();
     let matches = App::new("Epidemic Simulation Using Census Data (ESUCD)")
         .version("1.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
@@ -158,20 +161,19 @@ async fn main() -> anyhow::Result<()> {
     let use_cache = matches.is_present("use-cache");
     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
     let allow_downloads = !matches.is_present("disallow-download");
-    let grid_size = matches.value_of("grid-size").expect("Missing grid-size argument").parse().expect("grid-size is not an integer!");
+    let grid_size = matches
+        .value_of("grid-size")
+        .expect("Missing grid-size argument")
+        .parse()
+        .expect("grid-size is not an integer!");
     info!(
         "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
         area, use_cache, !allow_downloads
     );
 
-
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
-        CensusData::load_all_tables_async(
-            census_directory,
-            area.to_string(),
-            allow_downloads,
-        )
+        CensusData::load_all_tables_async(census_directory, area.to_string(), allow_downloads)
             .await
             .context("Failed to load census data")
             .unwrap();
@@ -196,7 +198,8 @@ async fn main() -> anyhow::Result<()> {
             census_directory.to_string() + OSM_FILENAME,
             census_directory + OSM_CACHE_FILENAME,
             use_cache,
-            visualise_building_boundaries, grid_size,
+            visualise_building_boundaries,
+            grid_size,
         )?
             .building_locations
             .drain()
@@ -215,20 +218,23 @@ async fn main() -> anyhow::Result<()> {
             census_directory,
             use_cache,
             allow_downloads,
-            false, grid_size,
+            false,
+            grid_size,
         )
             .await?;
 
         let total_buildings = 100.0;
         let data: Vec<visualisation::image_export::DrawingRecord> = sim
-            .output_areas.read().unwrap()
+            .output_areas
+            .read()
+            .unwrap()
             .iter()
             .map(|area| {
                 let area = area.lock().unwrap();
-                DrawingRecord::from((area.id().
-                    code().to_string(),
-                                     (area.polygon.clone()),
-                                     Some(area.buildings.len() as f64 / total_buildings),
+                DrawingRecord::from((
+                    area.id().code().to_string(),
+                    (area.polygon.clone()),
+                    Some(area.buildings.len() as f64 / total_buildings),
                 ))
             })
             .collect();
@@ -238,7 +244,8 @@ async fn main() -> anyhow::Result<()> {
     } else if matches.is_present("visualise") {
         let (_census, mut osm, polygons) = load_data(
             area.to_string(),
-            census_directory, grid_size,
+            census_directory,
+            grid_size,
             use_cache,
             allow_downloads,
             false,
@@ -269,7 +276,8 @@ async fn main() -> anyhow::Result<()> {
             census_directory,
             use_cache,
             allow_downloads,
-            visualise_building_boundaries, grid_size,
+            visualise_building_boundaries,
+            grid_size,
         )
             .await?;
         info!(

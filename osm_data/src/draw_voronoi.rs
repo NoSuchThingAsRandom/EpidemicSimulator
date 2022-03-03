@@ -47,7 +47,8 @@ fn draw_polygon_ring(
 pub fn draw_osm_buildings_polygons(
     filename: String,
     data: &OSMRawBuildings,
-    building_type: TagClassifiedBuilding, grid_size: i32,
+    building_type: TagClassifiedBuilding,
+    grid_size: i32,
 ) {
     println!("Drawing at: {}", filename);
     let draw_backend =

@@ -47,7 +47,7 @@ pub enum SimError {
         key: String,
     },
     Error {
-        context: String
+        context: String,
     },
 }
 
