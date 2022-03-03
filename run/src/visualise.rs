@@ -25,7 +25,7 @@ use std::time::Instant;
 use log::info;
 
 use load_census_data::CensusData;
-use sim::models::output_area::{OutputArea, OutputAreaID};
+use sim::models::output_area::OutputArea;
 use sim::simulator::Simulator;
 use visualisation::citizen_connections::{connected_groups, draw_graph};
 use visualisation::image_export::DrawingRecord;
@@ -37,7 +37,7 @@ pub fn draw_output_areas(
     info!("Drawing Output Areas to: {}", filename);
     let data: Vec<visualisation::image_export::DrawingRecord> = sim
         .iter()
-        .map(|(area)| {
+        .map(|area| {
             DrawingRecord::from((area.id().code().to_string(), &area.polygon, None))
         })
         .collect();

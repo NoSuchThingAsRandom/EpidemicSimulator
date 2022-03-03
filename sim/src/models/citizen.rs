@@ -20,6 +20,7 @@
 
 use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 
 use enum_map::Enum;
 use lazy_static::lazy_static;
@@ -47,7 +48,7 @@ fn binomial(probability: f64, n: u8) -> f64 {
     1.0 - (1.0 - probability).powf(n as f64)
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, Serialize)]
+#[derive(Debug, Copy, Clone, Serialize)]
 pub struct CitizenID {
     /// This is a global unique Citizen index
     global_index: u32,
@@ -94,6 +95,21 @@ impl Display for CitizenID {
         write!(f, "Citizen ID: {}", self.uuid_id)
     }
 }
+
+impl Hash for CitizenID {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.global_index.hash(state);
+        self.uuid_id.hash(state);
+    }
+}
+
+impl PartialEq for CitizenID {
+    fn eq(&self, other: &Self) -> bool {
+        self.global_index.eq(&other.global_index) && self.uuid_id.eq(&other.uuid_id)
+    }
+}
+
+impl Eq for CitizenID {}
 
 /// This is used to represent a single Citizen in the simulation
 #[derive(Debug, Serialize, Clone)]

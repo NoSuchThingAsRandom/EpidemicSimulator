@@ -19,12 +19,14 @@
  */
 
 use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::fs::File;
 use std::ops::AddAssign;
 use std::sync::{Mutex, RwLock};
 use std::time::Instant;
 
 use anyhow::Context;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
@@ -34,7 +36,7 @@ use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::disease::DiseaseStatus::Infected;
 use crate::interventions::{InterventionsEnabled, InterventionStatus};
-use crate::models::building::BuildingID;
+use crate::models::building::{BuildingID, School};
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
@@ -339,7 +341,7 @@ impl Simulator {
                     let citizen = match area.citizens.get_mut(citizen_id.local_index()).context("Cannot expose Citizen, as they do not exist!")
                     {
                         Ok(citizen) => { citizen }
-                        Err(_e) => {
+                        Err(e) => {
                             // TODO This is a big error, as Citizens aren't in the Building they're meant to be?
                             // Perhaps it's remote working and/or Public transport meaning Citizens get to buildings at different points?
                             //error!("{:?}",e);
@@ -366,16 +368,35 @@ impl Simulator {
         for id in exposure_statistics {
             self.statistics.citizen_exposed(id)?;
         }
-
-        // Generate public transport routes
-        for (route, mut citizens) in exposures.public_transport_pre_generated {
-            // Shuffle to ensure randomness on bus
-            citizens.shuffle(&mut self.rng);
-            let mut current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
-            while let Some((citizen, is_infected)) = citizens.pop() {
-                // If bus is full, generate a new one
-                if current_bus.add_citizen(citizen).is_err() {
-                    // Only need to save buses with exposures
+        /*
+                // Generate public transport routes
+                for (route, mut citizens) in exposures.public_transport_pre_generated {
+                    // Shuffle to ensure randomness on bus
+                    citizens.shuffle(&mut self.rng);
+                    let mut current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
+                    while let Some((citizen, is_infected)) = citizens.pop() {
+                        // If bus is full, generate a new one
+                        if current_bus.add_citizen(citizen).is_err() {
+                            // Only need to save buses with exposures
+                            if current_bus.exposure_count > 0 {
+                                if let Err(e) =
+                                self.expose_citizens(
+                                    current_bus.occupants().clone(),
+                                    current_bus.exposure_count,
+                                    ID::PublicTransport(current_bus.id().clone()),
+                                ).context(format!("Failed to expose bus: {}", current_bus.id())) {
+                                    error!("{:?}",e);
+                                }
+                            }
+                            current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
+                            current_bus
+                                .add_citizen(citizen)
+                                .context("Failed to add Citizen to new bus")?;
+                        }
+                        if is_infected {
+                            current_bus.exposure_count += 1;
+                        }
+                    }
                     if current_bus.exposure_count > 0 {
                         if let Err(e) =
                         self.expose_citizens(
@@ -386,26 +407,7 @@ impl Simulator {
                             error!("{:?}",e);
                         }
                     }
-                    current_bus = PublicTransport::new(route.0.clone(), route.1.clone());
-                    current_bus
-                        .add_citizen(citizen)
-                        .context("Failed to add Citizen to new bus")?;
-                }
-                if is_infected {
-                    current_bus.exposure_count += 1;
-                }
-            }
-            if current_bus.exposure_count > 0 {
-                if let Err(e) =
-                self.expose_citizens(
-                    current_bus.occupants().clone(),
-                    current_bus.exposure_count,
-                    ID::PublicTransport(current_bus.id().clone()),
-                ).context(format!("Failed to expose bus: {}", current_bus.id())) {
-                    error!("{:?}",e);
-                }
-            }
-        }
+                }*/
         // Apply Public Transport Exposures
         //debug!("There are {} exposures", exposure_list.len());
         Ok(())

@@ -24,6 +24,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::Point;
+use log::error;
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::FromParallelIterator;
 use serde::{Serialize, Serializer};
@@ -110,8 +111,8 @@ impl Display for BuildingID {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Output Area: {}, Type: {:?}, Building ID: {}",
-            self.output_area_id, self.building_type, self.building_unique_id
+            "Output Area: {}, Type: {:?}, Building ID: {}, Index: {}",
+            self.output_area_id, self.building_type, self.building_unique_id, self.building_index
         )
     }
 }
@@ -147,6 +148,9 @@ impl Serialize for dyn Building {
         }
         if let Some(household) = raw.downcast_ref::<Household>() {
             return household.serialize(serializer);
+        }
+        if let Some(school) = raw.downcast_ref::<School>() {
+            return school.serialize(serializer);
         }
         Err(serde::ser::Error::custom("Unknown building type!"))
     }
@@ -304,6 +308,7 @@ pub struct SchoolStatistic {
 pub const AVERAGE_CLASS_SIZE: f64 = 26.6;
 const AVERAGE_OFFICE_SIZE: usize = 12;
 
+#[derive(Debug, Serialize)]
 pub struct Class {
     students: Vec<CitizenID>,
     teacher: CitizenID,
@@ -318,11 +323,13 @@ impl Class {
     }
 }
 
-enum RoomID {
+#[derive(Debug, Serialize)]
+pub enum RoomID {
     ClassId { id: usize },
     OfficeId { id: usize },
 }
 
+#[derive(Serialize)]
 pub struct School {
     building_code: BuildingID,
     location: geo_types::Point<i32>,
@@ -331,6 +338,7 @@ pub struct School {
     /// This groups together all the staff not assigned a class
     offices: Vec<Vec<CitizenID>>,
     /// The class index the teacher/student belongs to
+    #[serde(skip)]
     occupant_to_class: HashMap<CitizenID, RoomID>,
 }
 
@@ -398,7 +406,6 @@ impl School {
             office_index += 1;
             statistic.number_of_offices += 1;
         }
-
         (School {
             building_code: building_id,
             location: building.center(),
@@ -438,7 +445,7 @@ impl Building for School {
     }
 
     fn occupants(&self) -> Vec<CitizenID> {
-        self.classes.iter().flat_map(|class| class.get_participants()).collect()
+        self.classes.iter().flat_map(|class| class.get_participants()).chain(self.offices.iter().flatten().cloned()).collect()
     }
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
@@ -448,32 +455,12 @@ impl Building for School {
         self.location
     }
     fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
-        let infected_citizens: HashSet<&CitizenID> = HashSet::from_par_iter(infected_citizens.into_par_iter());
-        let mut exposed = HashSet::new();
-        for infected_citizen in &infected_citizens {
-            let class_index = match self.occupant_to_class.get(&infected_citizen) {
+        let mut exposed = Vec::new();
+        for infected_citizen in infected_citizens {
+            let class_index = match self.occupant_to_class.get(infected_citizen) {
                 Some(class_index) => class_index,
                 None => {
-                    for office in &self.offices {
-                        for staff in office {
-                            if staff == *infected_citizen {
-                                panic!("Occupant to lookup failed, Citizen is in an office!");
-                            }
-                        }
-                    }
-                    for class in &self.classes {
-                        for student in &class.students {
-                            if student == *infected_citizen {
-                                panic!("Occupant to lookup failed, Citizen is a student in a Class!");
-                            }
-                        }
-                        if class.teacher == **infected_citizen {
-                            panic!("Occupant to lookup failed, Citizen is a teachers in a Class!");
-                        }
-                    }
-                    panic!("Citizen does not belong to this school!");
-                    // TODO Fix this - Kids
-                    //error!("Citizen does not belong to a class!");
+                    error!("Citizen {} does not belong to this school {}!",infected_citizen,self.id());
                     continue;
                 }
             };
@@ -481,19 +468,19 @@ impl Building for School {
                 RoomID::ClassId { id: class_id } => {
                     self.classes[*class_id].get_participants().iter().for_each(|citizen|
                         if !infected_citizens.contains(citizen) {
-                            exposed.insert(*citizen);
+                            exposed.push(*citizen);
                         });
                 }
                 RoomID::OfficeId { id: staff_id } => {
                     let staff = &self.offices[*staff_id];
                     staff.iter().for_each(|staff_member|
                         if !infected_citizens.contains(staff_member) {
-                            exposed.insert(*staff_member);
+                            exposed.push(*staff_member);
                         });
                 }
             }
         }
-        exposed.into_iter().collect()
+        exposed
     }
 }
 

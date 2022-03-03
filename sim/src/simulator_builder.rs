@@ -47,7 +47,7 @@ use crate::config::STARTING_INFECTED_COUNT;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::error::SimError;
 use crate::models::building::{AVERAGE_CLASS_SIZE, Building, BuildingID, BuildingType, School, Workplace};
-use crate::models::citizen::{Citizen, CitizenID, OccupationType};
+use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
 use crate::models::get_density_for_occupation;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::simulator::Timer;
@@ -176,7 +176,7 @@ impl SimulatorBuilder {
         // This is the total Citizen counter
         let mut global_citizen_index = 0;
         ref_output_areas.borrow_mut().iter_mut().for_each(|output_area| {
-            let generate_citizen_closure = || -> anyhow::Result<()> {
+            if let Err(e) = || -> anyhow::Result<()> {
                 // Retrieve the Census Data
                 let census_data_entry = census_data_ref
                     .for_output_area_code(output_area.id().code().to_string())
@@ -222,8 +222,8 @@ impl SimulatorBuilder {
                 }
                 assert_eq!(global_citizen_index as usize, citizen_output_area_lookup.len());
                 Ok(())
-            }();
-        })?;
+            }() { error!("{:?}",e); }
+        });
         info!(
             "Households and Citizen generation succeeded for {} Output Areas.",
             ref_output_areas.borrow().len()
@@ -257,18 +257,18 @@ impl SimulatorBuilder {
                         Some((None, Some(citizen)))
                     } else { None }
                 }).fold({
-                            let mut data = Vec::new();
-                            for _ in 0..MAX_STUDENT_AGE {
-                                data.push(Vec::new());
-                            }
-                            (data, Vec::new())
-                        }, |mut acc, (student, teacher)| {
+                                                           let mut students = Vec::new();
+                                                           for _ in 0..MAX_STUDENT_AGE {
+                                                               students.push(Vec::new());
+                                                           }
+                                                           (students, Vec::new())
+                                                       }, |(mut students, mut teachers), (student, teacher)| {
                     if let Some((age, id)) = student {
-                        acc.0[age as usize].push(id);
+                        students[age as usize].push(id);
                     } else if let Some(id) = teacher {
-                        acc.1.push(id)
+                        teachers.push(id)
                     }
-                    acc
+                    (students, teachers)
                 });
                 return children;
             }).reduce(|| (Vec::new(), Vec::new()), |(mut accum_students, mut accum_teachers), (item_students, item_teachers)| {
@@ -371,7 +371,7 @@ impl SimulatorBuilder {
             });
             acc
         }).reduce(|| HashMap::new(), |mut a, b| {
-            for (point, (students, teachers, building)) in b {
+            for (point, (students, _teachers, building)) in b {
                 let (entry, _, _) = a.entry(point).or_insert_with(|| (Vec::new(), Vec::new(), building));
                 for (index, age_group) in students.into_iter().enumerate() {
                     if entry.len() < index + 1 {
@@ -450,8 +450,8 @@ impl SimulatorBuilder {
             serde_json::to_writer(file, &school_boundaries).unwrap();
 
 
-            let debug_school_data: HashMap<String, (usize, usize)> = citizens_per_raw_school.iter().map(|(school, (students, teachers, _building))| {
-                return (format!("{:?}", school.x_y()), (students.iter().map(|age_group| age_group.len()).sum(), teachers.len()));
+            let debug_school_data: HashMap<String, (Vec<CitizenID>, Vec<CitizenID>)> = citizens_per_raw_school.iter().map(|(school, (students, teachers, _building))| {
+                return (format!("{:?}", school.x_y()), (students.iter().map(|age_group| age_group.iter().map(|student| student.id())).flatten().collect(), teachers.iter().map(|teacher| teacher.id()).collect()));
             }).collect();
             let filename = debug_directory.clone() + "citizen_schools.json";
             let file = File::create(filename.clone()).context(format!("Failed to create file: '{}'", filename.clone()))?;
@@ -604,7 +604,7 @@ impl SimulatorBuilder {
             (accum_citizens, accum_buildings, accum_ids)
         });
         // Create buildings for each Workplace output area
-        'citizen_allocation_loop: for ((workplace_area_index, mut citizen_ids), citizens) in citizens_to_allocate.into_iter().enumerate().zip(output_area_citizens) {
+        'citizen_allocation_loop: for ((workplace_area_index, mut _citizen_ids), citizens) in citizens_to_allocate.into_iter().enumerate().zip(output_area_citizens) {
             // Retrieve the buildings or skip this area
             let workplace_output_area_buildings = match output_area_buildings.get_mut(workplace_area_index) {
                 Some(workplace) => workplace,
@@ -769,7 +769,7 @@ impl SimulatorBuilder {
                     next_building_index += workplaces.len() as u32;
                     workplace_buildings.extend(workplaces);
                 }
-                Err(e) => {
+                Err(_e) => {
                     //error!("Failed to assign workplaces to Citizens for Occupation: {:?},\n\tError: {:?}",occupation,e);
                     continue;
                 }
@@ -914,6 +914,15 @@ impl SimulatorBuilder {
         self.build_schools()
             .context("Failed to build schools")?;
 
+        // Check all Citizens with a workplace are actually meant to be in a school
+        self.output_areas.par_iter().for_each(|area| {
+            area.citizens.iter().for_each(|citizen| {
+                if citizen.household_code != citizen.workplace_code {
+                    assert!(citizen.is_student() || citizen.detailed_occupation().eq(&Some(OccupationType::Teaching)), "Citizen {} should not be in a school, with job: {:?}", citizen.id(), citizen.detailed_occupation());
+                }
+            })
+        });
+
         timer.code_block_finished(&format!(
             "Built schools",
         ))?;
@@ -925,7 +934,7 @@ impl SimulatorBuilder {
                 .drain()
                 .filter_map(|(area, mut classified_buildings)| {
                     let buildings: Vec<RawBuilding> =
-                        classified_buildings.drain().filter(|(class, _)| *class != TagClassifiedBuilding::School || *class != TagClassifiedBuilding::Household).flat_map(|(_, a)| a).collect();
+                        classified_buildings.drain().filter(|(class, _)| *class != TagClassifiedBuilding::School && *class != TagClassifiedBuilding::Household).flat_map(|(_, a)| a).collect();
                     if buildings.is_empty() {
                         return None;
                     }

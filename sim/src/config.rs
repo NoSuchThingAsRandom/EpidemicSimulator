@@ -35,7 +35,7 @@ pub const DEBUG_ITERATION_PRINT: usize = 50;
 
 pub const PUBLIC_TRANSPORT_PERCENTAGE: f64 = 0.2;
 pub const BUS_CAPACITY: u32 = 20;
-pub const MAX_STUDENT_AGE: u16 = 8;
+pub const MAX_STUDENT_AGE: u16 = 18;
 // TODO Figure out how to get global SystemLocale::default()
 pub const NUMBER_FORMATTING: Locale = Locale::en_GB;// SystemLocale::default().expect("Failed to determine the locale format to use for formatting numbers");
 
