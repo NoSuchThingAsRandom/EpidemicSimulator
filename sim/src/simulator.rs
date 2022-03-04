@@ -43,7 +43,7 @@ use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::simulator_builder::SimulatorBuilder;
-use crate::statistics::Statistics;
+use crate::statistics::{StatisticsArea, StatisticsRecorder};
 
 pub enum DayOfWeek {
     /// Represents a normal working day (Mon - Fri), with the integer representing the actual day
@@ -169,7 +169,7 @@ pub struct Simulator {
     /// The Output Area ID, and Local Index for that Citizen
     pub citizen_output_area_lookup: RwLock<Vec<Mutex<(OutputAreaID, u32)>>>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
-    pub statistics: Statistics,
+    statistics_recorder: StatisticsRecorder,
     interventions: InterventionStatus,
     disease_model: DiseaseModel,
     pub public_transport: HashMap<PublicTransportID, PublicTransport>,
@@ -187,14 +187,15 @@ impl Simulator {
         );
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics, get_memory_usage()?);
+                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {:?},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics_recorder.current_entry.get(&StatisticsArea::All), get_memory_usage()?);
                 start_time = Instant::now();
             }
             if !self.step()? {
-                debug!("{}", self.statistics);
+                debug!("{:?}", self.statistics_recorder.current_entry.get(&StatisticsArea::All));
                 break;
             }
         }
+        self.statistics_recorder.dump_to_file("recordings/v1.0.1-test.json");
         Ok(())
     }
     /// Applies a single time step to the simulation
@@ -218,7 +219,7 @@ impl Simulator {
         if false {
             println!("DEBUG_TIME_STEP: Generate Exposures: {:.3} seconds ({:.3}%),Apply Exposures: {:.3} seconds ({:.3}%),  Apply Interventions: {:.3} seconds ({:.3}%)", generate_exposure_time, (generate_exposure_time / total) * 100.0, apply_exposure_time, (apply_exposure_time / total) * 100.0, intervention_time, (intervention_time / total) * 100.0);
         }
-        if !self.statistics.disease_exists() {
+        if !self.statistics_recorder.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
         } else {
@@ -229,7 +230,7 @@ impl Simulator {
     /// Detects the Citizens that have been exposed in the current time step
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        self.statistics.next();
+        self.statistics_recorder.next();
         let hour = self.statistics.time_step();
         let disease = &self.disease_model;
         let lockdown = self.interventions.lockdown_enabled();
@@ -252,7 +253,7 @@ impl Simulator {
                 let need_to_move = citizen.execute_time_step(
                     hour, disease, lockdown,
                 ).is_some();
-                statistics.add_citizen(&citizen.disease_status);
+                statistics_recorder.add_citizen(&citizen.disease_status);
 
                 // Either generate public transport session, or add exposure for fixed building position
                 if let Some(travel) = &citizen.on_public_transport {
@@ -519,7 +520,7 @@ impl Simulator {
                 &mut self.rng,
             )
             {
-                self.statistics
+                self.statistics_recorder
                     .citizen_exposed(location.clone())
                     .context(format!("Exposing citizen {}", citizen_id))?;
                 if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
@@ -532,7 +533,7 @@ impl Simulator {
 
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
         // TODO Check vaccinations -> `citizens_eligible_for_vaccine` still works?
-        let infected_percent = self.statistics.infected_percentage();
+        let infected_percent = self.statistics_recorder.infected_percentage();
         //debug!("Infected percent: {}",infected_percent);
         let new_interventions = self.interventions.update_status(infected_percent);
         for intervention in new_interventions {
@@ -540,7 +541,7 @@ impl Simulator {
                 InterventionsEnabled::Lockdown => {
                     info!(
                         "Lockdown is enabled at hour {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.current_time_step()
                     );
                     // TODO THIS IS BROKEN, and Citizens are gonna get stuck...
                     self.output_areas
@@ -559,7 +560,7 @@ impl Simulator {
                 InterventionsEnabled::Vaccination => {
                     info!(
                         "Starting vaccination program at hour: {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.current_time_step()
                     );
                     let eligible = self
                         .output_areas
@@ -593,7 +594,7 @@ impl Simulator {
                     info!(
                         "Mask wearing status has changed: {} at hour {}",
                         status,
-                        self.statistics.time_step()
+                        self.statistics_recorder.current_time_step()
                     )
                 }
             }

@@ -18,10 +18,15 @@
  *
  */
 
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
 use std::hash::Hash;
+use std::io::{BufWriter, Write};
 
-use serde::Serialize;
+use log::error;
+use serde::{Deserialize, Serialize};
+use serde_json::to_writer;
 use uuid::Uuid;
 
 use crate::interventions::MaskStatus;
@@ -65,7 +70,6 @@ impl DiseaseStatus {
         }
     }
 }
-
 impl Display for DiseaseStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -87,6 +91,7 @@ impl Display for DiseaseStatus {
         }
     }
 }
+
 
 #[derive(Clone)]
 pub struct DiseaseModel {
@@ -113,11 +118,11 @@ impl DiseaseModel {
     pub fn covid() -> DiseaseModel {
         DiseaseModel {
             reproduction_rate: 2.5,
-            exposure_chance: 0.04,
+            exposure_chance: 0.01,
             death_rate: 0.2,
             exposed_time: 4 * 24,
             infected_time: 14 * 24,
-            max_time_step: 1000,
+            max_time_step: 10000,
             vaccination_rate: 5000,
             mask_percentage: 0.8,
         }
@@ -146,39 +151,5 @@ impl DiseaseModel {
             chance = 0.0;
         }
         chance
-    }
-}
-
-/// Represents an event where Citizens are exposed to an infected individual at the given building
-#[derive(Hash, PartialEq, Eq, Clone)]
-pub struct Exposure {
-    /// The Output Code, the Citizen Resides in, and the actual ID of the citizen who is infected
-    pub infector_id: Uuid,
-    /// The location the exposure occurred in
-    pub location: ID,
-}
-
-impl Exposure {
-    /// Create a new exposure event from the given citizen at the given building
-    pub fn new(citizen_id: Uuid, location: ID) -> Exposure {
-        Exposure {
-            infector_id: citizen_id,
-            location,
-        }
-    }
-    /*    pub fn output_area_code(&self) -> OutputAreaID {
-        self.location.output_area_id()
-    }
-    pub fn area_classification(&self) -> AreaClassification {
-        self.location.area_type()
-    }
-    pub fn building_code(&self) -> Uuid {
-        self.location.building_id()
-    }*/
-}
-
-impl Display for Exposure {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Exposure by {}, at {} ", self.infector_id, self.location)
     }
 }
