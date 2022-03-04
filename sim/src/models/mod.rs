@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -27,7 +27,7 @@ use std::time::Instant;
 
 use geo_types::{Coordinate, LineString};
 use log::info;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
@@ -43,7 +43,7 @@ pub mod citizen;
 pub mod output_area;
 pub mod public_transport_route;
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum ID {
     Building(BuildingID),
     OutputArea(OutputAreaID),

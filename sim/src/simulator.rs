@@ -342,19 +342,18 @@ impl Simulator {
     ///
     /// Returns False if it has finished
     pub fn step(&mut self) -> anyhow::Result<bool> {
-        let mut start = Instant::now();
+        //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
+        self.statistics_recorder.next();
         // Reset public transport containers
         self.public_transport = Default::default();
-        self.generate_and_apply_exposures()?;
+        let exposures = self.generate_and_apply_exposures()?;
+        self.statistics_recorder.record_function_time("Generate and Apply Exposures".to_string());
 
-        let exposure_time = start.elapsed().as_secs_f64();
-        start = Instant::now();
 
         self.apply_interventions()?;
+        self.statistics_recorder.record_function_time("Apply Interventions".to_string());
 
-        let intervention_time = start.elapsed().as_secs_f64();
-        let total = exposure_time + intervention_time;
-        debug!("Generate Exposures: {:.3} seconds ({:.3}%), Apply Interventions: {:.3} seconds ({:.3}%)",exposure_time,exposure_time/total,intervention_time,intervention_time/total);
+
         if !self.statistics_recorder.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
@@ -366,7 +365,6 @@ impl Simulator {
     fn generate_and_apply_exposures(&mut self) -> anyhow::Result<()> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut building_exposure_list: HashMap<BuildingID, usize> = HashMap::new();
-        self.statistics_recorder.next();
 
 
         // The list of Citizens on Public Transport, grouped by their origin and destination
@@ -463,7 +461,7 @@ impl Simulator {
                     )
                     {
                         self.statistics_recorder
-                            .expose_citizen(citizen, &location)
+                            .add_exposure(location.clone())
                             .context(format!(
                                 "Exposing citizen {}",
                                 citizen_id
