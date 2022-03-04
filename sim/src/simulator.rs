@@ -40,36 +40,7 @@ use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::simulator_builder::SimulatorBuilder;
-use crate::statistics::Statistics;
-
-pub struct Timer {
-    function_timer: Instant,
-    code_block_timer: Instant,
-}
-
-impl Timer {
-    #[inline]
-    pub fn code_block_finished(&mut self, message: &str) -> anyhow::Result<()> {
-        info!(
-            "{} in {:.2} seconds. Total function time: {:.2} seconds, Memory usage: {}",
-            message,
-            self.code_block_timer.elapsed().as_secs_f64(),
-            self.function_timer.elapsed().as_secs_f64(),
-            get_memory_usage()?
-        );
-        self.code_block_timer = Instant::now();
-        Ok(())
-    }
-}
-
-impl Default for Timer {
-    fn default() -> Self {
-        Self {
-            function_timer: Instant::now(),
-            code_block_timer: Instant::now(),
-        }
-    }
-}
+use crate::statistics::{StatisticEntry, StatisticsRecorder};
 
 #[derive(Debug, Default, Clone)]
 struct GeneratedExposures {
@@ -101,41 +72,42 @@ pub struct Simulator {
 
 /// Runtime Simulation Methods
 impl Simulator {
+    /// Start the entire simulation process, until the disease is eradicated, or we reach teh max time step
     pub fn simulate(&mut self) -> anyhow::Result<()> {
         let mut start_time = Instant::now();
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
-            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics, get_memory_usage()?);
-                start_time = Instant::now();
-            }
             if !self.step()? {
-                debug!("{}", self.statistics);
+                debug!("{:?}", self.statistics_recorder.global_stats.last().expect("No data recorded!"));
                 break;
             }
+            if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
+                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {:?},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics_recorder.global_stats.last().expect("No data recorded!"), get_memory_usage()?);
+                start_time = Instant::now();
+            }
         }
+        self.statistics_recorder.dump_to_file("recordings/v1.1.json");
         Ok(())
     }
     /// Applies a single time step to the simulation
     ///
     /// Returns False if it has finished
     pub fn step(&mut self) -> anyhow::Result<bool> {
-        let mut start = Instant::now();
+        //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
+        self.statistics_recorder.next();
         // Reset public transport containers
         self.public_transport = Default::default();
         let exposures = self.generate_exposures()?;
-        let generate_exposure_time = start.elapsed().as_secs_f64();
+        self.statistics_recorder.record_function_time("Generate Exposures".to_string());
 
         self.apply_exposures(exposures)?;
-        let apply_exposure_time = start.elapsed().as_secs_f64();
-        start = Instant::now();
+        self.statistics_recorder.record_function_time("Apply Exposures".to_string());
 
         self.apply_interventions()?;
+        self.statistics_recorder.record_function_time("Apply Interventions".to_string());
 
-        let intervention_time = start.elapsed().as_secs_f64();
-        let total = generate_exposure_time + intervention_time;
-        debug!("Generate Exposures: {:.3} seconds ({:.3}%),Apply Exposures: {:.3} seconds ({:.3}%),  Apply Interventions: {:.3} seconds ({:.3}%)",generate_exposure_time,(generate_exposure_time/total)*100.0,apply_exposure_time,(apply_exposure_time/total)*100.0,intervention_time,(intervention_time/total)*100.0);
-        if !self.statistics.disease_exists() {
+
+        if !self.statistics_recorder.disease_exists() {
             info!("Disease finished as no one has the disease");
             Ok(false)
         } else {
@@ -143,6 +115,7 @@ impl Simulator {
         }
     }
 
+    /// Detects the Citizens that have been exposed in the current time step
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposures = GeneratedExposures::default();
@@ -273,8 +246,8 @@ impl Simulator {
                         &mut self.rng,
                     )
                     {
-                        self.statistics
-                            .citizen_exposed(location.clone())
+                        self.statistics_recorder
+                            .add_exposure(location.clone())
                             .context(format!("Exposing citizen {}", citizen_id))?;
 
                         if let Some(vaccine_list) = &mut self.citizens_eligible_for_vaccine {
@@ -397,7 +370,7 @@ impl From<SimulatorBuilder> for Simulator {
             output_areas: builder.output_areas,
             citizens: builder.citizens,
             citizens_eligible_for_vaccine: None,
-            statistics: Statistics::default(),
+            statistics_recorder: StatisticsRecorder::default(),
             interventions: Default::default(),
             disease_model: builder.disease_model,
             public_transport: Default::default(),
