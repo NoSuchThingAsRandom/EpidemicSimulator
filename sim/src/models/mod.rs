@@ -23,7 +23,7 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use load_census_data::tables::employment_densities::EmploymentDensities;
 
@@ -37,7 +37,7 @@ pub mod citizen;
 pub mod output_area;
 pub mod public_transport_route;
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum ID {
     Building(BuildingID),
     OutputArea(OutputAreaID),

@@ -27,7 +27,7 @@ use anyhow::Context;
 use log::error;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use load_census_data::CensusDataEntry;
 use load_census_data::tables::population_and_density_per_output_area::PersonType;
@@ -38,7 +38,7 @@ use crate::interventions::InterventionStatus;
 use crate::models::building::{Building, BuildingID, BuildingType, Household, Workplace};
 use crate::models::citizen::{Citizen, CitizenID, Occupation, OccupationType};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OutputAreaID {
     code: String,
     index: u32,

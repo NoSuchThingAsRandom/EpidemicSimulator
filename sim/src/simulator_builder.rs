@@ -53,7 +53,7 @@ use crate::models::building::{
 use crate::models::citizen::{Citizen, CitizenID, OccupationType};
 use crate::models::get_density_for_occupation;
 use crate::models::output_area::{OutputArea, OutputAreaID};
-use crate::simulator::Timer;
+use crate::statistics::Timer;
 
 pub struct SimulatorBuilder {
     census_data: CensusData,
@@ -1152,18 +1152,18 @@ impl SimulatorBuilder {
 
         self.initialise_output_areas()
             .context("Failed to initialise output areas!")?;
-        timer.code_block_finished(&format!(
+        timer.code_block_finished_with_print(format!(
             "Initialised {} Output Areas",
             self.output_areas.len()
         ))?;
         let mut possible_buildings_per_area = self
             .assign_buildings_to_output_areas()
             .context("Failed to assign buildings to output areas")?;
-        timer.code_block_finished("Assigned Possible Buildings to Output Areas")?;
+        timer.code_block_finished_with_print("Assigned Possible Buildings to Output Areas".to_string())?;
         self.generate_citizens(&mut rng, &mut possible_buildings_per_area)
             .context("Failed to generate Citizens")?;
 
-        timer.code_block_finished(&format!(
+        timer.code_block_finished_with_print(format!(
             "Generated Citizens and residences for {} output areas",
             self.output_areas.len()
         ))?;
@@ -1187,7 +1187,7 @@ impl SimulatorBuilder {
             })
         });
 
-        timer.code_block_finished(&format!("Built schools", ))?;
+        timer.code_block_finished_with_print(format!("Built schools"))?;
 
         // TODO Currently any buildings remaining are treated as Workplaces
         let possible_workplaces: HashMap<String, Vec<RawBuilding>> = possible_buildings_per_area
@@ -1234,7 +1234,7 @@ impl SimulatorBuilder {
         );
         self.build_workplaces(possible_workplaces)
             .context("Failed to build workplaces")?;
-        timer.code_block_finished("Generated workplaces for {} Output Areas")?;
+        timer.code_block_finished_with_print("Generated workplaces for {} Output Areas".to_string())?;
 
         let work_from_home_count: u32 = self
             .output_areas
@@ -1264,7 +1264,7 @@ impl SimulatorBuilder {
         self.apply_initial_infections(&mut rng)
             .context("Failed to create initial infections")?;
 
-        timer.code_block_finished("Applied initial infections")?;
+        timer.code_block_finished_with_print("Applied initial infections".to_string())?;
         debug!(
             "Starting Statistics: There are {} total Citizens, {} Output Areas",
             self.citizen_output_area_lookup
@@ -1274,6 +1274,7 @@ impl SimulatorBuilder {
                 .len()
                 .to_formatted_string(&NUMBER_FORMATTING)
         );
+        timer.finished_with_print("Initialisation".to_string());
         Ok(())
     }
 }

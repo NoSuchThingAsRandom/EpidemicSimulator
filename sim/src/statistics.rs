@@ -23,58 +23,110 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufWriter;
 use std::ops::AddAssign;
-
+use std::time::Instant;
 
 use log::{error, info};
+use num_format::Locale::{el, lo};
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer;
 
-use crate::config::NUMBER_FORMATTING;
+use crate::config::{get_memory_usage, NUMBER_FORMATTING};
 use crate::disease::DiseaseStatus;
+use crate::error::SimError;
 use crate::models::building::BuildingID;
 use crate::models::citizen::Citizen;
 use crate::models::ID;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;
 
-#[derive(Hash, Eq, PartialEq, Debug, Deserialize, Serialize)]
-pub enum StatisticsArea {
-    Building { id: BuildingID },
-    OutputArea { code: OutputAreaID },
-    PublicTransport { id: (OutputAreaID, OutputAreaID) },
-    All,
+/// A simple struct for benchmarking how long a block of code takes
+#[derive(Debug)]
+pub struct Timer {
+    function_timer: Instant,
+    code_block_timer: Instant,
+    pub function_times: HashMap<String, f64>,
 }
 
+impl Timer {
+    /// Call this to record how long has elapsed since the last call
+    #[inline]
+    pub fn code_block_finished(&mut self, message: String) {
+        let elapsed = self.code_block_timer.elapsed().as_secs_f64();
+        self.function_times.insert(message, elapsed);
+        self.code_block_timer = Instant::now();
+    }
+    /// Call this to record how long has elapsed since the last call
+    #[inline]
+    pub fn code_block_finished_with_print(&mut self, message: String) -> anyhow::Result<()> {
+        let elapsed = self.code_block_timer.elapsed().as_secs_f64();
+        println!(
+            "{} in {:.2} seconds. Total function time: {:.2} seconds, Memory usage: {}",
+            message,
+            elapsed,
+            self.function_timer.elapsed().as_secs_f64(),
+            get_memory_usage()?
+        );
+        self.function_times.insert(message, elapsed);
+        self.code_block_timer = Instant::now();
+        Ok(())
+    }
+    pub fn finished(&mut self) -> HashMap<String, f64> {
+        self.function_times.insert("total".to_string(), self.function_timer.elapsed().as_secs_f64());
+        self.function_times.clone()
+    }
+    pub fn finished_with_print(&mut self, function_name: String) -> HashMap<String, f64> {
+        self.function_times.insert("total".to_string(), self.function_timer.elapsed().as_secs_f64());
+        println!("{} finished in {:.2} seconds", function_name, self.function_timer.elapsed().as_secs_f64());
+        self.function_times.clone()
+    }
+}
+
+impl Default for Timer {
+    fn default() -> Self {
+        Self {
+            function_timer: Instant::now(),
+            code_block_timer: Instant::now(),
+            function_times: Default::default(),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct StatisticsRecorder {
-    all_data: HashMap<StatisticsArea, Vec<StatisticEntry>>,
+    #[serde(skip)]
+    timer: Timer,
+    timer_entries: Vec<HashMap<String, f64>>,
+    memory_usage_entries: Vec<String>,
     current_time_step: u32,
-    pub current_entry: HashMap<StatisticsArea, StatisticEntry>,
+    pub global_stats: Vec<StatisticEntry>,
+    /// The infections counts per time step, per area
+    all_stats_per_building: HashMap<ID, Vec<StatisticEntry>>,
+    /// The time steps currently being altered
+    pub current_entry: HashMap<ID, StatisticEntry>,
 }
 
 
 impl StatisticsRecorder {
     pub fn dump_to_file(&mut self, filename: &str) {
+        // Flush the recordings
+        self.next();
         let file = File::create(filename).expect("Failed to create results file!");
         let file_writer = BufWriter::new(file);
         let mut data: HashMap<&str, HashMap<String, Vec<StatisticEntry>>> = HashMap::new();
-        for (place, records) in self.all_data.drain() {
+        for (place, records) in self.all_stats_per_building.drain() {
+            let mut entry = data.entry("All").or_default();
+            entry.insert("All".to_string(), records.clone());
             match place {
-                StatisticsArea::Building { id } => {}
-                StatisticsArea::OutputArea { code } => {
+                ID::Building(id) => {}
+                ID::OutputArea(code) => {
                     let mut entry = data.entry("OutputArea").or_default();
                     entry.insert(code.code().to_string(), records);
                 }
-                StatisticsArea::PublicTransport { id } => {
+                ID::PublicTransport(id) => {
                     let mut entry = data.entry("PublicTransport").or_default();
-                    let code = String::new() + id.0.code() + "-" + id.1.code();
+                    let code = String::new() + id.source.code() + "-" + id.destination.code();
                     //entry.insert(code, records);
-                }
-                StatisticsArea::All => {
-                    let mut entry = data.entry("All").or_default();
-                    entry.insert("All".to_string(), records);
                 }
             }
         }
@@ -84,66 +136,59 @@ impl StatisticsRecorder {
     pub fn current_time_step(&self) -> u32 {
         self.current_time_step
     }
-    pub fn record(&mut self) {
-        self.current_time_step += 1;
-        for (area, entry) in self.current_entry.drain() {
-            let mut recording_entry = self.all_data.entry(area).or_default();//tatisticEntry::with_time_step(self.current_time_step));
-            recording_entry.push(entry);
-        }
-    }
 
     /// Prepares for recording the next step
-    pub fn next(&mut self) {
-        self.record();
-    }
-    pub fn add_citizen(&mut self, citizen: &Citizen) {
-        let time_step = self.current_time_step();
-        let stat_entry = self.current_entry.entry(StatisticsArea::All).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-        stat_entry.add_citizen(&citizen.disease_status);
-        if let Some(id) = &citizen.on_public_transport {
-            let stat_entry = self.current_entry.entry(StatisticsArea::PublicTransport { id: id.clone() }).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-            stat_entry.add_citizen(&citizen.disease_status);
-        } else {
-            let area = StatisticsArea::OutputArea { code: citizen.current_building_position.output_area_code().clone() };
-            let stat_entry = self.current_entry.entry(area).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-            stat_entry.add_citizen(&citizen.disease_status);
-        }
-    }
-    pub fn expose_citizen(&mut self, citizen: &Citizen, location: &ID) -> Result<(), crate::error::Error> {
-        let time_step = self.current_time_step();
-        let stat_entry = self.current_entry.entry(StatisticsArea::All).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-        stat_entry.citizen_exposed()?;
-        match location {
-            ID::Building(id) => {
-                let area = StatisticsArea::OutputArea { code: id.output_area_code() };
-                let stat_entry = self.current_entry.entry(area).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-                stat_entry.citizen_exposed()?;
-            }
-            ID::OutputArea(id) => {
-                let area = StatisticsArea::OutputArea { code: id.clone() };
-                let stat_entry = self.current_entry.entry(area).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-                stat_entry.citizen_exposed()?;
-            }
-            ID::PublicTransport(id) => {
-                let area = StatisticsArea::PublicTransport { id: (id.source.clone(), id.destination.clone()) };
-                let stat_entry = self.current_entry.entry(area).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-                stat_entry.citizen_exposed()?;
+    pub fn next(&mut self) -> anyhow::Result<()> {
+        // If we have started recording, update the previous data
+        if !self.global_stats.is_empty() {
+            self.timer_entries.push(self.timer.finished());
+            self.memory_usage_entries.push(get_memory_usage()?);
+            for (area, entry) in self.current_entry.drain() {
+                let mut recording_entry = self.all_stats_per_building.entry(area).or_default();//tatisticEntry::with_time_step(self.current_time_step));
+                recording_entry.push(entry);
             }
         }
+        self.timer = Timer::default();
+        self.current_time_step += 1;
+        self.global_stats.push(StatisticEntry::with_time_step(self.current_time_step()));
+        self.current_entry = HashMap::new();
         Ok(())
     }
+    pub fn record_function_time(&mut self, function_name: String) {
+        self.timer.code_block_finished(function_name)
+    }
 
+    /// Increment the current global stats, with the other
+    pub fn update_global_stats_entry(&mut self, entry: StatisticEntry) {
+        let mut current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
+        *current += entry;
+    }
+    pub fn add_exposure(&mut self, location: ID) -> Result<(), SimError> {
+        self.global_stats.last_mut().expect("No global data recorded").citizen_exposed()?;
+        // If building, expose the Output Area as well
+        let time_step = self.current_time_step;
+        let current_entry = &mut self.current_entry;
+        if let ID::Building(building) = &location {
+            let area_id = ID::OutputArea(building.output_area_code());
+            let stat_entry = current_entry.entry(area_id).or_insert_with(|| StatisticEntry::with_time_step(time_step));
+            stat_entry.citizen_exposed()?;
+        }
+        let stat_entry = current_entry.entry(location).or_insert_with(|| StatisticEntry::with_time_step(time_step));
+        stat_entry.citizen_exposed()?;
+        Ok(())
+    }
     pub fn disease_exists(&self) -> bool {
-        self.current_entry.get(&StatisticsArea::All).expect("No data recorded").disease_exists()
+        self.global_stats.last().expect("No data recorded").disease_exists()
     }
 
     pub fn infected_percentage(&self) -> f64 {
-        self.current_entry.get(&StatisticsArea::All).expect("No data recorded").infected_percentage()
+        self.global_stats.last().expect("No data recorded").infected_percentage()
     }
+    pub fn time_step(&self) -> u32 { self.current_time_step }
 }
 
 /// A snapshot of the disease per time step
-#[derive(Clone,Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StatisticEntry {
     time_step: u32,
     susceptible: u32,
@@ -152,20 +197,10 @@ pub struct StatisticEntry {
     recovered: u32,
     pub vaccinated: u32,
 }
-impl Default for StatisticEntry {
-    fn default() -> Self {
+
+impl StatisticEntry {
+    pub fn with_time_step(hour: u32) -> StatisticEntry {
         StatisticEntry {
-            time_step: 0,
-            susceptible: 0,
-            exposed: 0,
-            infected: 0,
-            recovered: 0,
-            vaccinated: 0,
-        }
-    }
-impl Statistics {
-    pub fn from_hour(hour: u32) -> Statistics {
-        Statistics {
             time_step: hour,
             susceptible: 0,
             exposed: 0,
@@ -238,63 +273,27 @@ impl Statistics {
     pub fn disease_exists(&self) -> bool {
         self.exposed != 0 || self.infected != 0 || self.susceptible != 0
     }
-
-    pub fn summarise(&self) {
-        println!("\n\n\n--------\n");
-        println!("Output Areas Exposed: ");
-        for area in &self.output_areas_exposed {
-            println!(
-                "         {} first infected at {} with total {}",
-                area.0, area.1.0, area.1.1
-            );
-        }
-        println!("\n\n\n--------\n");
-        println!("Buildings exposed Exposed: ");
-        for building in &self.buildings_exposed {
-            println!(
-                "         {} first infected at {} with total {}",
-                building.0, building.1.0, building.1.1
-            );
-        }
-    }
 }
-impl AddAssign for Statistics {
+
+impl AddAssign for StatisticEntry {
     fn add_assign(&mut self, rhs: Self) {
         self.susceptible += rhs.susceptible;
         self.exposed += rhs.exposed;
         self.infected += rhs.infected;
         self.recovered += rhs.recovered;
         self.vaccinated += rhs.vaccinated;
-        for (building, amount) in rhs.buildings_exposed {
-            let entry = self.buildings_exposed.entry(building).or_default();
-            entry.0 += amount.0;
-            entry.1 += amount.1;
-        }
-        for (building, amount) in rhs.workplace_exposed {
-            let entry = self.workplace_exposed.entry(building).or_default();
-            entry.0 += amount.0;
-            entry.1 += amount.1;
-        }
-        for (building, amount) in rhs.output_areas_exposed {
-            let entry = self.output_areas_exposed.entry(building).or_default();
-            entry.0 += amount.0;
-            entry.1 += amount.1;
-        }
     }
 }
-impl Default for Statistics {
+
+impl Default for StatisticEntry {
     fn default() -> Self {
-        Statistics {
+        StatisticEntry {
             time_step: 0,
             susceptible: 0,
             exposed: 0,
             infected: 0,
             recovered: 0,
             vaccinated: 0,
-            buildings_exposed: Default::default(),
-            workplace_exposed: Default::default(),
-            output_areas_exposed: Default::default(),
-            public_trandport_exposure_count: 0,
         }
     }
 }
