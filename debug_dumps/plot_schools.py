@@ -147,6 +147,6 @@ def plot_school_positions():
     plt.show()
 
 
-# plot_school_outlines()
+# \ plot_school_outlines()
 # plot_school_positions()
 plot_school_locations()

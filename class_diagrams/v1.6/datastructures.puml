@@ -1,6 +1,6 @@
 @startuml
 class Simulator{
-    {field} citizen_output_area_lookup : Vec<(OutputAreaID u32)>
+    {field} citizen_output_area_lookup : Vec<(OutputAreaID, u32)>
     output_area_lookup : HashMap<String, 32>
     output_areas : Vec<OutputArea>
     citizens_eligible_for_vaccine: HashSet<CitizenID>
