@@ -26,9 +26,7 @@ use std::iter::FromIterator;
 
 use geo::Point;
 use log::error;
-use rayon::iter::IntoParallelIterator;
-use rayon::prelude::FromParallelIterator;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use uuid::Uuid;
 
 use osm_data::RawBuilding;
@@ -45,7 +43,7 @@ pub const MINIMUM_FLOOR_SPACE_SIZE: u32 = 2000;
 /// A wrapper for all building types, for easier use in Hashmaps
 ///
 /// Each element contains
-#[derive(Clone, Debug, Serialize, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Hash, Eq, PartialEq)]
 pub enum BuildingType {
     Household,
     Workplace,
@@ -61,7 +59,7 @@ pub enum BuildingType {
 /// * An `OutputArea` - for broad location in the country,
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
-#[derive(Clone, Debug, Serialize, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct BuildingID {
     output_area_id: OutputAreaID,
     building_id: uuid::Uuid,
