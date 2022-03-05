@@ -84,7 +84,7 @@ pub struct Simulator {
     pub output_areas: RwLock<HashMap<OutputAreaID, Mutex<OutputArea>>>,
     pub citizen_output_area_lookup: RwLock<HashMap<CitizenID, Mutex<OutputAreaID>>>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
-    pub statistics: Statistics,
+    pub statistics_recorder: StatisticsRecorder,
     interventions: InterventionStatus,
     disease_model: DiseaseModel,
     pub public_transport: HashMap<PublicTransportID, PublicTransport>,
@@ -369,7 +369,7 @@ impl Simulator {
     }
 
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
-        let infected_percent = self.statistics.infected_percentage();
+        let infected_percent = self.statistics_recorder.infected_percentage();
         //debug!("Infected percent: {}",infected_percent);
         let new_interventions = self.interventions.update_status(infected_percent);
         for intervention in new_interventions {
@@ -377,7 +377,7 @@ impl Simulator {
                 InterventionsEnabled::Lockdown => {
                     info!(
                         "Lockdown is enabled at hour {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.time_step()
                     );
                     self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().for_each(|(id, area)| {
                         let mut area = area.lock().unwrap();
@@ -392,7 +392,7 @@ impl Simulator {
                 InterventionsEnabled::Vaccination => {
                     info!(
                         "Starting vaccination program at hour: {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.time_step()
                     );
                     let mut eligible = self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().fold(|| HashSet::new(), |mut accum, (id, area)| {
                         let area = area.lock().unwrap();
@@ -415,7 +415,7 @@ impl Simulator {
                     info!(
                         "Mask wearing status has changed: {} at hour {}",
                         status,
-                        self.statistics.time_step()
+                        self.statistics_recorder.time_step()
                     )
                 }
             }
@@ -453,7 +453,7 @@ impl Simulator {
         println!("Creating Core Dump!");
         let file = File::create("crash.dump")?;
         let mut file = LineWriter::new(file);
-        writeln!(file, "{}", self.statistics)?;
+        writeln!(file, "{:?}", self.statistics_recorder)?;
         for area in self.output_areas.read().unwrap().iter() {
             writeln!(file, "Output Area: {}", area.0)?;
             for building in area.1.lock().unwrap().buildings.values() {

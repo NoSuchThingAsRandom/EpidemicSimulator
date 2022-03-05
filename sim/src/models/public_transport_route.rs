@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -20,7 +20,7 @@
 
 use std::fmt::{Debug, Display, Formatter};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::config::BUS_CAPACITY;
@@ -28,10 +28,10 @@ use crate::error::SimError;
 use crate::models::citizen::CitizenID;
 use crate::models::output_area::OutputAreaID;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub struct PublicTransportID {
-    source: OutputAreaID,
-    destination: OutputAreaID,
+    pub source: OutputAreaID,
+    pub destination: OutputAreaID,
     id: Uuid,
 }
 

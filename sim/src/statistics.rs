@@ -178,6 +178,9 @@ impl StatisticsRecorder {
         let mut current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
         *current += entry;
     }
+    pub fn add_citizen(&mut self, disease_status: &DiseaseStatus) {
+        self.global_stats.last_mut().expect("No global data recorded").add_citizen(disease_status)
+    }
     pub fn add_exposure(&mut self, location: ID) -> Result<(), SimError> {
         self.global_stats.last_mut().expect("No global data recorded").citizen_exposed()?;
         // If building, expose the Output Area as well
