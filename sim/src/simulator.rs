@@ -63,7 +63,7 @@ pub struct Simulator {
     /// The list of citizens who have a "home" in this area
     pub citizens: HashMap<CitizenID, Citizen>,
     pub citizens_eligible_for_vaccine: Option<HashSet<CitizenID>>,
-    pub statistics: Statistics,
+    pub statistics_recorder: StatisticsRecorder,
     interventions: InterventionStatus,
     disease_model: DiseaseModel,
     pub public_transport: HashMap<PublicTransportID, PublicTransport>,
@@ -119,17 +119,15 @@ impl Simulator {
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
         let mut exposures = GeneratedExposures::default();
-        self.statistics.next();
-
 
         // Generate exposures for fixed building positions
         for citizen in self.citizens.values_mut() {
             citizen.execute_time_step(
-                self.statistics.time_step(),
+                self.statistics_recorder.time_step(),
                 &self.disease_model,
                 self.interventions.lockdown_enabled(),
             );
-            self.statistics.add_citizen(&citizen.disease_status);
+            self.statistics_recorder.add_citizen(&citizen.disease_status);
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {
@@ -263,7 +261,7 @@ impl Simulator {
         Ok(())
     }
     fn apply_interventions(&mut self) -> anyhow::Result<()> {
-        let infected_percent = self.statistics.infected_percentage();
+        let infected_percent = self.statistics_recorder.infected_percentage();
         //debug!("Infected percent: {}",infected_percent);
         let new_interventions = self.interventions.update_status(infected_percent);
         for intervention in new_interventions {
@@ -271,7 +269,7 @@ impl Simulator {
                 InterventionsEnabled::Lockdown => {
                     info!(
                         "Lockdown is enabled at hour {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.time_step()
                     );
                     // Send every Citizen home
                     for mut citizen in &mut self.citizens {
@@ -282,7 +280,7 @@ impl Simulator {
                 InterventionsEnabled::Vaccination => {
                     info!(
                         "Starting vaccination program at hour: {}",
-                        self.statistics.time_step()
+                        self.statistics_recorder.time_step()
                     );
                     let mut eligible = HashSet::new();
                     self.citizens.iter().for_each(|(id, citizen)| {
@@ -296,7 +294,7 @@ impl Simulator {
                     info!(
                         "Mask wearing status has changed: {} at hour {}",
                         status,
-                        self.statistics.time_step()
+                        self.statistics_recorder.time_step()
                     )
                 }
             }
@@ -327,7 +325,7 @@ impl Simulator {
         println!("Creating Core Dump!");
         let file = File::create("crash.dump")?;
         let mut file = LineWriter::new(file);
-        writeln!(file, "{}", self.statistics)?;
+        writeln!(file, "{:?}", self.statistics_recorder)?;
         for area in self.output_areas {
             writeln!(file, "Output Area: {}", area.0)?;
             for building in area.1.buildings.values() {
