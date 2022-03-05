@@ -1,12 +1,11 @@
 import json
 import math
-import time
-
 import matplotlib.animation as anm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shapefile as shp  # Requires the pyshp package
+import time
 from matplotlib import cm
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
@@ -38,7 +37,7 @@ def build_output_area_df() -> pd.DataFrame:
 
 
 def build_polygons():
-    sf = shp.Reader("../../data/census_map_areas/England_oa_2011/england_oa_2011.shp")
+    sf = shp.Reader("../../data/census_map_areas_converted/TestOutputAreas.shp")
 
     output_area_polygons = {}
     areas = set(output_area_df["code"].unique())
@@ -141,7 +140,6 @@ if __name__ == "__main__":
     print(min(colours))
     print(max(colours))
     print(colours)
-    exit()
     frames = 100
     selected_hours = np.linspace(output_area_df.time_step.min(), output_area_df.time_step.max(), num=frames)
     plt.axis("off")
@@ -160,7 +158,7 @@ if __name__ == "__main__":
     anim = anm.FuncAnimation(fig, animate, frames=frames, interval=1000, blit=False)
     print("Displaying: ", time.time() - func_time)
     plt.show()
-    # anim.save("test.gif", writer="imagemagick")
+    anim.save("test.gif", writer="imagemagick")
     print("Saved in: ", time.time() - func_time)
     print("Finished in: ", time.time() - total_time)
     # output_area_heatmap("infected")
