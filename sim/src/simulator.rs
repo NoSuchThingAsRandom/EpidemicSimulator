@@ -121,7 +121,7 @@ impl Simulator {
                 start_time = Instant::now();
             }
         }
-        self.statistics_recorder.dump_to_file("statistics_results/v1.3/");
+        self.statistics_recorder.dump_to_file("statistics_results/v1.6_copy/");
         Ok(())
     }
     /// Applies a single time step to the simulation
