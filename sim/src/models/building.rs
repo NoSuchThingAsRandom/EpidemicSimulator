@@ -26,6 +26,7 @@ use std::iter::FromIterator;
 
 use geo::Point;
 use log::error;
+use rayon::prelude::{FromParallelIterator, IntoParallelIterator};
 use serde::{Deserialize, Serialize, Serializer};
 use uuid::Uuid;
 

@@ -1,0 +1,628 @@
+warning: Patch `quadtree_rs v0.1.2 (https://github.com/NoSuchThingAsRandom/quadtree/#321fcd31)` was not used in the crate graph.
+Check that the patched package version and available features are compatible
+with the dependency requirements. If the patch has a different version from
+what is locked in the Cargo.lock file, run `cargo update` to use the new
+version. This may also occur with an optional dependency that is not enabled.
+warning: unused imports: `error`, `warn`
+  --> osm_data/src/polygon_lookup.rs:48:18
+   |
+48 | use log::{debug, error, info, trace, warn};
+   |                  ^^^^^               ^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `warn`
+  --> osm_data/src/voronoi_generator.rs:27:31
+   |
+27 | use log::{debug, info, trace, warn};
+   |                               ^^^^
+
+warning: unused variable: `e`
+   --> osm_data/src/polygon_lookup.rs:111:21
+    |
+111 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: function is never used: `get_random_point_inside_polygon`
+   --> osm_data/src/voronoi_generator.rs:146:4
+    |
+146 | fn get_random_point_inside_polygon(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: constant is never used: `MAX_DEPTH`
+  --> osm_data/src/quadtree.rs:32:1
+   |
+32 | pub const MAX_DEPTH: u8 = 20;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function is never used: `coord_num_abs`
+  --> osm_data/src/quadtree.rs:56:8
+   |
+56 | pub fn coord_num_abs<T: geo_types::CoordNum>(mut a: T) -> T {
+   |        ^^^^^^^^^^^^^
+
+warning: variant is never constructed: `York`
+  --> osm_data/src/lib.rs:67:5
+   |
+67 |     York,
+   |     ^^^^
+
+warning: variant is never constructed: `YorkshireAndTheHumber`
+  --> osm_data/src/lib.rs:68:5
+   |
+68 |     YorkshireAndTheHumber,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `osm_data` (lib) generated 8 warnings
+   Compiling sim v0.1.0 (/home/sam/Projects/EpidemicSimulator/sim)
+warning: unused import: `std::iter::FromIterator`
+  --> sim/src/models/building.rs:25:5
+   |
+25 | use std::iter::FromIterator;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::sync::Mutex`
+  --> sim/src/models/output_area.rs:25:5
+   |
+25 | use std::sync::Mutex;
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Arc`, `RwLockWriteGuard`
+  --> sim/src/simulator.rs:25:17
+   |
+25 | use std::sync::{Arc, Mutex, RwLock, RwLockWriteGuard};
+   |                 ^^^                 ^^^^^^^^^^^^^^^^
+
+warning: unused import: `Error`
+  --> sim/src/simulator.rs:28:23
+   |
+28 | use anyhow::{Context, Error};
+   |                       ^^^^^
+
+warning: unused import: `dashmap::DashMap`
+  --> sim/src/simulator.rs:29:5
+   |
+29 | use dashmap::DashMap;
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `am`, `ar`, `en`
+  --> sim/src/simulator.rs:31:26
+   |
+31 | use num_format::Locale::{am, ar, en};
+   |                          ^^  ^^  ^^
+
+warning: unnecessary trailing semicolon
+   --> sim/src/simulator.rs:386:29
+    |
+386 | ...                   ;
+    |                       ^ help: remove this semicolon
+    |
+    = note: `#[warn(redundant_semicolons)]` on by default
+
+warning: unused import: `format`
+  --> sim/src/statistics.rs:22:25
+   |
+22 | use std::fmt::{Display, format, Formatter};
+   |                         ^^^^^^
+
+warning: unused import: `anyhow::Context`
+  --> sim/src/statistics.rs:29:5
+   |
+29 | use anyhow::Context;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `error`
+  --> sim/src/statistics.rs:30:11
+   |
+30 | use log::{error, info, warn};
+   |           ^^^^^
+
+warning: unused imports: `el`, `lo`
+  --> sim/src/statistics.rs:31:26
+   |
+31 | use num_format::Locale::{el, lo};
+   |                          ^^  ^^
+
+warning: unused import: `crate::models::building::BuildingID`
+  --> sim/src/statistics.rs:39:5
+   |
+39 | use crate::models::building::BuildingID;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::citizen::Citizen`
+  --> sim/src/statistics.rs:40:5
+   |
+40 | use crate::models::citizen::Citizen;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::output_area::OutputAreaID`
+  --> sim/src/statistics.rs:42:5
+   |
+42 | use crate::models::output_area::OutputAreaID;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::public_transport_route::PublicTransportID`
+  --> sim/src/statistics.rs:43:5
+   |
+43 | use crate::models::public_transport_route::PublicTransportID;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unnecessary trailing semicolon
+   --> sim/src/statistics.rs:193:13
+    |
+193 |             ;
+    |             ^ help: remove this semicolon
+
+warning: unused variable: `area_code`
+   --> sim/src/simulator.rs:150:89
+    |
+150 |         let (statistics, exposures, moved_citizens) = output_areas.par_iter_mut().map(|(area_code, mut area)| {
+    |                                                                                         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_area_code`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `e`
+   --> sim/src/simulator.rs:256:29
+    |
+256 |                         Err(e) => {
+    |                             ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `statistics`
+   --> sim/src/simulator.rs:224:17
+    |
+224 |         let mut statistics = &mut self.statistics_recorder;
+    |                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_statistics`
+
+warning: unused variable: `id`
+   --> sim/src/simulator.rs:382:121
+    |
+382 |                     self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().for_each(|(id, area)| {
+    |                                                                                                                         ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `id`
+   --> sim/src/simulator.rs:397:166
+    |
+397 | ...(|| HashSet::new(), |mut accum, (id, area)| {
+    |                                     ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `file`
+   --> sim/src/simulator.rs:471:17
+    |
+471 |         let mut file = File::create("../../debug_dumps/crash.json")?;
+    |                 ^^^^ help: if this is intentional, prefix it with an underscore: `_file`
+
+warning: unused variable: `citizen`
+   --> sim/src/simulator.rs:496:102
+    |
+496 | ...izens.iter().for_each(|(id, citizen)| { citizen_output_area_lookup.insert(id.clone(), Mutex::new(area_id.clone())); }) });
+    |                                ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_citizen`
+
+warning: unused variable: `generate_citizen_closure`
+   --> sim/src/simulator_builder.rs:157:17
+    |
+157 |             let generate_citizen_closure = || -> anyhow::Result<()> {
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_generate_citizen_closure`
+
+warning: unused variable: `get_multiple`
+   --> sim/src/simulator_builder.rs:271:58
+    |
+271 |         let finding_closest_school = |citizen: &Citizen, get_multiple: bool| -> Result<Vec<&RawBuilding>, SimError> {
+    |                                                          ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_get_multiple`
+
+warning: unused variable: `teachers`
+   --> sim/src/simulator_builder.rs:331:36
+    |
+331 |             for (point, (students, teachers, building)) in b {
+    |                                    ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_teachers`
+
+warning: unused variable: `e`
+   --> sim/src/simulator_builder.rs:739:24
+    |
+739 |             if let Err(e) = workplaces {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `id`
+   --> sim/src/statistics.rs:124:30
+    |
+124 |                 ID::Building(id) => {}
+    |                              ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `entry`
+   --> sim/src/statistics.rs:130:29
+    |
+130 |                     let mut entry = exposure_counts.entry("PublicTransport").or_default();
+    |                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_entry`
+
+warning: unused variable: `code`
+   --> sim/src/statistics.rs:131:25
+    |
+131 |                     let code = String::new() + id.source.code() + "-" + id.destination.code();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: unused variable: `time_step`
+   --> sim/src/statistics.rs:187:13
+    |
+187 |         let time_step = self.current_time_step;
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_time_step`
+
+warning: unused variable: `members`
+   --> sim/src/models/building.rs:467:29
+    |
+467 |                     let mut members = self.classes[*class_id].get_participants().iter().for_each(|citizen|
+    |                             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_members`
+
+warning: variable does not need to be mutable
+   --> sim/src/models/building.rs:467:25
+    |
+467 |                     let mut members = self.classes[*class_id].get_participants().iter().for_each(|citizen|
+    |                         ----^^^^^^^
+    |                         |
+    |                         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator.rs:150:100
+    |
+150 |         let (statistics, exposures, moved_citizens) = output_areas.par_iter_mut().map(|(area_code, mut area)| {
+    |                                                                                                    ----^^^^
+    |                                                                                                    |
+    |                                                                                                    help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator.rs:253:25
+    |
+253 |                     let mut citizen = match area.citizens.get_mut(&citizen_id).context("Cannot expose Citizen, as they do not exist!")
+    |                         ----^^^^^^^
+    |                         |
+    |                         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator.rs:224:13
+    |
+224 |         let mut statistics = &mut self.statistics_recorder;
+    |             ----^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator.rs:339:17
+    |
+339 |             let mut area = area_ref.get_mut(&area_id).context(format!("Area id {} does not exist!", area_id))?;
+    |                 ----^^^^
+    |                 |
+    |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator.rs:397:25
+    |
+397 | ...   let mut eligible = self.output_areas.write().expect("Failed to retrive global Citizen lock").par_iter_mut().fold(|| HashSet::new(),...
+    |           ----^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator.rs:471:13
+    |
+471 |         let mut file = File::create("../../debug_dumps/crash.json")?;
+    |             ----^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/simulator_builder.rs:930:13
+    |
+930 |         let mut output_areas = &mut self.output_areas;
+    |             ----^^^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:121:17
+    |
+121 |             let mut entry = exposure_counts.entry("All").or_default();
+    |                 ----^^^^^
+    |                 |
+    |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:126:25
+    |
+126 |                     let mut entry = exposure_counts.entry("OutputArea").or_default();
+    |                         ----^^^^^
+    |                         |
+    |                         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:130:25
+    |
+130 |                     let mut entry = exposure_counts.entry("PublicTransport").or_default();
+    |                         ----^^^^^
+    |                         |
+    |                         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:162:21
+    |
+162 | ...   let mut recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();//tatisticEntry::with_time_step(self.c...
+    |           ----^^^^^^^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:178:13
+    |
+178 |         let mut current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
+    |             ----^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:191:17
+    |
+191 |             let mut stat_entry = current_entry.entry(area_id).or_default();
+    |                 ----^^^^^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:195:13
+    |
+195 |         let mut stat_entry = current_entry.entry(location).or_default();
+    |             ----^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused `Result` that must be used
+   --> sim/src/simulator.rs:118:9
+    |
+118 |         self.statistics_recorder.next();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_must_use)]` on by default
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `Result` that must be used
+   --> sim/src/statistics.rs:115:9
+    |
+115 |         self.next();
+    |         ^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+   Compiling visualisation v0.1.0 (/home/sam/Projects/EpidemicSimulator/visualisation)
+warning: unused variable: `c`
+   --> visualisation/src/image_export.rs:244:13
+    |
+244 |         let c = (area.percentage_highlighting.unwrap_or(1.0) * 255.0).ceil() as u8;
+    |             ^ help: if this is intentional, prefix it with an underscore: `_c`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `chart`
+   --> visualisation/src/image_export.rs:232:5
+    |
+232 |     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordi32, RangedCoordi32>>,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_chart`
+
+warning: function is never used: `draw_polygon_ring_filled`
+   --> visualisation/src/image_export.rs:175:4
+    |
+175 | fn draw_polygon_ring_filled(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `visualisation` (lib) generated 3 warnings
+warning: `sim` (lib) generated 49 warnings
+   Compiling run v0.1.0 (/home/sam/Projects/EpidemicSimulator/run)
+warning: unused import: `Arc`
+  --> run/src/main.rs:23:17
+   |
+23 | use std::sync::{Arc, Mutex, RwLock};
+   |                 ^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `rand::prelude::SliceRandom`
+  --> run/src/main.rs:30:5
+   |
+30 | use rand::prelude::SliceRandom;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `rand::thread_rng`
+  --> run/src/main.rs:31:5
+   |
+31 | use rand::thread_rng;
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `rayon::spawn`
+  --> run/src/main.rs:34:5
+   |
+34 | use rayon::spawn;
+   |     ^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> run/src/main.rs:299:9
+    |
+299 |     let mut data = RwLock::new(HashMap::new());
+    |         ----^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> run/src/main.rs:305:9
+    |
+305 |     let mut values: Vec<i32> = (0..10).collect();
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> run/src/main.rs:323:9
+    |
+323 |     let mut values: Vec<i32> = (0..10).collect();
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: function is never used: `test`
+   --> run/src/main.rs:298:4
+    |
+298 | fn test() {
+    |    ^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `run` (bin "run") generated 8 warnings
+    Finished release [optimized] target(s) in 8.68s
+     Running `target/release/run 1946157112TYPE299 --directory=data --grid-size=250000 --simulate --use-cache`
+ 2022-03-05T00:31:16.833Z INFO  run > Using area: 1946157112TYPE299, Utilizing Cache: true, Allowing downloads: false
+ 2022-03-05T00:31:16.833Z INFO  run > Using mode simulate for area '1946157112TYPE299'
+ 2022-03-05T00:31:16.833Z INFO  run::load_data > Loading data from disk...
+ 2022-03-05T00:31:16.841Z INFO  load_census_data > Fetching table 'data/tables/1946157112TYPE299/ks101ew_population_144.csv'
+ 2022-03-05T00:31:16.841Z DEBUG load_census_data > Reading census table: 'data/tables/1946157112TYPE299/ks101ew_population_144.csv' from disk
+ 2022-03-05T00:31:16.849Z DEBUG load_census_data > Loaded table into pre processing
+ 2022-03-05T00:31:16.853Z INFO  load_census_data > Fetching table 'data/tables/1946157112TYPE299/qs103ew_age_structure_NUM_503_1.csv'
+ 2022-03-05T00:31:16.853Z DEBUG load_census_data > Reading census table: 'data/tables/1946157112TYPE299/qs103ew_age_structure_NUM_503_1.csv' from disk
+ 2022-03-05T00:31:16.885Z DEBUG load_census_data > Loaded table into pre processing
+ 2022-03-05T00:31:16.898Z INFO  load_census_data > Fetching table 'data/tables/1946157112TYPE299/ks608uk_occupation_count_NM_1518_1.csv'
+ 2022-03-05T00:31:16.898Z DEBUG load_census_data > Reading census table: 'data/tables/1946157112TYPE299/ks608uk_occupation_count_NM_1518_1.csv' from disk
+ 2022-03-05T00:31:16.910Z DEBUG load_census_data > Loaded table into pre processing
+ 2022-03-05T00:31:16.914Z INFO  load_census_data > Fetching table 'data/tables/1946157112TYPE299/wf01bew_residential_vs_workplace_NM_1228_1.csv'
+ 2022-03-05T00:31:16.914Z DEBUG load_census_data > Reading census table: 'data/tables/1946157112TYPE299/wf01bew_residential_vs_workplace_NM_1228_1.csv' from disk
+ 2022-03-05T00:31:16.925Z DEBUG load_census_data > Loaded table into pre processing
+Built 637 residential workplace areas with 31023 records
+ 2022-03-05T00:31:16.933Z INFO  load_census_data > Removing incomplete Output Areas
+ 2022-03-05T00:31:16.933Z DEBUG load_census_data > Population area count: 637
+ 2022-03-05T00:31:16.933Z DEBUG load_census_data > Age area count: 637
+ 2022-03-05T00:31:16.933Z DEBUG load_census_data > Occupation area count: 637
+ 2022-03-05T00:31:16.933Z DEBUG load_census_data > Residents area count:  637
+ 2022-03-05T00:31:16.933Z DEBUG load_census_data > Filtered area count:   637
+ 2022-03-05T00:31:16.934Z DEBUG load_census_data > Removed 0 workplace areas. 31023 work areas out of 637 home remaining
+ 2022-03-05T00:31:16.934Z DEBUG load_census_data > There are 637 complete output areas
+ 2022-03-05T00:31:16.934Z INFO  osm_data         > Building OSM Data...
+ 2022-03-05T00:31:16.934Z DEBUG osm_data         > Starting to read data from file
+ 2022-03-05T00:31:16.934Z DEBUG osm_data         > Reading cached parsing data from: data/OSM/cached
+ 2022-03-05T00:31:16.936Z INFO  osm_data::polygon_lookup > Loading map data from file data/census_map_areas_converted/TestOutputAreas.shp
+ 2022-03-05T00:31:18.144Z DEBUG osm_data                 > Loaded OSM data
+ 2022-03-05T00:31:18.144Z INFO  osm_data                 > Building voronoi diagram for School with 8970 buildings
+ 2022-03-05T00:31:18.144Z INFO  osm_data::voronoi_generator > Building Voronoi Grid of 250000 x 250000 with 8970 seeds
+Boundary: ((363573, 378246), (543203, 518699))
+ 2022-03-05T00:31:18.145Z TRACE osm_data::voronoi_generator > Voronoi Boundary: ((121191, 126082), (181067, 172899))
+ 2022-03-05T00:31:18.145Z DEBUG osm_data::voronoi_generator > Voronoi boundary box size: 181068 -> BoundingBox { center: [90534, 90534], top_right: [181068, 181068] }
+ 2022-03-05T00:31:18.145Z TRACE osm_data::voronoi_generator > Sample of Seeds: [[142818, 145193], [125800, 129102], [125818, 129102], [169140, 144261], [168799, 144418], [169139, 144536], [143345, 139464], [125430, 130278], [125465, 130299], [127826, 133309]]
+ 2022-03-05T00:31:18.151Z DEBUG osm_data::voronoi_generator > Built Voronoi map, with 8970 polygons
+ 2022-03-05T00:31:18.152Z TRACE osm_data::voronoi_generator > Converted polygons to 8948 geo polygons
+ 2022-03-05T00:31:18.153Z TRACE osm_data::polygon_lookup    > Building new Polygon Container of size: 181068
+ 2022-03-05T00:31:18.361Z DEBUG osm_data::voronoi_generator > Built quad tree
+ 2022-03-05T00:31:18.361Z INFO  osm_data                    > Finished building OSM data
+ 2022-03-05T00:31:18.361Z DEBUG osm_data                    > There are 8970 School 
+ 2022-03-05T00:31:18.361Z DEBUG osm_data                    > There are 604563 WorkPlace 
+ 2022-03-05T00:31:18.361Z DEBUG osm_data                    > There are 821490 Household 
+ 2022-03-05T00:31:18.361Z DEBUG osm_data                    > There are 26804 Shop 
+ 2022-03-05T00:31:18.361Z DEBUG osm_data                    > There are 710 Hospital 
+ 2022-03-05T00:31:18.882Z DEBUG osm_data::polygon_lookup    > Built 0 polygons in time: 1.946747563
+ 2022-03-05T00:31:19.935Z DEBUG osm_data::polygon_lookup    > Built 1500000000 polygons in time: 2.999373126
+ 2022-03-05T00:31:20.286Z DEBUG osm_data::polygon_lookup    > Built 500000000 polygons in time: 3.3501141629999998
+ 2022-03-05T00:31:21.274Z DEBUG osm_data::polygon_lookup    > Built 1000000000 polygons in time: 4.338266284
+ 2022-03-05T00:31:24.462Z INFO  osm_data::polygon_lookup    > Finished loading map data in 7.526608995s
+ 2022-03-05T00:31:24.462Z TRACE osm_data::polygon_lookup    > Building new Polygon Container of size: 250000
+Initialised 637 Output Areas in 0.00 seconds. Total function time: 0.00 seconds, Memory usage: 5.30 GB
+ 2022-03-05T00:31:25.144Z DEBUG sim::simulator_builder      > Attempting to allocating 1462537 possible buildings to 637 Output Areas
+ 2022-03-05T00:31:25.932Z DEBUG sim::simulator_builder      > 4161556 Buildings have been assigned. 637 Output Areas remaining (with buildings)
+Assigned Possible Buildings to Output Areas in 0.79 seconds. Total function time: 0.79 seconds, Memory usage: 5.47 GB
+ 2022-03-05T00:31:26.369Z INFO  sim::simulator_builder      > Households and Citizen generation succeeded for 637 Output Areas.
+ 2022-03-05T00:31:26.369Z WARN  sim::simulator_builder      > Failed to generate households for 5 Output Areas, as no homes exist!
+ 2022-03-05T00:31:26.372Z DEBUG sim::simulator_builder      > There are 18568 Citizens with an occupation of: Manager
+ 2022-03-05T00:31:26.374Z DEBUG sim::simulator_builder      > There are 36073 Citizens with an occupation of: Professional
+ 2022-03-05T00:31:26.376Z DEBUG sim::simulator_builder      > There are 21656 Citizens with an occupation of: Technical
+ 2022-03-05T00:31:26.378Z DEBUG sim::simulator_builder      > There are 18764 Citizens with an occupation of: Administrative
+ 2022-03-05T00:31:26.380Z DEBUG sim::simulator_builder      > There are 18012 Citizens with an occupation of: SkilledTrades
+ 2022-03-05T00:31:26.382Z DEBUG sim::simulator_builder      > There are 16641 Citizens with an occupation of: Caring
+ 2022-03-05T00:31:26.384Z DEBUG sim::simulator_builder      > There are 19290 Citizens with an occupation of: Sales
+ 2022-03-05T00:31:26.386Z DEBUG sim::simulator_builder      > There are 10219 Citizens with an occupation of: MachineOperatives
+ 2022-03-05T00:31:26.388Z DEBUG sim::simulator_builder      > There are 22125 Citizens with an occupation of: Teaching
+Generated Citizens and residences for 637 output areas in 0.46 seconds. Total function time: 1.24 seconds, Memory usage: 5.57 GB
+ 2022-03-05T00:31:26.388Z DEBUG sim::simulator_builder      > Building Schools
+ 2022-03-05T00:31:26.391Z DEBUG sim::simulator_builder      > 22125 teachers retrieved
+ 2022-03-05T00:31:26.391Z DEBUG sim::simulator_builder      > There are 8 age groups, with 16273 students and 22125 teachers
+ 2022-03-05T00:31:26.391Z DEBUG sim::simulator_builder      > There are 8970 raw schools
+ 2022-03-05T00:31:28.720Z INFO  sim::simulator_builder      > Assigned Students to 24 raw schools
+ 2022-03-05T00:31:47.686Z INFO  sim::simulator_builder      > Assigned teachers to schools
+ 2022-03-05T00:31:47.686Z WARN  sim::simulator_builder      > Failed to assign schools to 0 teachers
+ 2022-03-05T00:31:47.693Z ERROR sim::simulator_builder      > 
+An error occurred loading Census Data
+	Type: ParsingError
+	Source: Missing Key! Context: Retrieving output area for schools, 	Key: ID: E00065900 
+ 2022-03-05T00:31:47.695Z ERROR sim::simulator_builder      > 
+An error occurred loading Census Data
+	Type: ParsingError
+	Source: Missing Key! Context: Retrieving output area for schools, 	Key: ID: E00141591 
+ 2022-03-05T00:31:47.696Z ERROR sim::simulator_builder      > 
+An error occurred loading Census Data
+	Type: ParsingError
+	Source: Missing Key! Context: Retrieving output area for schools, 	Key: ID: E00142154 
+ 2022-03-05T00:31:47.697Z WARN  sim::simulator_builder      > 0 schools are missing teachers
+ 2022-03-05T00:31:47.697Z INFO  sim::simulator_builder      > Generated 24 schools, with 22125 teachers, 16273 students across 707 classes, with avg class size 23 and avg classes per school 29. With 1798 offices and 21418 misc staff
+Built schools in 21.31 seconds. Total function time: 22.55 seconds, Memory usage: 5.57 GB
+ 2022-03-05T00:31:47.804Z DEBUG sim::simulator_builder      > There are 26172 areas with workplace buildings
+ 2022-03-05T00:31:47.804Z INFO  sim::simulator_builder      > Starting to build workplaces for 637 areas
+ 2022-03-05T00:31:47.804Z DEBUG sim::simulator_builder      > Assigning workplaces to 637 output areas 
+ 2022-03-05T00:31:47.977Z DEBUG sim::simulator_builder      > Creating workplace buildings for: 159223 Citizens and 576 Output Areas
+ 2022-03-05T00:31:47.977Z DEBUG sim::simulator_builder      > 38398 Citizens have not been assigned a workplace area!
+ 2022-03-05T00:31:48.007Z ERROR sim::simulator_builder      > Ran out of Workplaces 17 to assign workers (846/1005) to in Output Area: ID: E00067493
+ 2022-03-05T00:31:48.008Z ERROR sim::simulator_builder      > Ran out of Workplaces 10 to assign workers (723/1092) to in Output Area: ID: E00067493
+ 2022-03-05T00:31:48.008Z ERROR sim::simulator_builder      > Ran out of Workplaces 9 to assign workers (1954/2192) to in Output Area: ID: E00067493
+ 2022-03-05T00:31:48.008Z ERROR sim::simulator_builder      > Ran out of Workplaces 8 to assign workers (1130/1339) to in Output Area: ID: E00067493
+Generated workplaces for {} Output Areas in 0.37 seconds. Total function time: 22.93 seconds, Memory usage: 5.71 GB
+ 2022-03-05T00:31:48.083Z DEBUG sim::simulator_builder      > 2,165 out of 197,621 Citizens 1.1%, are working from home.
+Applied initial infections in 0.02 seconds. Total function time: 22.94 seconds, Memory usage: 5.71 GB
+ 2022-03-05T00:31:48.084Z DEBUG sim::simulator_builder      > Starting Statistics: There are 197,621 total Citizens, 637 Output Areas
+Initialisation finished in 23.04 seconds
+ 2022-03-05T00:31:49.153Z INFO  run                         > Finished loading data and Initialising  simulator in 32.32
+ 2022-03-05T00:31:49.154Z INFO  sim::simulator              > Starting simulation...
+Completed  50 time steps, in:   0.01 seconds  Statistics: StatisticEntry { time_step: 1, susceptible: 197610, exposed: 1, infected: 10, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+ 2022-03-05T00:31:49.369Z ERROR sim::simulator              > Area ID: E00065900 doesn't exist!
+ 2022-03-05T00:31:49.385Z ERROR sim::simulator              > Area ID: E00142154 doesn't exist!
+ 2022-03-05T00:31:49.426Z ERROR sim::simulator              > Area ID: E00141591 doesn't exist!
+ 2022-03-05T00:31:49.439Z ERROR sim::simulator              > Failed to retrieve Output Area
+Completed  50 time steps, in:   1.28 seconds  Statistics: StatisticEntry { time_step: 51, susceptible: 186291, exposed: 368, infected: 9, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.20 seconds  Statistics: StatisticEntry { time_step: 101, susceptible: 186126, exposed: 531, infected: 11, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.33 seconds  Statistics: StatisticEntry { time_step: 151, susceptible: 184965, exposed: 1326, infected: 377, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.48 seconds  Statistics: StatisticEntry { time_step: 201, susceptible: 183708, exposed: 2418, infected: 542, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.36 seconds  Statistics: StatisticEntry { time_step: 251, susceptible: 167013, exposed: 17842, infected: 1813, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.40 seconds  Statistics: StatisticEntry { time_step: 301, susceptible: 130824, exposed: 52795, infected: 3049, recovered: 0, vaccinated: 0 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.58 seconds  Statistics: StatisticEntry { time_step: 351, susceptible: 87679, exposed: 73775, infected: 25205, recovered: 9, vaccinated: 0 },   Memory usage: 5.31 GB
+ 2022-03-05T00:31:59.726Z INFO  sim::interventions          > Mask wearing on public transport is enacted
+ 2022-03-05T00:31:59.726Z INFO  sim::simulator              > Mask wearing status has changed: Only Public Transport at hour 373
+ 2022-03-05T00:32:00.873Z INFO  sim::simulator              > Starting vaccination program at hour: 399
+Completed  50 time steps, in:   2.39 seconds  Statistics: StatisticEntry { time_step: 401, susceptible: 41435, exposed: 75698, infected: 60025, recovered: 9, vaccinated: 9501 },   Memory usage: 5.31 GB
+ 2022-03-05T00:32:02.164Z INFO  sim::interventions          > Mask wearing everywhere is enacted
+ 2022-03-05T00:32:02.164Z INFO  sim::simulator              > Mask wearing status has changed: Everywhere at hour 423
+Completed  50 time steps, in:   2.82 seconds  Statistics: StatisticEntry { time_step: 451, susceptible: 109, exposed: 33296, infected: 101666, recovered: 213, vaccinated: 51384 },   Memory usage: 5.31 GB
+ 2022-03-05T00:32:04.921Z INFO  sim::simulator              > Lockdown is enabled at hour 466
+Completed  50 time steps, in:   4.24 seconds  Statistics: StatisticEntry { time_step: 501, susceptible: 0, exposed: 23, infected: 134556, recovered: 467, vaccinated: 51622 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   5.02 seconds  Statistics: StatisticEntry { time_step: 551, susceptible: 0, exposed: 0, infected: 134112, recovered: 934, vaccinated: 51622 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   4.92 seconds  Statistics: StatisticEntry { time_step: 601, susceptible: 0, exposed: 0, infected: 132868, recovered: 2178, vaccinated: 51622 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   5.01 seconds  Statistics: StatisticEntry { time_step: 651, susceptible: 0, exposed: 0, infected: 131425, recovered: 3621, vaccinated: 51622 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   4.74 seconds  Statistics: StatisticEntry { time_step: 701, susceptible: 0, exposed: 0, infected: 106616, recovered: 28430, vaccinated: 51622 },   Memory usage: 5.31 GB
+ 2022-03-05T00:32:31.003Z INFO  sim::interventions          > Mask wearing everywhere is removed
+ 2022-03-05T00:32:31.003Z INFO  sim::simulator              > Mask wearing status has changed: Only Public Transport at hour 749
+Completed  50 time steps, in:   3.17 seconds  Statistics: StatisticEntry { time_step: 751, susceptible: 0, exposed: 0, infected: 74610, recovered: 60436, vaccinated: 51622 },   Memory usage: 5.31 GB
+ 2022-03-05T00:32:32.881Z INFO  sim::interventions          > Mask wearing on public transport is removed
+ 2022-03-05T00:32:32.881Z INFO  sim::simulator              > Mask wearing status has changed: None at hour 784
+Completed  50 time steps, in:   2.69 seconds  Statistics: StatisticEntry { time_step: 801, susceptible: 0, exposed: 0, infected: 25189, recovered: 109857, vaccinated: 51622 },   Memory usage: 5.31 GB
+Completed  50 time steps, in:   1.65 seconds  Statistics: StatisticEntry { time_step: 851, susceptible: 0, exposed: 0, infected: 6, recovered: 135040, vaccinated: 51622 },   Memory usage: 5.31 GB
+ 2022-03-05T00:32:36.099Z INFO  sim::simulator              > Disease finished as no one has the disease
+ 2022-03-05T00:32:36.099Z DEBUG sim::simulator              > StatisticEntry { time_step: 874, susceptible: 0, exposed: 0, infected: 0, recovered: 135046, vaccinated: 51622 }
+ 2022-03-05T00:32:36.107Z INFO  sim::statistics             > Dumped data to file: statistics_results/v1.5/
+ 2022-03-05T00:32:36.107Z INFO  run                         > Finished in 79.273518865s

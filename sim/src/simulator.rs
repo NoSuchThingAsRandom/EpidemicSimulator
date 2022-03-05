@@ -107,7 +107,7 @@ impl Simulator {
                 start_time = Instant::now();
             }
         }
-        self.statistics_recorder.dump_to_file("statistics_results/v1.3/");
+        self.statistics_recorder.dump_to_file("statistics_results/v1.5/");
         Ok(())
     }
     /// Applies a single time step to the simulation
@@ -221,7 +221,7 @@ impl Simulator {
         let disease = &self.disease_model;
         let mask_status = &self.interventions.mask_status;
         let output_areas = &self.output_areas;
-        let mut statistics = &mut self.statistics;
+        let mut statistics = &mut self.statistics_recorder;
         // Apply building exposures
         let exposure_statistics: Vec<ID> = exposures.building_exposure_list.par_iter().map(|(area_id, building_exposures)| -> Vec<ID> {
             let mut exposures = Vec::new();
