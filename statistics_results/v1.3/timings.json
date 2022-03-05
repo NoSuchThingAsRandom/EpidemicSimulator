@@ -1,0 +1,4748 @@
+[
+  {
+    "total": 0.00634323,
+    "Apply Interventions": 9.2e-7,
+    "Generate Exposures": 0.006044528,
+    "Apply Exposures": 0.000225011
+  },
+  {
+    "Apply Exposures": 0.000252951,
+    "total": 0.006316198,
+    "Generate Exposures": 0.006060927,
+    "Apply Interventions": 6.2e-7
+  },
+  {
+    "Apply Interventions": 8.2e-7,
+    "Apply Exposures": 0.00004223,
+    "Generate Exposures": 0.005978708,
+    "total": 0.006023758
+  },
+  {
+    "total": 0.005871337,
+    "Generate Exposures": 0.005830147,
+    "Apply Interventions": 4e-7,
+    "Apply Exposures": 0.00003943
+  },
+  {
+    "total": 0.005722657,
+    "Apply Interventions": 5e-7,
+    "Apply Exposures": 0.000032471,
+    "Generate Exposures": 0.005688686
+  },
+  {
+    "Apply Interventions": 6.4e-7,
+    "Generate Exposures": 0.005682576,
+    "Apply Exposures": 0.00003208,
+    "total": 0.005716206
+  },
+  {
+    "Generate Exposures": 0.005663056,
+    "Apply Interventions": 3.7e-7,
+    "Apply Exposures": 0.0000294,
+    "total": 0.005694116
+  },
+  {
+    "Apply Exposures": 0.003871038,
+    "Apply Interventions": 6.4e-7,
+    "total": 0.026224731,
+    "Generate Exposures": 0.022350713
+  },
+  {
+    "Apply Interventions": 3e-7,
+    "total": 0.02808067,
+    "Generate Exposures": 0.027365867,
+    "Apply Exposures": 0.000713093
+  },
+  {
+    "Apply Exposures": 0.000263231,
+    "Apply Interventions": 1.15e-6,
+    "total": 0.005971868,
+    "Generate Exposures": 0.005705397
+  },
+  {
+    "Generate Exposures": 0.005685156,
+    "total": 0.006002168,
+    "Apply Exposures": 0.000250602,
+    "Apply Interventions": 4.1e-7
+  },
+  {
+    "Apply Exposures": 0.000256421,
+    "total": 0.006293969,
+    "Apply Interventions": 1e-6,
+    "Generate Exposures": 0.006034758
+  },
+  {
+    "Generate Exposures": 0.006094227,
+    "Apply Interventions": 3.5e-7,
+    "total": 0.006371099,
+    "Apply Exposures": 0.000275562
+  },
+  {
+    "Apply Interventions": 3.9e-7,
+    "Generate Exposures": 0.005752587,
+    "Apply Exposures": 0.000268551,
+    "total": 0.006023148
+  },
+  {
+    "Generate Exposures": 0.005634596,
+    "total": 0.005893037,
+    "Apply Interventions": 3.1e-7,
+    "Apply Exposures": 0.000256971
+  },
+  {
+    "Generate Exposures": 0.021397278,
+    "Apply Interventions": 3e-7,
+    "total": 0.025512358,
+    "Apply Exposures": 0.004112609
+  },
+  {
+    "Generate Exposures": 0.026230261,
+    "Apply Exposures": 0.000100431,
+    "Apply Interventions": 4.7e-7,
+    "total": 0.026333102
+  },
+  {
+    "Apply Exposures": 0.000102381,
+    "Generate Exposures": 0.006152778,
+    "Apply Interventions": 8.4e-7,
+    "total": 0.006257179
+  },
+  {
+    "Apply Exposures": 0.00003338,
+    "Generate Exposures": 0.005800537,
+    "total": 0.005835817,
+    "Apply Interventions": 3.2e-7
+  },
+  {
+    "Generate Exposures": 0.005730166,
+    "Apply Exposures": 0.000041471,
+    "total": 0.005774647,
+    "Apply Interventions": 9.5e-7
+  },
+  {
+    "total": 0.005780697,
+    "Generate Exposures": 0.005678776,
+    "Apply Interventions": 4.2e-7,
+    "Apply Exposures": 0.000035581
+  },
+  {
+    "total": 0.006093438,
+    "Apply Interventions": 8.9e-7,
+    "Generate Exposures": 0.006052868,
+    "Apply Exposures": 0.00003767
+  },
+  {
+    "Apply Exposures": 0.00004097,
+    "Generate Exposures": 0.006110248,
+    "total": 0.006153078,
+    "Apply Interventions": 5.5e-7
+  },
+  {
+    "Generate Exposures": 0.005791587,
+    "Apply Interventions": 7.5e-7,
+    "Apply Exposures": 0.00003379,
+    "total": 0.005827207
+  },
+  {
+    "total": 0.005704486,
+    "Apply Interventions": 6.8e-7,
+    "Apply Exposures": 0.00003501,
+    "Generate Exposures": 0.005667766
+  },
+  {
+    "Generate Exposures": 0.005677856,
+    "Apply Interventions": 3.7e-7,
+    "total": 0.005714686,
+    "Apply Exposures": 0.00003526
+  },
+  {
+    "Generate Exposures": 0.005666206,
+    "Apply Exposures": 0.000033131,
+    "total": 0.005701187,
+    "Apply Interventions": 4.2e-7
+  },
+  {
+    "total": 0.005724426,
+    "Apply Interventions": 4.9e-7,
+    "Generate Exposures": 0.005689806,
+    "Apply Exposures": 0.0000331
+  },
+  {
+    "Generate Exposures": 0.005836067,
+    "Apply Exposures": 0.00003381,
+    "Apply Interventions": 8.9e-7,
+    "total": 0.005872617
+  },
+  {
+    "Generate Exposures": 0.005730937,
+    "Apply Interventions": 4.7e-7,
+    "total": 0.005765617,
+    "Apply Exposures": 0.00003323
+  },
+  {
+    "Generate Exposures": 0.005676346,
+    "Apply Exposures": 0.000031591,
+    "total": 0.005771977,
+    "Apply Interventions": 4.2e-7
+  },
+  {
+    "Generate Exposures": 0.022144743,
+    "Apply Exposures": 0.003957218,
+    "Apply Interventions": 4.6e-7,
+    "total": 0.026104711
+  },
+  {
+    "Apply Exposures": 0.000529163,
+    "Apply Interventions": 1.02e-6,
+    "total": 0.028238641,
+    "Generate Exposures": 0.027706158
+  },
+  {
+    "Generate Exposures": 0.005682766,
+    "Apply Exposures": 0.000250301,
+    "Apply Interventions": 5.2e-7,
+    "total": 0.005935227
+  },
+  {
+    "Apply Interventions": 4.2e-7,
+    "Generate Exposures": 0.005669737,
+    "total": 0.005915398,
+    "Apply Exposures": 0.000244051
+  },
+  {
+    "total": 0.005917767,
+    "Generate Exposures": 0.005669796,
+    "Apply Exposures": 0.000246371,
+    "Apply Interventions": 3.9e-7
+  },
+  {
+    "Apply Interventions": 3.6e-7,
+    "Generate Exposures": 0.005735926,
+    "total": 0.005973327,
+    "Apply Exposures": 0.000235881
+  },
+  {
+    "Apply Exposures": 0.000236071,
+    "total": 0.005891757,
+    "Generate Exposures": 0.005653876,
+    "Apply Interventions": 3.6e-7
+  },
+  {
+    "Generate Exposures": 0.005701486,
+    "Apply Interventions": 6.3e-7,
+    "Apply Exposures": 0.000230241,
+    "total": 0.005935087
+  },
+  {
+    "Apply Exposures": 0.004109419,
+    "Generate Exposures": 0.021506319,
+    "Apply Interventions": 3.5e-7,
+    "total": 0.025617578
+  },
+  {
+    "Generate Exposures": 0.026286782,
+    "Apply Interventions": 7.6e-7,
+    "Apply Exposures": 0.00010213,
+    "total": 0.026465352
+  },
+  {
+    "Apply Exposures": 0.00003431,
+    "Generate Exposures": 0.006050819,
+    "Apply Interventions": 7.8e-7,
+    "total": 0.006087889
+  },
+  {
+    "Apply Interventions": 7.3e-7,
+    "total": 0.00657021,
+    "Generate Exposures": 0.00652503,
+    "Apply Exposures": 0.00004231
+  },
+  {
+    "Generate Exposures": 0.006134628,
+    "Apply Exposures": 0.0000356,
+    "total": 0.006173478,
+    "Apply Interventions": 6.6e-7
+  },
+  {
+    "Generate Exposures": 0.005817837,
+    "total": 0.005852327,
+    "Apply Exposures": 0.00003284,
+    "Apply Interventions": 3.6e-7
+  },
+  {
+    "Apply Interventions": 3.7e-7,
+    "Generate Exposures": 0.005692046,
+    "Apply Exposures": 0.00003257,
+    "total": 0.005726536
+  },
+  {
+    "total": 0.005740667,
+    "Generate Exposures": 0.005707226,
+    "Apply Exposures": 0.000031931,
+    "Apply Interventions": 3.2e-7
+  },
+  {
+    "Apply Interventions": 6.9e-7,
+    "Apply Exposures": 0.000038561,
+    "Generate Exposures": 0.005734296,
+    "total": 0.005775577
+  },
+  {
+    "Generate Exposures": 0.00646536,
+    "Apply Exposures": 0.00003653,
+    "Apply Interventions": 9.5e-7,
+    "total": 0.00650496
+  },
+  {
+    "Generate Exposures": 0.005653016,
+    "Apply Exposures": 0.00003293,
+    "total": 0.005687586,
+    "Apply Interventions": 4.2e-7
+  },
+  {
+    "Generate Exposures": 0.005672927,
+    "Apply Exposures": 0.00003154,
+    "total": 0.005775637,
+    "Apply Interventions": 5.5e-7
+  },
+  {
+    "Apply Exposures": 0.00003518,
+    "Apply Interventions": 7.5e-7,
+    "Generate Exposures": 0.006016118,
+    "total": 0.006053678
+  },
+  {
+    "Generate Exposures": 0.006298879,
+    "Apply Interventions": 6.6e-7,
+    "Apply Exposures": 0.00004154,
+    "total": 0.00634286
+  },
+  {
+    "total": 0.006097918,
+    "Generate Exposures": 0.006059498,
+    "Apply Exposures": 0.00003506,
+    "Apply Interventions": 9.6e-7
+  },
+  {
+    "Generate Exposures": 0.005708647,
+    "total": 0.005742637,
+    "Apply Interventions": 4e-7,
+    "Apply Exposures": 0.0000324
+  },
+  {
+    "Apply Exposures": 0.003921458,
+    "Apply Interventions": 7.3e-7,
+    "Generate Exposures": 0.021947242,
+    "total": 0.02587126
+  },
+  {
+    "Apply Exposures": 0.000490523,
+    "Apply Interventions": 3e-7,
+    "Generate Exposures": 0.027532497,
+    "total": 0.02802459
+  },
+  {
+    "Apply Interventions": 3.3e-7,
+    "total": 0.005939587,
+    "Apply Exposures": 0.000229251,
+    "Generate Exposures": 0.005708726
+  },
+  {
+    "total": 0.005915177,
+    "Apply Exposures": 0.000230282,
+    "Generate Exposures": 0.005683355,
+    "Apply Interventions": 3.7e-7
+  },
+  {
+    "Apply Exposures": 0.000219961,
+    "total": 0.005892027,
+    "Apply Interventions": 4.1e-7,
+    "Generate Exposures": 0.005670446
+  },
+  {
+    "Apply Interventions": 3.8e-7,
+    "total": 0.005968828,
+    "Apply Exposures": 0.000225482,
+    "Generate Exposures": 0.005675226
+  },
+  {
+    "Apply Interventions": 8.5e-7,
+    "Apply Exposures": 0.000228741,
+    "total": 0.005990028,
+    "Generate Exposures": 0.005758737
+  },
+  {
+    "Generate Exposures": 0.006185029,
+    "total": 0.00648246,
+    "Apply Exposures": 0.000294311,
+    "Apply Interventions": 9.4e-7
+  },
+  {
+    "total": 0.025994551,
+    "Generate Exposures": 0.021861731,
+    "Apply Exposures": 0.00413002,
+    "Apply Interventions": 7.4e-7
+  },
+  {
+    "Apply Exposures": 0.00009347,
+    "Generate Exposures": 0.026247171,
+    "total": 0.026342701,
+    "Apply Interventions": 5.4e-7
+  },
+  {
+    "Apply Exposures": 0.00002984,
+    "Apply Interventions": 3.5e-7,
+    "Generate Exposures": 0.005961648,
+    "total": 0.005992838
+  },
+  {
+    "Generate Exposures": 0.005725057,
+    "total": 0.005757277,
+    "Apply Exposures": 0.0000306,
+    "Apply Interventions": 3.4e-7
+  },
+  {
+    "Apply Interventions": 3.7e-7,
+    "Apply Exposures": 0.000032621,
+    "total": 0.005710767,
+    "Generate Exposures": 0.005676426
+  },
+  {
+    "Apply Interventions": 1.23e-6,
+    "Generate Exposures": 0.005709516,
+    "total": 0.005748186,
+    "Apply Exposures": 0.00003546
+  },
+  {
+    "Generate Exposures": 0.005674136,
+    "Apply Exposures": 0.00003157,
+    "Apply Interventions": 4.6e-7,
+    "total": 0.005707456
+  },
+  {
+    "Apply Exposures": 0.000033221,
+    "total": 0.005805907,
+    "Apply Interventions": 5e-7,
+    "Generate Exposures": 0.005706956
+  },
+  {
+    "Apply Interventions": 1.18e-6,
+    "total": 0.005871067,
+    "Apply Exposures": 0.00003676,
+    "Generate Exposures": 0.005831617
+  },
+  {
+    "Apply Interventions": 7.6e-7,
+    "Generate Exposures": 0.006199059,
+    "Apply Exposures": 0.00003945,
+    "total": 0.006241589
+  },
+  {
+    "Apply Interventions": 4.5e-7,
+    "total": 0.005977428,
+    "Generate Exposures": 0.005939848,
+    "Apply Exposures": 0.00003563
+  },
+  {
+    "total": 0.005792807,
+    "Generate Exposures": 0.005757617,
+    "Apply Interventions": 2.7e-7,
+    "Apply Exposures": 0.00003357
+  },
+  {
+    "Apply Interventions": 1.07e-6,
+    "total": 0.005919228,
+    "Generate Exposures": 0.005876277,
+    "Apply Exposures": 0.000040091
+  },
+  {
+    "Apply Interventions": 3.4e-7,
+    "Generate Exposures": 0.006220798,
+    "total": 0.006256599,
+    "Apply Exposures": 0.000034491
+  },
+  {
+    "Apply Interventions": 7.9e-7,
+    "Generate Exposures": 0.005945367,
+    "total": 0.005984688,
+    "Apply Exposures": 0.000035981
+  },
+  {
+    "total": 0.006050427,
+    "Apply Interventions": 6e-7,
+    "Apply Exposures": 0.00003524,
+    "Generate Exposures": 0.006013277
+  },
+  {
+    "Apply Interventions": 7.3e-7,
+    "Generate Exposures": 0.024054131,
+    "Apply Exposures": 0.00438724,
+    "total": 0.028444371
+  },
+  {
+    "total": 0.028384651,
+    "Apply Exposures": 0.000461432,
+    "Generate Exposures": 0.027848868,
+    "Apply Interventions": 8.2e-7
+  },
+  {
+    "Apply Exposures": 0.000218341,
+    "total": 0.005933468,
+    "Generate Exposures": 0.005713087,
+    "Apply Interventions": 6.4e-7
+  },
+  {
+    "Apply Exposures": 0.000227741,
+    "Apply Interventions": 6.1e-7,
+    "total": 0.005999157,
+    "Generate Exposures": 0.005769256
+  },
+  {
+    "Apply Interventions": 4e-7,
+    "Apply Exposures": 0.000236831,
+    "total": 0.006136449,
+    "Generate Exposures": 0.005898208
+  },
+  {
+    "Apply Interventions": 5e-7,
+    "total": 0.005908417,
+    "Generate Exposures": 0.005683446,
+    "Apply Exposures": 0.000223061
+  },
+  {
+    "Apply Interventions": 5.4e-7,
+    "Generate Exposures": 0.005674556,
+    "Apply Exposures": 0.000224441,
+    "total": 0.005900757
+  },
+  {
+    "Generate Exposures": 0.005725346,
+    "total": 0.005948677,
+    "Apply Interventions": 5.4e-7,
+    "Apply Exposures": 0.000221811
+  },
+  {
+    "Apply Interventions": 4.31e-7,
+    "total": 0.0258659,
+    "Generate Exposures": 0.02174062,
+    "Apply Exposures": 0.004122879
+  },
+  {
+    "Apply Interventions": 5.2e-7,
+    "Generate Exposures": 0.026378272,
+    "total": 0.026469152,
+    "Apply Exposures": 0.00008845
+  },
+  {
+    "total": 0.006067258,
+    "Apply Interventions": 5.5e-7,
+    "Generate Exposures": 0.006008698,
+    "Apply Exposures": 0.00005659
+  },
+  {
+    "total": 0.006053478,
+    "Apply Exposures": 0.00003115,
+    "Apply Interventions": 8.5e-7,
+    "Generate Exposures": 0.005952378
+  },
+  {
+    "Generate Exposures": 0.005889298,
+    "total": 0.005921078,
+    "Apply Interventions": 6.8e-7,
+    "Apply Exposures": 0.00002996
+  },
+  {
+    "Apply Exposures": 0.00003037,
+    "Generate Exposures": 0.005822517,
+    "total": 0.005854377,
+    "Apply Interventions": 4.5e-7
+  },
+  {
+    "Generate Exposures": 0.005944708,
+    "Apply Interventions": 4.4e-7,
+    "total": 0.005977118,
+    "Apply Exposures": 0.0000307
+  },
+  {
+    "Apply Exposures": 0.00003335,
+    "Apply Interventions": 3.3e-7,
+    "Generate Exposures": 0.005799917,
+    "total": 0.005835097
+  },
+  {
+    "Generate Exposures": 0.005679806,
+    "Apply Exposures": 0.00003336,
+    "total": 0.005715147,
+    "Apply Interventions": 6.81e-7
+  },
+  {
+    "Apply Exposures": 0.000032141,
+    "Apply Interventions": 4.5e-7,
+    "Generate Exposures": 0.005734916,
+    "total": 0.005769117
+  },
+  {
+    "Apply Exposures": 0.00003544,
+    "total": 0.005764466,
+    "Generate Exposures": 0.005727166,
+    "Apply Interventions": 2.9e-7
+  },
+  {
+    "Apply Exposures": 0.00004044,
+    "total": 0.006148599,
+    "Apply Interventions": 8e-7,
+    "Generate Exposures": 0.006105079
+  },
+  {
+    "Apply Interventions": 9.5e-7,
+    "Generate Exposures": 0.006281129,
+    "total": 0.006324509,
+    "Apply Exposures": 0.00004012
+  },
+  {
+    "total": 0.005956657,
+    "Apply Exposures": 0.00003771,
+    "Apply Interventions": 5.8e-7,
+    "Generate Exposures": 0.005852116
+  },
+  {
+    "Apply Exposures": 0.000037781,
+    "Generate Exposures": 0.005710186,
+    "total": 0.005749647,
+    "Apply Interventions": 6.9e-7
+  },
+  {
+    "Apply Exposures": 0.000043051,
+    "Apply Interventions": 6.8e-7,
+    "total": 0.005754007,
+    "Generate Exposures": 0.005709086
+  },
+  {
+    "total": 0.025832619,
+    "Apply Exposures": 0.003900118,
+    "Generate Exposures": 0.021930171,
+    "Apply Interventions": 4.6e-7
+  },
+  {
+    "Generate Exposures": 0.028138991,
+    "Apply Exposures": 0.001073055,
+    "Apply Interventions": 7.8e-7,
+    "total": 0.029214286
+  },
+  {
+    "Generate Exposures": 0.005732356,
+    "Apply Exposures": 0.000801954,
+    "total": 0.00653697,
+    "Apply Interventions": 6.6e-7
+  },
+  {
+    "Generate Exposures": 0.005722217,
+    "Apply Exposures": 0.000980014,
+    "total": 0.006704421,
+    "Apply Interventions": 1.02e-6
+  },
+  {
+    "Generate Exposures": 0.005790987,
+    "total": 0.007147704,
+    "Apply Exposures": 0.001353896,
+    "Apply Interventions": 7.71e-7
+  },
+  {
+    "Apply Interventions": 3.7e-7,
+    "Apply Exposures": 0.001410086,
+    "Generate Exposures": 0.006162368,
+    "total": 0.007574334
+  },
+  {
+    "Apply Exposures": 0.002954633,
+    "total": 0.009005941,
+    "Generate Exposures": 0.006047108,
+    "Apply Interventions": 9.9e-7
+  },
+  {
+    "Apply Interventions": 7.4e-7,
+    "Generate Exposures": 0.00645865,
+    "Apply Exposures": 0.001871789,
+    "total": 0.008367279
+  },
+  {
+    "Apply Exposures": 0.005891057,
+    "Generate Exposures": 0.02384321,
+    "Apply Interventions": 9.6e-7,
+    "total": 0.029737217
+  },
+  {
+    "total": 0.028492451,
+    "Apply Exposures": 0.001708827,
+    "Apply Interventions": 9.6e-7,
+    "Generate Exposures": 0.026780444
+  },
+  {
+    "total": 0.006953862,
+    "Generate Exposures": 0.005909857,
+    "Apply Exposures": 0.001041895,
+    "Apply Interventions": 6.3e-7
+  },
+  {
+    "Generate Exposures": 0.005988988,
+    "Apply Interventions": 9.9e-7,
+    "Apply Exposures": 0.001054944,
+    "total": 0.007056032
+  },
+  {
+    "Apply Exposures": 0.001055925,
+    "Apply Interventions": 9.67e-6,
+    "total": 0.007004502,
+    "Generate Exposures": 0.005937527
+  },
+  {
+    "total": 0.006978702,
+    "Generate Exposures": 0.005920937,
+    "Apply Exposures": 0.001047185,
+    "Apply Interventions": 9.08e-6
+  },
+  {
+    "total": 0.007025713,
+    "Generate Exposures": 0.005962548,
+    "Apply Exposures": 0.001050995,
+    "Apply Interventions": 0.00001056
+  },
+  {
+    "Apply Exposures": 0.001030975,
+    "Generate Exposures": 0.005958298,
+    "total": 0.007000633,
+    "Apply Interventions": 0.00001018
+  },
+  {
+    "total": 0.006953562,
+    "Generate Exposures": 0.005914807,
+    "Apply Interventions": 9.55e-6,
+    "Apply Exposures": 0.001027825
+  },
+  {
+    "Apply Exposures": 0.001051475,
+    "total": 0.007049053,
+    "Generate Exposures": 0.005925638,
+    "Apply Interventions": 9.75e-6
+  },
+  {
+    "Apply Exposures": 0.001032405,
+    "Generate Exposures": 0.005962598,
+    "Apply Interventions": 0.00001022,
+    "total": 0.007007463
+  },
+  {
+    "Generate Exposures": 0.006521981,
+    "total": 0.007677766,
+    "Apply Interventions": 9.51e-6,
+    "Apply Exposures": 0.001143935
+  },
+  {
+    "Apply Exposures": 0.001006025,
+    "Apply Interventions": 9.15e-6,
+    "Generate Exposures": 0.006006908,
+    "total": 0.007023333
+  },
+  {
+    "Apply Exposures": 0.000990155,
+    "Apply Interventions": 0.00001037,
+    "total": 0.006934582,
+    "Generate Exposures": 0.005932397
+  },
+  {
+    "Generate Exposures": 0.005918118,
+    "Apply Interventions": 4.3e-7,
+    "Apply Exposures": 0.000987645,
+    "total": 0.006916883
+  },
+  {
+    "Apply Exposures": 0.000992045,
+    "total": 0.006990302,
+    "Apply Interventions": 0.00001159,
+    "Generate Exposures": 0.005985327
+  },
+  {
+    "Apply Interventions": 7e-7,
+    "total": 0.026713035,
+    "Apply Exposures": 0.004842953,
+    "Generate Exposures": 0.021867062
+  },
+  {
+    "Generate Exposures": 0.027698278,
+    "Apply Interventions": 9.7e-7,
+    "Apply Exposures": 0.002821893,
+    "total": 0.030522761
+  },
+  {
+    "Apply Exposures": 0.002696032,
+    "total": 0.00859773,
+    "Generate Exposures": 0.005896048,
+    "Apply Interventions": 3.19e-6
+  },
+  {
+    "Apply Exposures": 0.002733262,
+    "total": 0.008686271,
+    "Apply Interventions": 3.781e-6,
+    "Generate Exposures": 0.005917128
+  },
+  {
+    "Apply Exposures": 0.002816073,
+    "total": 0.00878512,
+    "Apply Interventions": 2.64e-6,
+    "Generate Exposures": 0.005964377
+  },
+  {
+    "Apply Exposures": 0.003019475,
+    "Generate Exposures": 0.005987738,
+    "total": 0.009011313,
+    "Apply Interventions": 2.41e-6
+  },
+  {
+    "Apply Interventions": 8.9e-7,
+    "Apply Exposures": 0.003533396,
+    "total": 0.009830505,
+    "Generate Exposures": 0.006291789
+  },
+  {
+    "Generate Exposures": 0.005951488,
+    "total": 0.009097483,
+    "Apply Exposures": 0.003143505,
+    "Apply Interventions": 6.9e-7
+  },
+  {
+    "Apply Exposures": 0.007123203,
+    "Apply Interventions": 7.1e-7,
+    "Generate Exposures": 0.022937066,
+    "total": 0.030063889
+  },
+  {
+    "total": 0.028421903,
+    "Generate Exposures": 0.026682574,
+    "Apply Exposures": 0.001736499,
+    "Apply Interventions": 1.09e-6
+  },
+  {
+    "Apply Exposures": 0.001396416,
+    "Generate Exposures": 0.006092288,
+    "total": 0.007490694,
+    "Apply Interventions": 3.6e-7
+  },
+  {
+    "Apply Interventions": 7.8e-7,
+    "Apply Exposures": 0.001380596,
+    "Generate Exposures": 0.006121089,
+    "total": 0.007504075
+  },
+  {
+    "Apply Interventions": 6.9e-7,
+    "total": 0.007536224,
+    "Apply Exposures": 0.001387366,
+    "Generate Exposures": 0.006146168
+  },
+  {
+    "Generate Exposures": 0.006134338,
+    "Apply Interventions": 5.9e-7,
+    "total": 0.007569735,
+    "Apply Exposures": 0.001371107
+  },
+  {
+    "Apply Exposures": 0.001378586,
+    "Generate Exposures": 0.006132929,
+    "total": 0.007514035,
+    "Apply Interventions": 7.6e-7
+  },
+  {
+    "Generate Exposures": 0.006213939,
+    "Apply Interventions": 7.1e-7,
+    "Apply Exposures": 0.001370837,
+    "total": 0.007586876
+  },
+  {
+    "Generate Exposures": 0.007019532,
+    "Apply Exposures": 0.001493037,
+    "Apply Interventions": 7.8e-7,
+    "total": 0.008515899
+  },
+  {
+    "Apply Exposures": 0.001328946,
+    "Generate Exposures": 0.00648868,
+    "Apply Interventions": 5.9e-7,
+    "total": 0.007819506
+  },
+  {
+    "Generate Exposures": 0.006133399,
+    "Apply Exposures": 0.001318406,
+    "Apply Interventions": 6.2e-7,
+    "total": 0.007454105
+  },
+  {
+    "total": 0.007800736,
+    "Apply Exposures": 0.001346076,
+    "Generate Exposures": 0.00645178,
+    "Apply Interventions": 1e-6
+  },
+  {
+    "Generate Exposures": 0.006527191,
+    "Apply Exposures": 0.001327716,
+    "Apply Interventions": 9.8e-7,
+    "total": 0.007857977
+  },
+  {
+    "total": 0.007874337,
+    "Apply Exposures": 0.001326067,
+    "Generate Exposures": 0.00654502,
+    "Apply Interventions": 8.7e-7
+  },
+  {
+    "Apply Interventions": 6.5e-7,
+    "Generate Exposures": 0.00651008,
+    "total": 0.007854076,
+    "Apply Exposures": 0.001342076
+  },
+  {
+    "Apply Exposures": 0.001326616,
+    "total": 0.007808426,
+    "Generate Exposures": 0.006413909,
+    "Apply Interventions": 5.5e-7
+  },
+  {
+    "total": 0.03025228,
+    "Apply Exposures": 0.005343004,
+    "Apply Interventions": 6.2e-7,
+    "Generate Exposures": 0.024906966
+  },
+  {
+    "Apply Interventions": 7.9e-7,
+    "Generate Exposures": 0.029918399,
+    "Apply Exposures": 0.003311105,
+    "total": 0.033232834
+  },
+  {
+    "Apply Exposures": 0.003926758,
+    "Generate Exposures": 0.005902757,
+    "Apply Interventions": 8.5e-7,
+    "total": 0.009832455
+  },
+  {
+    "Apply Exposures": 0.003381706,
+    "Apply Interventions": 1.1e-6,
+    "Generate Exposures": 0.006254368,
+    "total": 0.009639254
+  },
+  {
+    "Apply Exposures": 0.003405016,
+    "Apply Interventions": 5.8e-7,
+    "Generate Exposures": 0.005871778,
+    "total": 0.009278774
+  },
+  {
+    "total": 0.009294513,
+    "Apply Interventions": 7.1e-7,
+    "Apply Exposures": 0.003421626,
+    "Generate Exposures": 0.005870487
+  },
+  {
+    "Apply Exposures": 0.003584156,
+    "total": 0.009519364,
+    "Generate Exposures": 0.005933188,
+    "Apply Interventions": 6.6e-7
+  },
+  {
+    "Apply Exposures": 0.004113039,
+    "total": 0.010972701,
+    "Generate Exposures": 0.006856152,
+    "Apply Interventions": 1.08e-6
+  },
+  {
+    "total": 0.03019185,
+    "Generate Exposures": 0.023002817,
+    "Apply Exposures": 0.007185933,
+    "Apply Interventions": 8e-7
+  },
+  {
+    "Generate Exposures": 0.027196286,
+    "total": 0.029391946,
+    "Apply Exposures": 0.002127729,
+    "Apply Interventions": 7.5e-7
+  },
+  {
+    "total": 0.007778036,
+    "Apply Exposures": 0.001616147,
+    "Apply Interventions": 7.4e-7,
+    "Generate Exposures": 0.006158759
+  },
+  {
+    "Generate Exposures": 0.006777581,
+    "Apply Exposures": 0.001603508,
+    "total": 0.008383959,
+    "Apply Interventions": 8e-7
+  },
+  {
+    "Apply Interventions": 3.6e-7,
+    "Generate Exposures": 0.006161649,
+    "total": 0.007705336,
+    "Apply Exposures": 0.001542017
+  },
+  {
+    "Generate Exposures": 0.006126648,
+    "Apply Exposures": 0.001532067,
+    "total": 0.007660025,
+    "Apply Interventions": 2.8e-7
+  },
+  {
+    "total": 0.007616555,
+    "Apply Interventions": 5.1e-7,
+    "Apply Exposures": 0.001526187,
+    "Generate Exposures": 0.006088408
+  },
+  {
+    "Generate Exposures": 0.006077889,
+    "total": 0.007586776,
+    "Apply Exposures": 0.001507027,
+    "Apply Interventions": 3.3e-7
+  },
+  {
+    "Apply Interventions": 5.9e-7,
+    "Apply Exposures": 0.001497487,
+    "Generate Exposures": 0.006088648,
+    "total": 0.007587745
+  },
+  {
+    "Apply Exposures": 0.001483407,
+    "Apply Interventions": 4.7e-7,
+    "Generate Exposures": 0.006073118,
+    "total": 0.007558175
+  },
+  {
+    "total": 0.007605266,
+    "Generate Exposures": 0.006111569,
+    "Apply Interventions": 6e-7,
+    "Apply Exposures": 0.001490787
+  },
+  {
+    "Generate Exposures": 0.006052068,
+    "total": 0.007594505,
+    "Apply Exposures": 0.001480887,
+    "Apply Interventions": 5.1e-7
+  },
+  {
+    "Generate Exposures": 0.006145679,
+    "Apply Exposures": 0.001488587,
+    "Apply Interventions": 8.6e-7,
+    "total": 0.007637866
+  },
+  {
+    "total": 0.008356208,
+    "Apply Exposures": 0.001544797,
+    "Generate Exposures": 0.006808651,
+    "Apply Interventions": 8.4e-7
+  },
+  {
+    "Apply Interventions": 2.9e-7,
+    "total": 0.007631225,
+    "Generate Exposures": 0.006155408,
+    "Apply Exposures": 0.001474297
+  },
+  {
+    "Apply Exposures": 0.001499526,
+    "total": 0.007637745,
+    "Generate Exposures": 0.006135279,
+    "Apply Interventions": 7.5e-7
+  },
+  {
+    "Apply Exposures": 0.005435746,
+    "Generate Exposures": 0.022254023,
+    "total": 0.027692729,
+    "Apply Interventions": 8.2e-7
+  },
+  {
+    "Apply Exposures": 0.003785298,
+    "total": 0.031962658,
+    "Apply Interventions": 7.8e-7,
+    "Generate Exposures": 0.0281742
+  },
+  {
+    "total": 0.009548394,
+    "Apply Interventions": 7.2e-7,
+    "Apply Exposures": 0.003626687,
+    "Generate Exposures": 0.005919487
+  },
+  {
+    "Apply Exposures": 0.003675567,
+    "Apply Interventions": 8.1e-7,
+    "total": 0.009565814,
+    "Generate Exposures": 0.005887917
+  },
+  {
+    "Apply Exposures": 0.003711978,
+    "Generate Exposures": 0.005911177,
+    "Apply Interventions": 7.1e-7,
+    "total": 0.009625405
+  },
+  {
+    "Apply Exposures": 0.004973773,
+    "Apply Interventions": 9.9e-7,
+    "Generate Exposures": 0.006006168,
+    "total": 0.011016561
+  },
+  {
+    "Apply Exposures": 0.003684518,
+    "Apply Interventions": 9e-7,
+    "Generate Exposures": 0.006080958,
+    "total": 0.009767916
+  },
+  {
+    "Apply Interventions": 1.05e-6,
+    "total": 0.009832375,
+    "Apply Exposures": 0.003827228,
+    "Generate Exposures": 0.006002647
+  },
+  {
+    "Apply Interventions": 7.6e-7,
+    "Apply Exposures": 0.007307314,
+    "total": 0.030333811,
+    "Generate Exposures": 0.023023017
+  },
+  {
+    "Apply Exposures": 0.002386381,
+    "Generate Exposures": 0.026969195,
+    "total": 0.029358086,
+    "Apply Interventions": 5.8e-7
+  },
+  {
+    "Generate Exposures": 0.006172838,
+    "total": 0.007812356,
+    "Apply Interventions": 6.2e-7,
+    "Apply Exposures": 0.001637568
+  },
+  {
+    "total": 0.007793466,
+    "Apply Interventions": 4.7e-7,
+    "Generate Exposures": 0.006154078,
+    "Apply Exposures": 0.001637528
+  },
+  {
+    "Apply Interventions": 5.4e-7,
+    "Generate Exposures": 0.006165589,
+    "Apply Exposures": 0.001611058,
+    "total": 0.007778787
+  },
+  {
+    "Generate Exposures": 0.006130778,
+    "Apply Interventions": 6.2e-7,
+    "Apply Exposures": 0.001619327,
+    "total": 0.007752115
+  },
+  {
+    "Apply Interventions": 5.3e-7,
+    "total": 0.007761036,
+    "Apply Exposures": 0.001637128,
+    "Generate Exposures": 0.006122228
+  },
+  {
+    "Apply Interventions": 3.9e-7,
+    "Generate Exposures": 0.006152058,
+    "total": 0.007820016,
+    "Apply Exposures": 0.001608508
+  },
+  {
+    "Generate Exposures": 0.006216039,
+    "total": 0.007855857,
+    "Apply Exposures": 0.001637718,
+    "Apply Interventions": 7.3e-7
+  },
+  {
+    "Generate Exposures": 0.006355689,
+    "Apply Exposures": 0.001664788,
+    "total": 0.008022147,
+    "Apply Interventions": 3.4e-7
+  },
+  {
+    "Apply Exposures": 0.001657068,
+    "Generate Exposures": 0.006215979,
+    "Apply Interventions": 8e-7,
+    "total": 0.007875157
+  },
+  {
+    "Apply Exposures": 0.001645327,
+    "Generate Exposures": 0.006648351,
+    "total": 0.008295878,
+    "Apply Interventions": 7.3e-7
+  },
+  {
+    "Apply Exposures": 0.001628167,
+    "total": 0.007849126,
+    "Apply Interventions": 4e-7,
+    "Generate Exposures": 0.006219479
+  },
+  {
+    "Apply Interventions": 3.2e-7,
+    "Generate Exposures": 0.006184439,
+    "total": 0.007791696,
+    "Apply Exposures": 0.001605997
+  },
+  {
+    "Apply Interventions": 3.4e-7,
+    "Generate Exposures": 0.006226009,
+    "Apply Exposures": 0.001629157,
+    "total": 0.007857036
+  },
+  {
+    "total": 0.007754855,
+    "Generate Exposures": 0.006159798,
+    "Apply Exposures": 0.001593267,
+    "Apply Interventions": 4.2e-7
+  },
+  {
+    "Generate Exposures": 0.022184944,
+    "Apply Exposures": 0.005515835,
+    "Apply Interventions": 7.7e-7,
+    "total": 0.027703459
+  },
+  {
+    "Generate Exposures": 0.027890669,
+    "total": 0.031951488,
+    "Apply Interventions": 8e-7,
+    "Apply Exposures": 0.004027679
+  },
+  {
+    "Generate Exposures": 0.005922368,
+    "total": 0.009949766,
+    "Apply Exposures": 0.004025598,
+    "Apply Interventions": 5.2e-7
+  },
+  {
+    "Apply Exposures": 0.00430199,
+    "Apply Interventions": 4.3e-7,
+    "Generate Exposures": 0.005953727,
+    "total": 0.010257367
+  },
+  {
+    "total": 0.010531419,
+    "Apply Exposures": 0.004555331,
+    "Generate Exposures": 0.005974088,
+    "Apply Interventions": 6.6e-7
+  },
+  {
+    "Apply Interventions": 1.02e-6,
+    "Generate Exposures": 0.006243149,
+    "total": 0.011081582,
+    "Apply Exposures": 0.004835673
+  },
+  {
+    "Apply Exposures": 0.005034994,
+    "total": 0.011146002,
+    "Generate Exposures": 0.006108878,
+    "Apply Interventions": 5.5e-7
+  },
+  {
+    "Generate Exposures": 0.006148889,
+    "Apply Interventions": 7.6e-7,
+    "total": 0.011338253,
+    "Apply Exposures": 0.005186434
+  },
+  {
+    "Apply Exposures": 0.008947312,
+    "Apply Interventions": 6.7e-7,
+    "total": 0.031827178,
+    "Generate Exposures": 0.022876836
+  },
+  {
+    "Apply Interventions": 8.5e-7,
+    "Apply Exposures": 0.002993334,
+    "total": 0.032720162,
+    "Generate Exposures": 0.029723668
+  },
+  {
+    "total": 0.009152503,
+    "Apply Interventions": 4.7e-7,
+    "Generate Exposures": 0.00638774,
+    "Apply Exposures": 0.002762683
+  },
+  {
+    "total": 0.009458615,
+    "Generate Exposures": 0.00643029,
+    "Apply Exposures": 0.002967964,
+    "Apply Interventions": 5.5e-7
+  },
+  {
+    "Apply Interventions": 8.6e-7,
+    "total": 0.009818305,
+    "Apply Exposures": 0.003274285,
+    "Generate Exposures": 0.0065411
+  },
+  {
+    "Apply Exposures": 0.003462806,
+    "Apply Interventions": 1.21e-6,
+    "Generate Exposures": 0.007285113,
+    "total": 0.010750939
+  },
+  {
+    "Generate Exposures": 0.00656889,
+    "Apply Exposures": 0.003665048,
+    "total": 0.010236138,
+    "Apply Interventions": 6.3e-7
+  },
+  {
+    "Apply Interventions": 8.9e-7,
+    "total": 0.010396878,
+    "Generate Exposures": 0.006553201,
+    "Apply Exposures": 0.003841767
+  },
+  {
+    "Apply Interventions": 9.5e-7,
+    "total": 0.01067357,
+    "Generate Exposures": 0.006659021,
+    "Apply Exposures": 0.004011369
+  },
+  {
+    "Generate Exposures": 0.00655809,
+    "total": 0.010702549,
+    "Apply Interventions": 3.7e-7,
+    "Apply Exposures": 0.004142839
+  },
+  {
+    "Apply Interventions": 7.4e-7,
+    "Generate Exposures": 0.006594511,
+    "total": 0.010845341,
+    "Apply Exposures": 0.00424896
+  },
+  {
+    "Generate Exposures": 0.006612641,
+    "Apply Exposures": 0.00439351,
+    "Apply Interventions": 6.1e-7,
+    "total": 0.011008181
+  },
+  {
+    "Generate Exposures": 0.00660278,
+    "total": 0.011115501,
+    "Apply Exposures": 0.004511141,
+    "Apply Interventions": 4.3e-7
+  },
+  {
+    "total": 0.011381223,
+    "Apply Exposures": 0.004660982,
+    "Apply Interventions": 4.5e-7,
+    "Generate Exposures": 0.006660531
+  },
+  {
+    "Generate Exposures": 0.006815751,
+    "total": 0.011965176,
+    "Apply Exposures": 0.005146275,
+    "Apply Interventions": 7.6e-7
+  },
+  {
+    "Apply Exposures": 0.004882273,
+    "total": 0.012074736,
+    "Generate Exposures": 0.007189713,
+    "Apply Interventions": 7.7e-7
+  },
+  {
+    "Generate Exposures": 0.022808596,
+    "Apply Exposures": 0.008803731,
+    "Apply Interventions": 6.2e-7,
+    "total": 0.031615877
+  },
+  {
+    "Apply Exposures": 0.026190882,
+    "Apply Interventions": 7.3e-7,
+    "Generate Exposures": 0.028556223,
+    "total": 0.054750605
+  },
+  {
+    "Apply Exposures": 0.026496153,
+    "Generate Exposures": 0.00663596,
+    "Apply Interventions": 7.2e-7,
+    "total": 0.033135464
+  },
+  {
+    "Apply Exposures": 0.025955521,
+    "total": 0.033430816,
+    "Apply Interventions": 7.3e-7,
+    "Generate Exposures": 0.007472025
+  },
+  {
+    "Apply Exposures": 0.026199483,
+    "Generate Exposures": 0.007526044,
+    "Apply Interventions": 8.4e-7,
+    "total": 0.033729327
+  },
+  {
+    "Apply Interventions": 8e-7,
+    "Apply Exposures": 0.026841685,
+    "total": 0.03438832,
+    "Generate Exposures": 0.007542905
+  },
+  {
+    "total": 0.033922278,
+    "Generate Exposures": 0.007197753,
+    "Apply Exposures": 0.026721105,
+    "Apply Interventions": 8e-7
+  },
+  {
+    "Apply Exposures": 0.028677064,
+    "Apply Interventions": 1.1e-6,
+    "total": 0.035715056,
+    "Generate Exposures": 0.006980882
+  },
+  {
+    "Generate Exposures": 0.027379808,
+    "Apply Exposures": 0.027140685,
+    "Apply Interventions": 5.4e-7,
+    "total": 0.054523963
+  },
+  {
+    "Apply Exposures": 0.006989123,
+    "Apply Interventions": 5.6e-7,
+    "Generate Exposures": 0.030420711,
+    "total": 0.037412554
+  },
+  {
+    "Generate Exposures": 0.007709216,
+    "Apply Interventions": 1.08e-6,
+    "total": 0.014455937,
+    "Apply Exposures": 0.006743461
+  },
+  {
+    "total": 0.014320646,
+    "Generate Exposures": 0.007534755,
+    "Apply Exposures": 0.006784211,
+    "Apply Interventions": 4.3e-7
+  },
+  {
+    "Apply Exposures": 0.006807402,
+    "Apply Interventions": 4.6e-7,
+    "Generate Exposures": 0.007569695,
+    "total": 0.014378917
+  },
+  {
+    "Apply Exposures": 0.006955172,
+    "Generate Exposures": 0.007719166,
+    "total": 0.014677918,
+    "Apply Interventions": 8.1e-7
+  },
+  {
+    "Generate Exposures": 0.007627195,
+    "Apply Exposures": 0.006982223,
+    "total": 0.014611558,
+    "Apply Interventions": 4.3e-7
+  },
+  {
+    "Generate Exposures": 0.007652016,
+    "total": 0.014716688,
+    "Apply Interventions": 4.7e-7,
+    "Apply Exposures": 0.007062972
+  },
+  {
+    "Generate Exposures": 0.007646815,
+    "Apply Interventions": 9.9e-7,
+    "total": 0.014803319,
+    "Apply Exposures": 0.007153944
+  },
+  {
+    "Apply Interventions": 7.6e-7,
+    "total": 0.014895909,
+    "Generate Exposures": 0.007754046,
+    "Apply Exposures": 0.007063883
+  },
+  {
+    "Apply Exposures": 0.007197033,
+    "Apply Interventions": 5.8e-7,
+    "total": 0.014923,
+    "Generate Exposures": 0.007723947
+  },
+  {
+    "Apply Exposures": 0.007127603,
+    "Generate Exposures": 0.007868316,
+    "total": 0.014998059,
+    "Apply Interventions": 5.1e-7
+  },
+  {
+    "Apply Interventions": 1.17e-6,
+    "Apply Exposures": 0.007297994,
+    "Generate Exposures": 0.007772877,
+    "total": 0.015074501
+  },
+  {
+    "Generate Exposures": 0.007744966,
+    "Apply Interventions": 7.7e-7,
+    "total": 0.014999829,
+    "Apply Exposures": 0.007252253
+  },
+  {
+    "Generate Exposures": 0.007692456,
+    "Apply Exposures": 0.007241363,
+    "Apply Interventions": 6.4e-7,
+    "total": 0.014935539
+  },
+  {
+    "Apply Interventions": 9.8e-7,
+    "Generate Exposures": 0.007707505,
+    "Apply Exposures": 0.007319354,
+    "total": 0.015029719
+  },
+  {
+    "Apply Interventions": 7.4e-7,
+    "Generate Exposures": 0.023459679,
+    "total": 0.034655961,
+    "Apply Exposures": 0.011192802
+  },
+  {
+    "total": 0.065080393,
+    "Apply Interventions": 7.7e-7,
+    "Apply Exposures": 0.034816572,
+    "Generate Exposures": 0.030259911
+  },
+  {
+    "Generate Exposures": 0.007568645,
+    "Apply Exposures": 0.03428285,
+    "Apply Interventions": 7.7e-7,
+    "total": 0.041854945
+  },
+  {
+    "Generate Exposures": 0.007671255,
+    "total": 0.041449543,
+    "Apply Interventions": 8.2e-7,
+    "Apply Exposures": 0.033735077
+  },
+  {
+    "Generate Exposures": 0.007654636,
+    "Apply Exposures": 0.033798127,
+    "Apply Interventions": 7.8e-7,
+    "total": 0.041455863
+  },
+  {
+    "total": 0.041206312,
+    "Apply Exposures": 0.033512846,
+    "Generate Exposures": 0.007689466,
+    "Apply Interventions": 7.8e-7
+  },
+  {
+    "Apply Interventions": 8e-7,
+    "Apply Exposures": 0.033069125,
+    "total": 0.04074076,
+    "Generate Exposures": 0.007668505
+  },
+  {
+    "Generate Exposures": 0.007648416,
+    "Apply Interventions": 8.6e-7,
+    "Apply Exposures": 0.033244304,
+    "total": 0.04089585
+  },
+  {
+    "Apply Exposures": 0.033589156,
+    "Generate Exposures": 0.02355582,
+    "Apply Interventions": 7.9e-7,
+    "total": 0.057148436
+  },
+  {
+    "Apply Interventions": 6e-7,
+    "Apply Exposures": 0.008811191,
+    "total": 0.040177248,
+    "Generate Exposures": 0.031362437
+  },
+  {
+    "Generate Exposures": 0.008101328,
+    "Apply Exposures": 0.008856211,
+    "total": 0.016960649,
+    "Apply Interventions": 8.3e-7
+  },
+  {
+    "total": 0.01707171,
+    "Apply Exposures": 0.009033992,
+    "Generate Exposures": 0.008035768,
+    "Apply Interventions": 4.8e-7
+  },
+  {
+    "Apply Interventions": 8.8e-7,
+    "Apply Exposures": 0.009290123,
+    "Generate Exposures": 0.008080098,
+    "total": 0.017373541
+  },
+  {
+    "Apply Exposures": 0.01073889,
+    "Generate Exposures": 0.008277638,
+    "total": 0.019146519,
+    "Apply Interventions": 7.4e-7
+  },
+  {
+    "Generate Exposures": 0.011258873,
+    "Apply Exposures": 0.014940639,
+    "total": 0.026203162,
+    "Apply Interventions": 7.8e-7
+  },
+  {
+    "Apply Exposures": 0.010238298,
+    "Apply Interventions": 1.19e-6,
+    "Generate Exposures": 0.009398593,
+    "total": 0.019641241
+  },
+  {
+    "Generate Exposures": 0.008167398,
+    "total": 0.018187374,
+    "Apply Interventions": 5.1e-7,
+    "Apply Exposures": 0.010018336
+  },
+  {
+    "Apply Interventions": 2.6e-7,
+    "Apply Exposures": 0.010151597,
+    "Generate Exposures": 0.008202898,
+    "total": 0.018356335
+  },
+  {
+    "Generate Exposures": 0.008549781,
+    "total": 0.018787898,
+    "Apply Exposures": 0.010235087,
+    "Apply Interventions": 1.16e-6
+  },
+  {
+    "Apply Interventions": 8.7e-7,
+    "total": 0.018757678,
+    "Generate Exposures": 0.008170358,
+    "Apply Exposures": 0.01058477
+  },
+  {
+    "total": 0.019527151,
+    "Apply Interventions": 7.7e-7,
+    "Generate Exposures": 0.008239768,
+    "Apply Exposures": 0.011284233
+  },
+  {
+    "Apply Exposures": 0.010624709,
+    "total": 0.018851458,
+    "Apply Interventions": 6.9e-7,
+    "Generate Exposures": 0.008224149
+  },
+  {
+    "Apply Exposures": 0.01074152,
+    "Generate Exposures": 0.008241339,
+    "Apply Interventions": 6e-7,
+    "total": 0.018985149
+  },
+  {
+    "Apply Exposures": 0.0108336,
+    "Generate Exposures": 0.008340069,
+    "Apply Interventions": 6.91e-7,
+    "total": 0.01924154
+  },
+  {
+    "Apply Interventions": 6.8e-7,
+    "total": 0.038844951,
+    "Generate Exposures": 0.024514554,
+    "Apply Exposures": 0.014326807
+  },
+  {
+    "Generate Exposures": 0.03003648,
+    "Apply Interventions": 8e-7,
+    "Apply Exposures": 0.037957997,
+    "total": 0.067998437
+  },
+  {
+    "Apply Exposures": 0.037377154,
+    "Generate Exposures": 0.007891887,
+    "Apply Interventions": 7.7e-7,
+    "total": 0.045272501
+  },
+  {
+    "Generate Exposures": 0.007897037,
+    "Apply Interventions": 6.7e-7,
+    "total": 0.045184781,
+    "Apply Exposures": 0.037285044
+  },
+  {
+    "Apply Exposures": 0.037091833,
+    "total": 0.04511981,
+    "Generate Exposures": 0.008024267,
+    "Apply Interventions": 6.1e-7
+  },
+  {
+    "Apply Interventions": 5.9e-7,
+    "Apply Exposures": 0.03646158,
+    "Generate Exposures": 0.007907607,
+    "total": 0.044371697
+  },
+  {
+    "total": 0.04511803,
+    "Apply Exposures": 0.037025723,
+    "Generate Exposures": 0.008088687,
+    "Apply Interventions": 8.4e-7
+  },
+  {
+    "Generate Exposures": 0.008126598,
+    "Apply Exposures": 0.037005662,
+    "Apply Interventions": 7.3e-7,
+    "total": 0.04513561
+  },
+  {
+    "Generate Exposures": 0.024384755,
+    "Apply Exposures": 0.036242028,
+    "total": 0.060630163,
+    "Apply Interventions": 6.6e-7
+  },
+  {
+    "Apply Exposures": 0.012103086,
+    "total": 0.043696253,
+    "Generate Exposures": 0.031526137,
+    "Apply Interventions": 3.7e-7
+  },
+  {
+    "total": 0.020171484,
+    "Generate Exposures": 0.00854421,
+    "Apply Interventions": 7.7e-7,
+    "Apply Exposures": 0.011623814
+  },
+  {
+    "Generate Exposures": 0.00847452,
+    "Apply Interventions": 8.3e-7,
+    "total": 0.020117234,
+    "Apply Exposures": 0.011639734
+  },
+  {
+    "total": 0.020495835,
+    "Generate Exposures": 0.008335158,
+    "Apply Exposures": 0.012157667,
+    "Apply Interventions": 6.9e-7
+  },
+  {
+    "Generate Exposures": 0.008363528,
+    "Apply Exposures": 0.011731575,
+    "Apply Interventions": 8.1e-7,
+    "total": 0.020098343
+  },
+  {
+    "Apply Interventions": 9.4e-7,
+    "Apply Exposures": 0.011913136,
+    "total": 0.020239384,
+    "Generate Exposures": 0.008323348
+  },
+  {
+    "Generate Exposures": 0.00844813,
+    "Apply Interventions": 9.1e-7,
+    "total": 0.020228545,
+    "Apply Exposures": 0.011776915
+  },
+  {
+    "Apply Exposures": 0.011681634,
+    "Apply Interventions": 4.9e-7,
+    "Generate Exposures": 0.008295999,
+    "total": 0.019979993
+  },
+  {
+    "Apply Interventions": 1.08e-6,
+    "Apply Exposures": 0.012118037,
+    "Generate Exposures": 0.008316909,
+    "total": 0.020438206
+  },
+  {
+    "Apply Interventions": 1.05e-6,
+    "total": 0.020168224,
+    "Generate Exposures": 0.008317799,
+    "Apply Exposures": 0.011847125
+  },
+  {
+    "Generate Exposures": 0.008371679,
+    "Apply Interventions": 7.7e-7,
+    "Apply Exposures": 0.012108896,
+    "total": 0.020552025
+  },
+  {
+    "Generate Exposures": 0.00861801,
+    "Apply Exposures": 0.011909095,
+    "Apply Interventions": 1.02e-6,
+    "total": 0.020530595
+  },
+  {
+    "total": 0.020607997,
+    "Apply Interventions": 8.8e-7,
+    "Apply Exposures": 0.011948276,
+    "Generate Exposures": 0.008656211
+  },
+  {
+    "Apply Interventions": 6.3e-7,
+    "Generate Exposures": 0.00853912,
+    "Apply Exposures": 0.012413208,
+    "total": 0.020955048
+  },
+  {
+    "Apply Exposures": 0.012056226,
+    "Generate Exposures": 0.008360749,
+    "Apply Interventions": 7.2e-7,
+    "total": 0.020419965
+  },
+  {
+    "Generate Exposures": 0.024977527,
+    "Apply Exposures": 0.01503626,
+    "total": 0.040017297,
+    "Apply Interventions": 6.8e-7
+  },
+  {
+    "Apply Exposures": 0.045258211,
+    "total": 0.085961981,
+    "Apply Interventions": 7.4e-7,
+    "Generate Exposures": 0.04070048
+  },
+  {
+    "Apply Exposures": 0.038848772,
+    "Generate Exposures": 0.008040797,
+    "total": 0.046892709,
+    "Apply Interventions": 7.3e-7
+  },
+  {
+    "Apply Interventions": 1.03e-6,
+    "Generate Exposures": 0.008102847,
+    "Apply Exposures": 0.048567917,
+    "total": 0.056675054
+  },
+  {
+    "Apply Exposures": 0.038366329,
+    "Generate Exposures": 0.008100068,
+    "Apply Interventions": 8.6e-7,
+    "total": 0.046469757
+  },
+  {
+    "Apply Exposures": 0.038009257,
+    "Apply Interventions": 7.6e-7,
+    "Generate Exposures": 0.008182548,
+    "total": 0.046241056
+  },
+  {
+    "Apply Exposures": 0.039014472,
+    "Generate Exposures": 0.008136948,
+    "total": 0.04715412,
+    "Apply Interventions": 8.2e-7
+  },
+  {
+    "total": 0.045699634,
+    "Apply Exposures": 0.037581506,
+    "Generate Exposures": 0.008114828,
+    "Apply Interventions": 7e-7
+  },
+  {
+    "total": 0.062461931,
+    "Generate Exposures": 0.025109597,
+    "Apply Exposures": 0.037348804,
+    "Apply Interventions": 1.16e-6
+  },
+  {
+    "Apply Exposures": 0.012661589,
+    "Apply Interventions": 7.7e-7,
+    "Generate Exposures": 0.031910869,
+    "total": 0.044576178
+  },
+  {
+    "Generate Exposures": 0.00854133,
+    "Apply Interventions": 2.8e-7,
+    "total": 0.020982578,
+    "Apply Exposures": 0.012438908
+  },
+  {
+    "Apply Exposures": 0.012617469,
+    "Generate Exposures": 0.008956062,
+    "total": 0.021577431,
+    "Apply Interventions": 7.6e-7
+  },
+  {
+    "Apply Interventions": 4.3e-7,
+    "Apply Exposures": 0.01278613,
+    "total": 0.021477531,
+    "Generate Exposures": 0.008688831
+  },
+  {
+    "total": 0.021766482,
+    "Generate Exposures": 0.00860575,
+    "Apply Interventions": 9.7e-7,
+    "Apply Exposures": 0.013157602
+  },
+  {
+    "Apply Exposures": 0.013234463,
+    "Apply Interventions": 8e-7,
+    "Generate Exposures": 0.00867179,
+    "total": 0.021909123
+  },
+  {
+    "total": 0.022006083,
+    "Apply Exposures": 0.013162302,
+    "Generate Exposures": 0.008783601,
+    "Apply Interventions": 2.8e-7
+  },
+  {
+    "Generate Exposures": 0.009033482,
+    "total": 0.022813997,
+    "Apply Exposures": 0.013777175,
+    "Apply Interventions": 7.4e-7
+  },
+  {
+    "Generate Exposures": 0.008856651,
+    "Apply Exposures": 0.013490443,
+    "Apply Interventions": 1.19e-6,
+    "total": 0.022350654
+  },
+  {
+    "Generate Exposures": 0.00875514,
+    "Apply Interventions": 8.1e-7,
+    "Apply Exposures": 0.013626354,
+    "total": 0.022384454
+  },
+  {
+    "Apply Exposures": 0.013495563,
+    "Generate Exposures": 0.008824422,
+    "Apply Interventions": 4.3e-7,
+    "total": 0.022322815
+  },
+  {
+    "Generate Exposures": 0.009511044,
+    "Apply Exposures": 0.014234317,
+    "total": 0.023748651,
+    "Apply Interventions": 7.6e-7
+  },
+  {
+    "Generate Exposures": 0.008949932,
+    "Apply Exposures": 0.013633974,
+    "Apply Interventions": 1.1e-6,
+    "total": 0.022587936
+  },
+  {
+    "Apply Exposures": 0.013750834,
+    "Generate Exposures": 0.008822411,
+    "Apply Interventions": 8.3e-7,
+    "total": 0.022576305
+  },
+  {
+    "total": 0.022656815,
+    "Generate Exposures": 0.008887811,
+    "Apply Exposures": 0.013765794,
+    "Apply Interventions": 5.2e-7
+  },
+  {
+    "Apply Exposures": 0.017415951,
+    "Apply Interventions": 5.9e-7,
+    "Generate Exposures": 0.025802201,
+    "total": 0.043221432
+  },
+  {
+    "Generate Exposures": 0.030595783,
+    "Apply Interventions": 1.5e-6,
+    "total": 0.07692717,
+    "Apply Exposures": 0.046282367
+  },
+  {
+    "Generate Exposures": 0.010141438,
+    "total": 0.083160619,
+    "Apply Exposures": 0.073015051,
+    "Apply Interventions": 8.6e-7
+  },
+  {
+    "Apply Exposures": 0.096282,
+    "total": 0.107724403,
+    "Apply Interventions": 8.1e-7,
+    "Generate Exposures": 0.011439103
+  },
+  {
+    "Apply Exposures": 0.118238733,
+    "total": 0.130906182,
+    "Generate Exposures": 0.012663789,
+    "Apply Interventions": 7e-7
+  },
+  {
+    "Apply Interventions": 8.1e-7,
+    "Apply Exposures": 0.136924761,
+    "Generate Exposures": 0.013614613,
+    "total": 0.150542784
+  },
+  {
+    "Apply Exposures": 0.150448494,
+    "total": 0.165103962,
+    "Apply Interventions": 7.7e-7,
+    "Generate Exposures": 0.014651868
+  },
+  {
+    "total": 0.185808561,
+    "Apply Exposures": 0.170489628,
+    "Apply Interventions": 0.000020501,
+    "Generate Exposures": 0.015295812
+  },
+  {
+    "Apply Interventions": 7.7e-7,
+    "Apply Exposures": 0.155821399,
+    "Generate Exposures": 0.031572228,
+    "total": 0.187397107
+  },
+  {
+    "Apply Exposures": 0.063765249,
+    "total": 0.109023791,
+    "Apply Interventions": 8.2e-7,
+    "Generate Exposures": 0.045255102
+  },
+  {
+    "Apply Exposures": 0.063762999,
+    "total": 0.090762025,
+    "Generate Exposures": 0.026995546,
+    "Apply Interventions": 7.7e-7
+  },
+  {
+    "Apply Exposures": 0.063768939,
+    "total": 0.093198857,
+    "Generate Exposures": 0.029367728,
+    "Apply Interventions": 6.4e-7
+  },
+  {
+    "Generate Exposures": 0.027386469,
+    "Apply Interventions": 7.8e-7,
+    "total": 0.089039028,
+    "Apply Exposures": 0.061648519
+  },
+  {
+    "Generate Exposures": 0.027005526,
+    "total": 0.088258143,
+    "Apply Exposures": 0.061248577,
+    "Apply Interventions": 9.2e-7
+  },
+  {
+    "Apply Interventions": 9.7e-7,
+    "Generate Exposures": 0.027126797,
+    "total": 0.088103633,
+    "Apply Exposures": 0.060973096
+  },
+  {
+    "Apply Interventions": 8e-7,
+    "Apply Exposures": 0.061038046,
+    "total": 0.088036233,
+    "Generate Exposures": 0.026994847
+  },
+  {
+    "Apply Interventions": 8.3e-7,
+    "total": 0.090035263,
+    "Generate Exposures": 0.027394739,
+    "Apply Exposures": 0.062636254
+  },
+  {
+    "Generate Exposures": 0.02781632,
+    "Apply Interventions": 7.8e-7,
+    "total": 0.088757216,
+    "Apply Exposures": 0.060934236
+  },
+  {
+    "Apply Interventions": 6.7e-7,
+    "total": 0.087900513,
+    "Apply Exposures": 0.060696185,
+    "Generate Exposures": 0.027201068
+  },
+  {
+    "total": 0.088709136,
+    "Apply Exposures": 0.061426828,
+    "Apply Interventions": 1.03e-6,
+    "Generate Exposures": 0.027278428
+  },
+  {
+    "Generate Exposures": 0.027193648,
+    "Apply Exposures": 0.062678834,
+    "total": 0.089876032,
+    "Apply Interventions": 9.5e-7
+  },
+  {
+    "total": 0.08739054,
+    "Apply Exposures": 0.060035002,
+    "Apply Interventions": 7.1e-7,
+    "Generate Exposures": 0.027285768
+  },
+  {
+    "Generate Exposures": 0.029928581,
+    "Apply Interventions": 7.3e-7,
+    "total": 0.090323665,
+    "Apply Exposures": 0.060391074
+  },
+  {
+    "Generate Exposures": 0.026872046,
+    "Apply Interventions": 7.4e-7,
+    "Apply Exposures": 0.060446424,
+    "total": 0.0873222
+  },
+  {
+    "Generate Exposures": 0.038582121,
+    "Apply Interventions": 9.4e-7,
+    "Apply Exposures": 0.05964924,
+    "total": 0.098234801
+  },
+  {
+    "Generate Exposures": 0.037779057,
+    "Apply Interventions": 8.4e-7,
+    "Apply Exposures": 0.196198862,
+    "total": 0.233981189
+  },
+  {
+    "Generate Exposures": 0.018372016,
+    "Apply Interventions": 8.6e-7,
+    "Apply Exposures": 0.216234327,
+    "total": 0.234609773
+  },
+  {
+    "Generate Exposures": 0.01905671,
+    "total": 0.256232575,
+    "Apply Exposures": 0.237172695,
+    "Apply Interventions": 9.9e-7
+  },
+  {
+    "total": 0.273236015,
+    "Generate Exposures": 0.020018944,
+    "Apply Exposures": 0.245610805,
+    "Apply Interventions": 0.007603106
+  },
+  {
+    "total": 0.277879418,
+    "Generate Exposures": 0.021040419,
+    "Apply Exposures": 0.255397292,
+    "Apply Interventions": 0.001438487
+  },
+  {
+    "Generate Exposures": 0.021341061,
+    "Apply Exposures": 0.269857471,
+    "Apply Interventions": 0.001354807,
+    "total": 0.292556719
+  },
+  {
+    "Apply Interventions": 0.001271276,
+    "total": 0.30349888,
+    "Generate Exposures": 0.021713372,
+    "Apply Exposures": 0.280465352
+  },
+  {
+    "Generate Exposures": 0.037559437,
+    "Apply Interventions": 0.001596967,
+    "total": 0.280736123,
+    "Apply Exposures": 0.241576729
+  },
+  {
+    "Apply Interventions": 0.001143565,
+    "Apply Exposures": 0.084138487,
+    "total": 0.136202963,
+    "Generate Exposures": 0.050918031
+  },
+  {
+    "Apply Exposures": 0.083957476,
+    "Generate Exposures": 0.036169981,
+    "Apply Interventions": 0.001067655,
+    "total": 0.121198392
+  },
+  {
+    "Generate Exposures": 0.036315752,
+    "Apply Exposures": 0.083754925,
+    "total": 0.121062222,
+    "Apply Interventions": 0.000988455
+  },
+  {
+    "Apply Interventions": 0.000919654,
+    "total": 0.121569334,
+    "Generate Exposures": 0.037609848,
+    "Apply Exposures": 0.083036032
+  },
+  {
+    "Apply Interventions": 0.000438302,
+    "total": 0.120466489,
+    "Generate Exposures": 0.036058411,
+    "Apply Exposures": 0.083967196
+  },
+  {
+    "total": 0.120252088,
+    "Apply Exposures": 0.083698515,
+    "Generate Exposures": 0.036536423,
+    "Apply Interventions": 0.00001398
+  },
+  {
+    "Generate Exposures": 0.037853909,
+    "total": 0.12067068,
+    "Apply Exposures": 0.082798671,
+    "Apply Interventions": 0.00001396
+  },
+  {
+    "total": 0.11869229,
+    "Apply Exposures": 0.082512959,
+    "Generate Exposures": 0.036161761,
+    "Apply Interventions": 0.00001481
+  },
+  {
+    "Apply Exposures": 0.082645871,
+    "Apply Interventions": 0.00001536,
+    "total": 0.119140154,
+    "Generate Exposures": 0.036408773
+  },
+  {
+    "Generate Exposures": 0.036616963,
+    "Apply Exposures": 0.089278692,
+    "total": 0.125912605,
+    "Apply Interventions": 0.00001421
+  },
+  {
+    "Apply Exposures": 0.083097314,
+    "Apply Interventions": 0.00001424,
+    "Generate Exposures": 0.036271971,
+    "total": 0.119386735
+  },
+  {
+    "Apply Exposures": 0.082767142,
+    "Apply Interventions": 0.00001458,
+    "total": 0.121140493,
+    "Generate Exposures": 0.038355531
+  },
+  {
+    "Apply Interventions": 0.000015421,
+    "Generate Exposures": 0.036172211,
+    "total": 0.118754082,
+    "Apply Exposures": 0.08256374
+  },
+  {
+    "Generate Exposures": 0.036350722,
+    "Apply Interventions": 0.00001496,
+    "total": 0.118826682,
+    "Apply Exposures": 0.08245726
+  },
+  {
+    "Generate Exposures": 0.037687408,
+    "Apply Interventions": 0.00001673,
+    "Apply Exposures": 0.087092802,
+    "total": 0.12480086
+  },
+  {
+    "Apply Interventions": 0.000362332,
+    "total": 0.142844425,
+    "Generate Exposures": 0.060972178,
+    "Apply Exposures": 0.081506595
+  },
+  {
+    "Generate Exposures": 0.041746768,
+    "Apply Interventions": 0.00001452,
+    "total": 0.33541741,
+    "Apply Exposures": 0.293653212
+  },
+  {
+    "total": 0.330386776,
+    "Apply Interventions": 0.00001569,
+    "Apply Exposures": 0.306868854,
+    "Generate Exposures": 0.023498722
+  },
+  {
+    "Apply Interventions": 0.00001444,
+    "Apply Exposures": 0.312906822,
+    "total": 0.337007397,
+    "Generate Exposures": 0.024025374
+  },
+  {
+    "Generate Exposures": 0.025764092,
+    "Apply Exposures": 0.32017492,
+    "Apply Interventions": 0.00001461,
+    "total": 0.345956792
+  },
+  {
+    "total": 0.368706881,
+    "Generate Exposures": 0.025755023,
+    "Apply Interventions": 0.00001416,
+    "Apply Exposures": 0.342934058
+  },
+  {
+    "Apply Exposures": 0.338171006,
+    "total": 0.363124894,
+    "Apply Interventions": 0.0000137,
+    "Generate Exposures": 0.024937418
+  },
+  {
+    "Apply Exposures": 0.338638551,
+    "Generate Exposures": 0.02516627,
+    "total": 0.363821301,
+    "Apply Interventions": 0.00001399
+  },
+  {
+    "total": 0.340051728,
+    "Apply Interventions": 0.000214601,
+    "Apply Exposures": 0.29629788,
+    "Generate Exposures": 0.043536207
+  },
+  {
+    "total": 0.150591846,
+    "Generate Exposures": 0.054617759,
+    "Apply Exposures": 0.095955077,
+    "Apply Interventions": 0.00001604
+  },
+  {
+    "Apply Interventions": 0.0000211,
+    "total": 0.13669729,
+    "Apply Exposures": 0.095268834,
+    "Generate Exposures": 0.041404386
+  },
+  {
+    "Apply Interventions": 0.00001495,
+    "Apply Exposures": 0.094979563,
+    "total": 0.136546101,
+    "Generate Exposures": 0.041548528
+  },
+  {
+    "Apply Exposures": 0.095183693,
+    "Apply Interventions": 0.00001462,
+    "Generate Exposures": 0.041247717,
+    "total": 0.13644921
+  },
+  {
+    "Generate Exposures": 0.051850918,
+    "Apply Exposures": 0.105753724,
+    "total": 0.157690582,
+    "Apply Interventions": 0.00001622
+  },
+  {
+    "Apply Interventions": 0.00001448,
+    "total": 0.147818505,
+    "Generate Exposures": 0.042093291,
+    "Apply Exposures": 0.105706964
+  },
+  {
+    "Generate Exposures": 0.043829829,
+    "Apply Interventions": 0.00001395,
+    "Apply Exposures": 0.097447064,
+    "total": 0.141294333
+  },
+  {
+    "Apply Exposures": 0.096391639,
+    "Generate Exposures": 0.042797614,
+    "Apply Interventions": 0.00001475,
+    "total": 0.139207493
+  },
+  {
+    "total": 0.138719603,
+    "Apply Exposures": 0.096941614,
+    "Apply Interventions": 0.00001404,
+    "Generate Exposures": 0.041760379
+  },
+  {
+    "total": 0.146547649,
+    "Apply Interventions": 0.00001426,
+    "Apply Exposures": 0.101449364,
+    "Generate Exposures": 0.045080955
+  },
+  {
+    "total": 0.137049174,
+    "Generate Exposures": 0.041395467,
+    "Apply Exposures": 0.095631357,
+    "Apply Interventions": 0.00001888
+  },
+  {
+    "Apply Interventions": 0.00001491,
+    "Apply Exposures": 0.096135019,
+    "Generate Exposures": 0.042359563,
+    "total": 0.138512332
+  },
+  {
+    "total": 0.137768078,
+    "Generate Exposures": 0.042412412,
+    "Apply Exposures": 0.095336836,
+    "Apply Interventions": 0.00001614
+  },
+  {
+    "total": 0.152137086,
+    "Apply Exposures": 0.099604696,
+    "Apply Interventions": 0.00001701,
+    "Generate Exposures": 0.05251205
+  },
+  {
+    "Apply Exposures": 0.097859388,
+    "Generate Exposures": 0.042607453,
+    "total": 0.140554441,
+    "Apply Interventions": 0.00001429
+  },
+  {
+    "Apply Exposures": 0.094678083,
+    "total": 0.152788931,
+    "Apply Interventions": 0.000317332,
+    "Generate Exposures": 0.057790246
+  },
+  {
+    "Apply Exposures": 0.348726838,
+    "Apply Interventions": 0.000014,
+    "Generate Exposures": 0.044710494,
+    "total": 0.393455102
+  },
+  {
+    "total": 0.372853974,
+    "Generate Exposures": 0.026145085,
+    "Apply Exposures": 0.346692698,
+    "Apply Interventions": 0.000013251
+  },
+  {
+    "Apply Exposures": 0.352475657,
+    "Apply Interventions": 0.00001607,
+    "Generate Exposures": 0.02707412,
+    "total": 0.379568847
+  },
+  {
+    "total": 0.412176485,
+    "Generate Exposures": 0.026583687,
+    "Apply Exposures": 0.385565378,
+    "Apply Interventions": 0.00002363
+  },
+  {
+    "Apply Exposures": 0.372959678,
+    "Generate Exposures": 0.032326465,
+    "Apply Interventions": 0.00001432,
+    "total": 0.405303743
+  },
+  {
+    "Generate Exposures": 0.027408481,
+    "Apply Exposures": 0.365053093,
+    "Apply Interventions": 0.00001366,
+    "total": 0.392478544
+  },
+  {
+    "Generate Exposures": 0.027602233,
+    "Apply Interventions": 0.00001419,
+    "Apply Exposures": 0.370415688,
+    "total": 0.398035151
+  },
+  {
+    "Apply Interventions": 0.000210891,
+    "total": 0.358476852,
+    "Generate Exposures": 0.046835015,
+    "Apply Exposures": 0.311428236
+  },
+  {
+    "total": 0.172151778,
+    "Apply Exposures": 0.107392726,
+    "Generate Exposures": 0.064671051,
+    "Apply Interventions": 0.000016251
+  },
+  {
+    "Apply Interventions": 0.00001532,
+    "Apply Exposures": 0.102063681,
+    "Generate Exposures": 0.052737843,
+    "total": 0.154820084
+  },
+  {
+    "Apply Exposures": 0.104305722,
+    "Apply Interventions": 0.00001572,
+    "Generate Exposures": 0.050970736,
+    "total": 0.155296008
+  },
+  {
+    "total": 0.155698059,
+    "Apply Exposures": 0.1040241,
+    "Generate Exposures": 0.051657219,
+    "Apply Interventions": 0.00001335
+  },
+  {
+    "Apply Exposures": 0.102166411,
+    "Apply Interventions": 0.00001364,
+    "Generate Exposures": 0.051026986,
+    "total": 0.153210297
+  },
+  {
+    "Apply Interventions": 0.00001636,
+    "Apply Exposures": 0.103398098,
+    "Generate Exposures": 0.051054626,
+    "total": 0.154471844
+  },
+  {
+    "Apply Exposures": 0.102232472,
+    "Apply Interventions": 0.00001666,
+    "Generate Exposures": 0.051139207,
+    "total": 0.15339167
+  },
+  {
+    "Generate Exposures": 0.050947536,
+    "Apply Interventions": 0.00001381,
+    "Apply Exposures": 0.102613864,
+    "total": 0.15357848
+  },
+  {
+    "total": 0.153677621,
+    "Generate Exposures": 0.051016506,
+    "Apply Exposures": 0.102644065,
+    "Apply Interventions": 0.00001476
+  },
+  {
+    "Apply Exposures": 0.103611699,
+    "total": 0.155178778,
+    "Apply Interventions": 0.00001664,
+    "Generate Exposures": 0.051547029
+  },
+  {
+    "Apply Interventions": 0.00001635,
+    "Apply Exposures": 0.104162172,
+    "total": 0.158676904,
+    "Generate Exposures": 0.054428632
+  },
+  {
+    "Apply Exposures": 0.102262443,
+    "total": 0.154140464,
+    "Apply Interventions": 0.00001371,
+    "Generate Exposures": 0.051860821
+  },
+  {
+    "total": 0.154791508,
+    "Generate Exposures": 0.050861496,
+    "Apply Interventions": 0.000016421,
+    "Apply Exposures": 0.103911231
+  },
+  {
+    "Apply Interventions": 0.000013,
+    "Apply Exposures": 0.102800666,
+    "Generate Exposures": 0.050977906,
+    "total": 0.153794762
+  },
+  {
+    "Generate Exposures": 0.051859181,
+    "Apply Interventions": 0.000015831,
+    "Apply Exposures": 0.103551409,
+    "total": 0.155429621
+  },
+  {
+    "total": 0.161723491,
+    "Apply Exposures": 0.100710696,
+    "Apply Interventions": 0.000304352,
+    "Generate Exposures": 0.060705263
+  },
+  {
+    "Apply Interventions": 0.00001438,
+    "total": 0.418849713,
+    "Apply Exposures": 0.373255973,
+    "Generate Exposures": 0.04557639
+  },
+  {
+    "Apply Interventions": 0.00001495,
+    "Apply Exposures": 0.3845823,
+    "total": 0.412297504,
+    "Generate Exposures": 0.027697134
+  },
+  {
+    "total": 0.424770155,
+    "Generate Exposures": 0.028156456,
+    "Apply Interventions": 0.000014321,
+    "Apply Exposures": 0.396596438
+  },
+  {
+    "Apply Exposures": 0.382815275,
+    "Apply Interventions": 0.00001524,
+    "Generate Exposures": 0.02897423,
+    "total": 0.411808025
+  },
+  {
+    "Apply Exposures": 0.392522712,
+    "total": 0.422840878,
+    "Generate Exposures": 0.030239926,
+    "Apply Interventions": 0.00001606
+  },
+  {
+    "Generate Exposures": 0.029346242,
+    "total": 0.417194874,
+    "Apply Exposures": 0.387830372,
+    "Apply Interventions": 0.00001496
+  },
+  {
+    "Generate Exposures": 0.029293302,
+    "Apply Exposures": 0.390470136,
+    "Apply Interventions": 0.00001392,
+    "total": 0.419780758
+  },
+  {
+    "Apply Interventions": 0.000210301,
+    "Generate Exposures": 0.048264254,
+    "Apply Exposures": 0.333039897,
+    "total": 0.381517452
+  },
+  {
+    "Generate Exposures": 0.067461148,
+    "Apply Exposures": 0.110445227,
+    "total": 0.200781196,
+    "Apply Interventions": 0.022870371
+  },
+  {
+    "Apply Interventions": 0.00002294,
+    "total": 0.179909665,
+    "Apply Exposures": 0.116981969,
+    "Generate Exposures": 0.062901756
+  },
+  {
+    "Apply Interventions": 0.00001715,
+    "Generate Exposures": 0.05743829,
+    "Apply Exposures": 0.114395566,
+    "total": 0.171854776
+  },
+  {
+    "Generate Exposures": 0.056440605,
+    "Apply Interventions": 0.00002372,
+    "total": 0.173719235,
+    "Apply Exposures": 0.11725182
+  },
+  {
+    "Generate Exposures": 0.056393194,
+    "Apply Interventions": 0.0000185,
+    "Apply Exposures": 0.115429222,
+    "total": 0.171844296
+  },
+  {
+    "total": 0.172876601,
+    "Apply Interventions": 0.00001518,
+    "Apply Exposures": 0.116383976,
+    "Generate Exposures": 0.056473455
+  },
+  {
+    "Apply Exposures": 0.113518294,
+    "Apply Interventions": 0.00001521,
+    "total": 0.170891283,
+    "Generate Exposures": 0.057293479
+  },
+  {
+    "Apply Interventions": 0.000014201,
+    "total": 0.172704612,
+    "Generate Exposures": 0.058351904,
+    "Apply Exposures": 0.114335147
+  },
+  {
+    "Apply Exposures": 0.114103806,
+    "Apply Interventions": 0.0000181,
+    "total": 0.171420795,
+    "Generate Exposures": 0.057295709
+  },
+  {
+    "Apply Exposures": 0.114989771,
+    "total": 0.172798442,
+    "Generate Exposures": 0.057789161,
+    "Apply Interventions": 0.00001575
+  },
+  {
+    "total": 0.172813232,
+    "Apply Exposures": 0.114968141,
+    "Apply Interventions": 0.00001566,
+    "Generate Exposures": 0.057826611
+  },
+  {
+    "total": 0.173295195,
+    "Apply Exposures": 0.115164132,
+    "Generate Exposures": 0.058113213,
+    "Apply Interventions": 0.00001453
+  },
+  {
+    "Apply Interventions": 0.00001488,
+    "Apply Exposures": 0.124323307,
+    "Generate Exposures": 0.058759897,
+    "total": 0.183101274
+  },
+  {
+    "Apply Exposures": 0.120214466,
+    "total": 0.187438164,
+    "Generate Exposures": 0.067202588,
+    "Apply Interventions": 0.00001777
+  },
+  {
+    "Generate Exposures": 0.064488455,
+    "Apply Interventions": 0.00001397,
+    "Apply Exposures": 0.116109696,
+    "total": 0.180615141
+  },
+  {
+    "total": 0.174969634,
+    "Apply Interventions": 0.00001519,
+    "Generate Exposures": 0.059190049,
+    "Apply Exposures": 0.115761715
+  },
+  {
+    "Apply Interventions": 0.00001554,
+    "total": 0.179177265,
+    "Apply Exposures": 0.117531054,
+    "Generate Exposures": 0.061563131
+  },
+  {
+    "Generate Exposures": 0.060005794,
+    "Apply Interventions": 0.00001572,
+    "total": 0.177666308,
+    "Apply Exposures": 0.117641094
+  },
+  {
+    "total": 0.18001093,
+    "Generate Exposures": 0.060231084,
+    "Apply Interventions": 0.00001415,
+    "Apply Exposures": 0.119762816
+  },
+  {
+    "Generate Exposures": 0.063890692,
+    "Apply Exposures": 0.132125686,
+    "Apply Interventions": 0.00001461,
+    "total": 0.196034218
+  },
+  {
+    "Generate Exposures": 0.060780247,
+    "total": 0.179624778,
+    "Apply Exposures": 0.11882902,
+    "Apply Interventions": 0.000012761
+  },
+  {
+    "total": 0.279677808,
+    "Apply Exposures": 0.185301116,
+    "Generate Exposures": 0.094357711,
+    "Apply Interventions": 0.000015291
+  },
+  {
+    "total": 0.282628194,
+    "Apply Interventions": 0.00001892,
+    "Apply Exposures": 0.185957311,
+    "Generate Exposures": 0.096647763
+  },
+  {
+    "Apply Exposures": 0.186749564,
+    "Generate Exposures": 0.088274153,
+    "total": 0.275047147,
+    "Apply Interventions": 0.00001955
+  },
+  {
+    "Generate Exposures": 0.086058862,
+    "Apply Exposures": 0.166786787,
+    "total": 0.252866359,
+    "Apply Interventions": 0.00001739
+  },
+  {
+    "Generate Exposures": 0.091753139,
+    "total": 0.2591423,
+    "Apply Exposures": 0.167370041,
+    "Apply Interventions": 0.00001585
+  },
+  {
+    "Apply Exposures": 0.128812952,
+    "total": 0.224529461,
+    "Generate Exposures": 0.095635879,
+    "Apply Interventions": 0.00001886
+  },
+  {
+    "Apply Exposures": 0.125643126,
+    "Generate Exposures": 0.07339269,
+    "Apply Interventions": 0.00001574,
+    "total": 0.199054396
+  },
+  {
+    "Apply Interventions": 0.00003175,
+    "total": 0.21209971,
+    "Generate Exposures": 0.062833408,
+    "Apply Exposures": 0.149230972
+  },
+  {
+    "Generate Exposures": 0.097371248,
+    "total": 0.267839395,
+    "Apply Interventions": 0.00001428,
+    "Apply Exposures": 0.170450637
+  },
+  {
+    "Apply Exposures": 0.123295475,
+    "Apply Interventions": 0.00001464,
+    "total": 0.185906873,
+    "Generate Exposures": 0.062593808
+  },
+  {
+    "Apply Interventions": 0.00001365,
+    "Apply Exposures": 0.122996594,
+    "Generate Exposures": 0.061934744,
+    "total": 0.184948008
+  },
+  {
+    "Apply Interventions": 0.00001418,
+    "Generate Exposures": 0.063026319,
+    "Apply Exposures": 0.121451808,
+    "total": 0.184495757
+  },
+  {
+    "Apply Exposures": 0.127672087,
+    "Apply Interventions": 0.00001375,
+    "Generate Exposures": 0.062219346,
+    "total": 0.189908513
+  },
+  {
+    "Apply Exposures": 0.124375681,
+    "Apply Interventions": 0.00001415,
+    "total": 0.188804148,
+    "Generate Exposures": 0.064410986
+  },
+  {
+    "Apply Interventions": 0.00001459,
+    "total": 0.185356123,
+    "Apply Exposures": 0.121915481,
+    "Generate Exposures": 0.063423382
+  },
+  {
+    "Apply Interventions": 0.00001325,
+    "Apply Exposures": 0.121406577,
+    "total": 0.183891835,
+    "Generate Exposures": 0.062395487
+  },
+  {
+    "Apply Exposures": 0.125305347,
+    "Generate Exposures": 0.064422197,
+    "total": 0.189749544,
+    "Apply Interventions": 0.00001871
+  },
+  {
+    "Apply Interventions": 0.00001683,
+    "Generate Exposures": 0.064238726,
+    "total": 0.184646079,
+    "Apply Exposures": 0.120387552
+  },
+  {
+    "Apply Exposures": 0.120101262,
+    "total": 0.182834501,
+    "Generate Exposures": 0.062715409,
+    "Apply Interventions": 0.00001489
+  },
+  {
+    "Generate Exposures": 0.062203766,
+    "total": 0.184369228,
+    "Apply Exposures": 0.122143732,
+    "Apply Interventions": 0.00001837
+  },
+  {
+    "Generate Exposures": 0.062611299,
+    "Apply Interventions": 0.00001354,
+    "total": 0.183281184,
+    "Apply Exposures": 0.120653035
+  },
+  {
+    "Generate Exposures": 0.061249263,
+    "Apply Exposures": 0.120823675,
+    "Apply Interventions": 0.00001513,
+    "total": 0.182090928
+  },
+  {
+    "total": 0.188158308,
+    "Apply Interventions": 0.0000147,
+    "Generate Exposures": 0.061338182,
+    "Apply Exposures": 0.126802576
+  },
+  {
+    "Apply Exposures": 0.123364308,
+    "Apply Interventions": 0.00001435,
+    "Generate Exposures": 0.062344788,
+    "total": 0.185726396
+  },
+  {
+    "total": 0.184909702,
+    "Apply Exposures": 0.121054657,
+    "Apply Interventions": 0.00001589,
+    "Generate Exposures": 0.063836225
+  },
+  {
+    "Apply Exposures": 0.120895767,
+    "Generate Exposures": 0.061872836,
+    "Apply Interventions": 0.00001463,
+    "total": 0.182853443
+  },
+  {
+    "total": 0.184739823,
+    "Apply Exposures": 0.120983567,
+    "Generate Exposures": 0.063738016,
+    "Apply Interventions": 0.00001443
+  },
+  {
+    "Generate Exposures": 0.067758784,
+    "Apply Interventions": 0.00001378,
+    "total": 0.187801447,
+    "Apply Exposures": 0.120025913
+  },
+  {
+    "Apply Interventions": 0.00001372,
+    "Apply Exposures": 0.121185739,
+    "total": 0.182622233,
+    "Generate Exposures": 0.061419804
+  },
+  {
+    "total": 0.184459991,
+    "Apply Interventions": 0.00001835,
+    "Apply Exposures": 0.122249714,
+    "Generate Exposures": 0.062188707
+  },
+  {
+    "Apply Exposures": 0.122642017,
+    "Generate Exposures": 0.065079151,
+    "Apply Interventions": 0.00001437,
+    "total": 0.187738458
+  },
+  {
+    "total": 0.183377617,
+    "Generate Exposures": 0.062997062,
+    "Apply Exposures": 0.120365675,
+    "Apply Interventions": 0.00001223
+  },
+  {
+    "Apply Exposures": 0.125151739,
+    "Apply Interventions": 0.000016531,
+    "Generate Exposures": 0.063177543,
+    "total": 0.188348583
+  },
+  {
+    "Generate Exposures": 0.066145637,
+    "total": 0.190438422,
+    "Apply Interventions": 0.00001474,
+    "Apply Exposures": 0.124274935
+  },
+  {
+    "Apply Exposures": 0.120376595,
+    "total": 0.188342502,
+    "Apply Interventions": 0.00001543,
+    "Generate Exposures": 0.067947547
+  },
+  {
+    "total": 0.183327097,
+    "Apply Interventions": 0.00001583,
+    "Generate Exposures": 0.062025027,
+    "Apply Exposures": 0.12121982
+  },
+  {
+    "Generate Exposures": 0.061951728,
+    "total": 0.182297884,
+    "Apply Exposures": 0.120324646,
+    "Apply Interventions": 0.00001798
+  },
+  {
+    "Apply Interventions": 0.000015691,
+    "Generate Exposures": 0.061874566,
+    "total": 0.183398969,
+    "Apply Exposures": 0.121506102
+  },
+  {
+    "Generate Exposures": 0.063629335,
+    "total": 0.184269234,
+    "Apply Exposures": 0.120621468,
+    "Apply Interventions": 0.000015391
+  },
+  {
+    "Apply Exposures": 0.121340311,
+    "Generate Exposures": 0.061804636,
+    "total": 0.183167607,
+    "Apply Interventions": 0.00001957
+  },
+  {
+    "Apply Exposures": 0.121394102,
+    "Generate Exposures": 0.061599055,
+    "Apply Interventions": 0.0000127,
+    "total": 0.183008707
+  },
+  {
+    "Generate Exposures": 0.061667246,
+    "Apply Exposures": 0.120957241,
+    "Apply Interventions": 0.00001443,
+    "total": 0.182641847
+  },
+  {
+    "total": 0.182738147,
+    "Apply Interventions": 0.00001541,
+    "Generate Exposures": 0.061870817,
+    "Apply Exposures": 0.12084948
+  },
+  {
+    "total": 0.187130269,
+    "Apply Interventions": 0.00002133,
+    "Generate Exposures": 0.061954127,
+    "Apply Exposures": 0.125151102
+  },
+  {
+    "Apply Exposures": 0.120502899,
+    "Apply Interventions": 0.00001524,
+    "total": 0.186536967,
+    "Generate Exposures": 0.066015378
+  },
+  {
+    "total": 0.198445165,
+    "Generate Exposures": 0.07257287,
+    "Apply Interventions": 0.0000157,
+    "Apply Exposures": 0.125800925
+  },
+  {
+    "Apply Interventions": 0.00001362,
+    "Apply Exposures": 0.122984542,
+    "total": 0.202224635,
+    "Generate Exposures": 0.079222943
+  },
+  {
+    "total": 0.198300997,
+    "Generate Exposures": 0.064779553,
+    "Apply Exposures": 0.133494084,
+    "Apply Interventions": 0.0000243
+  },
+  {
+    "total": 0.18288941,
+    "Apply Interventions": 0.00001523,
+    "Apply Exposures": 0.12051184,
+    "Generate Exposures": 0.06235877
+  },
+  {
+    "Generate Exposures": 0.069352245,
+    "total": 0.190696279,
+    "Apply Interventions": 0.00001461,
+    "Apply Exposures": 0.121326574
+  },
+  {
+    "total": 0.185429532,
+    "Apply Exposures": 0.120749911,
+    "Generate Exposures": 0.064662481,
+    "Apply Interventions": 0.00001339
+  },
+  {
+    "total": 0.183107871,
+    "Apply Exposures": 0.12038021,
+    "Apply Interventions": 0.00001506,
+    "Generate Exposures": 0.062709231
+  },
+  {
+    "total": 0.18246305,
+    "Apply Interventions": 0.00001433,
+    "Generate Exposures": 0.06218047,
+    "Apply Exposures": 0.12026478
+  },
+  {
+    "Apply Exposures": 0.120134789,
+    "Apply Interventions": 0.00001411,
+    "total": 0.182087087,
+    "Generate Exposures": 0.061935238
+  },
+  {
+    "Apply Interventions": 0.000013651,
+    "Generate Exposures": 0.062675223,
+    "total": 0.183077883,
+    "Apply Exposures": 0.120386189
+  },
+  {
+    "total": 0.186272838,
+    "Generate Exposures": 0.061517266,
+    "Apply Interventions": 0.000136541,
+    "Apply Exposures": 0.124550451
+  },
+  {
+    "total": 0.18642798,
+    "Generate Exposures": 0.063420777,
+    "Apply Interventions": 0.0000155,
+    "Apply Exposures": 0.122988113
+  },
+  {
+    "Apply Interventions": 0.00001721,
+    "total": 0.184128918,
+    "Apply Exposures": 0.121613887,
+    "Generate Exposures": 0.062494451
+  },
+  {
+    "Apply Exposures": 0.121210165,
+    "Generate Exposures": 0.062842214,
+    "total": 0.184077579,
+    "Apply Interventions": 0.00002203
+  },
+  {
+    "Apply Exposures": 0.123482557,
+    "total": 0.186989824,
+    "Generate Exposures": 0.063489817,
+    "Apply Interventions": 0.00001422
+  },
+  {
+    "total": 0.184780352,
+    "Apply Exposures": 0.121821168,
+    "Generate Exposures": 0.062941014,
+    "Apply Interventions": 0.00001508
+  },
+  {
+    "Apply Interventions": 0.00001464,
+    "Apply Exposures": 0.122456151,
+    "total": 0.184947223,
+    "Generate Exposures": 0.062473422
+  },
+  {
+    "Generate Exposures": 0.063582677,
+    "Apply Exposures": 0.122360001,
+    "Apply Interventions": 0.00001573,
+    "total": 0.185962028
+  },
+  {
+    "Apply Exposures": 0.121190736,
+    "Generate Exposures": 0.062492233,
+    "Apply Interventions": 0.00001454,
+    "total": 0.183700819
+  },
+  {
+    "Apply Interventions": 0.00001654,
+    "Generate Exposures": 0.062302841,
+    "Apply Exposures": 0.121898879,
+    "total": 0.18422133
+  },
+  {
+    "Apply Exposures": 0.121337837,
+    "total": 0.184414022,
+    "Apply Interventions": 0.00001742,
+    "Generate Exposures": 0.062997035
+  },
+  {
+    "total": 0.18601893,
+    "Apply Interventions": 0.00001792,
+    "Generate Exposures": 0.064169761,
+    "Apply Exposures": 0.121828329
+  },
+  {
+    "Apply Interventions": 0.000014171,
+    "Apply Exposures": 0.121716268,
+    "Generate Exposures": 0.063301497,
+    "total": 0.185035386
+  },
+  {
+    "Generate Exposures": 0.062931555,
+    "total": 0.184003661,
+    "Apply Interventions": 0.00001606,
+    "Apply Exposures": 0.121052706
+  },
+  {
+    "total": 0.182725696,
+    "Generate Exposures": 0.061677369,
+    "Apply Exposures": 0.121030867,
+    "Apply Interventions": 0.00001458
+  },
+  {
+    "Apply Interventions": 0.00001274,
+    "total": 0.191162927,
+    "Generate Exposures": 0.063390667,
+    "Apply Exposures": 0.12775605
+  },
+  {
+    "total": 0.184631955,
+    "Apply Interventions": 0.00001365,
+    "Generate Exposures": 0.062490273,
+    "Apply Exposures": 0.122124542
+  },
+  {
+    "total": 0.185313608,
+    "Apply Exposures": 0.122991256,
+    "Generate Exposures": 0.062305012,
+    "Apply Interventions": 0.0000143
+  },
+  {
+    "Apply Interventions": 0.0000157,
+    "Apply Exposures": 0.124199313,
+    "total": 0.188501945,
+    "Generate Exposures": 0.064283962
+  },
+  {
+    "total": 0.200840547,
+    "Apply Interventions": 0.00001939,
+    "Generate Exposures": 0.064724574,
+    "Apply Exposures": 0.136093173
+  },
+  {
+    "Generate Exposures": 0.06771782,
+    "Apply Interventions": 0.000014791,
+    "Apply Exposures": 0.12172327,
+    "total": 0.189526571
+  },
+  {
+    "total": 0.190130604,
+    "Generate Exposures": 0.069451839,
+    "Apply Exposures": 0.120661665,
+    "Apply Interventions": 0.00001396
+  },
+  {
+    "Apply Exposures": 0.120459413,
+    "Apply Interventions": 0.000017451,
+    "total": 0.184071194,
+    "Generate Exposures": 0.06359107
+  },
+  {
+    "Apply Interventions": 0.00001362,
+    "total": 0.183732142,
+    "Generate Exposures": 0.062676244,
+    "Apply Exposures": 0.121039418
+  },
+  {
+    "Apply Exposures": 0.120302985,
+    "Generate Exposures": 0.061419108,
+    "Apply Interventions": 0.00001513,
+    "total": 0.181739853
+  },
+  {
+    "Generate Exposures": 0.061437958,
+    "total": 0.182505837,
+    "Apply Exposures": 0.121049339,
+    "Apply Interventions": 0.00001562
+  },
+  {
+    "Apply Exposures": 0.120515746,
+    "Apply Interventions": 0.00001454,
+    "total": 0.183469312,
+    "Generate Exposures": 0.062936446
+  },
+  {
+    "Apply Interventions": 0.00001678,
+    "Apply Exposures": 0.120527996,
+    "Generate Exposures": 0.061865051,
+    "total": 0.182412577
+  },
+  {
+    "Apply Interventions": 0.00001364,
+    "Apply Exposures": 0.121624551,
+    "Generate Exposures": 0.0615757,
+    "total": 0.183216481
+  },
+  {
+    "Apply Interventions": 0.00001356,
+    "Apply Exposures": 0.120850819,
+    "total": 0.18274768,
+    "Generate Exposures": 0.061880681
+  },
+  {
+    "Apply Interventions": 0.00001434,
+    "Apply Exposures": 0.120505946,
+    "total": 0.181756975,
+    "Generate Exposures": 0.061168188
+  },
+  {
+    "Apply Interventions": 0.00001361,
+    "Apply Exposures": 0.121622452,
+    "total": 0.183419203,
+    "Generate Exposures": 0.061780281
+  },
+  {
+    "total": 0.18289407,
+    "Apply Exposures": 0.121391761,
+    "Apply Interventions": 0.000018,
+    "Generate Exposures": 0.061481479
+  },
+  {
+    "Apply Exposures": 0.120769528,
+    "total": 0.182469709,
+    "Apply Interventions": 0.00001412,
+    "Generate Exposures": 0.061683711
+  },
+  {
+    "total": 0.184011187,
+    "Apply Exposures": 0.120844649,
+    "Apply Interventions": 0.00001489,
+    "Generate Exposures": 0.063148518
+  },
+  {
+    "total": 0.183867867,
+    "Generate Exposures": 0.063080278,
+    "Apply Exposures": 0.120768359,
+    "Apply Interventions": 0.00001573
+  },
+  {
+    "Apply Exposures": 0.120534608,
+    "Generate Exposures": 0.06147051,
+    "Apply Interventions": 0.00001763,
+    "total": 0.182025978
+  },
+  {
+    "Generate Exposures": 0.06142018,
+    "total": 0.181256884,
+    "Apply Interventions": 0.00001391,
+    "Apply Exposures": 0.119819594
+  },
+  {
+    "total": 0.183859767,
+    "Apply Interventions": 0.00001664,
+    "Apply Exposures": 0.122366777,
+    "Generate Exposures": 0.06147354
+  },
+  {
+    "Generate Exposures": 0.065869973,
+    "Apply Interventions": 0.00001655,
+    "total": 0.187472506,
+    "Apply Exposures": 0.121582813
+  },
+  {
+    "Generate Exposures": 0.064112013,
+    "total": 0.186422381,
+    "Apply Exposures": 0.122223908,
+    "Apply Interventions": 0.00001555
+  },
+  {
+    "Generate Exposures": 0.063597921,
+    "Apply Exposures": 0.122166618,
+    "total": 0.185787909,
+    "Apply Interventions": 0.00001962
+  },
+  {
+    "Apply Interventions": 0.00001473,
+    "Generate Exposures": 0.062558206,
+    "Apply Exposures": 0.135753306,
+    "total": 0.198329722
+  },
+  {
+    "total": 0.188281291,
+    "Generate Exposures": 0.062744457,
+    "Apply Interventions": 0.00001319,
+    "Apply Exposures": 0.125520454
+  },
+  {
+    "Apply Exposures": 0.121270843,
+    "Apply Interventions": 0.00001909,
+    "total": 0.182468462,
+    "Generate Exposures": 0.061175039
+  },
+  {
+    "Generate Exposures": 0.061718112,
+    "Apply Exposures": 0.12068332,
+    "Apply Interventions": 0.00001409,
+    "total": 0.182418882
+  },
+  {
+    "Apply Exposures": 0.122745101,
+    "total": 0.185294407,
+    "Generate Exposures": 0.062531786,
+    "Apply Interventions": 0.00001405
+  },
+  {
+    "total": 0.181461358,
+    "Apply Interventions": 0.000014061,
+    "Generate Exposures": 0.061064968,
+    "Apply Exposures": 0.120379219
+  },
+  {
+    "Apply Exposures": 0.121145362,
+    "Apply Interventions": 0.00001515,
+    "Generate Exposures": 0.066795178,
+    "total": 0.18795887
+  },
+  {
+    "Apply Exposures": 0.118897131,
+    "total": 0.180175121,
+    "Generate Exposures": 0.06125873,
+    "Apply Interventions": 0.00001583
+  },
+  {
+    "Generate Exposures": 0.061493381,
+    "Apply Exposures": 0.119414604,
+    "Apply Interventions": 0.00001397,
+    "total": 0.180993555
+  },
+  {
+    "Generate Exposures": 0.061600892,
+    "total": 0.181032517,
+    "Apply Interventions": 0.0000144,
+    "Apply Exposures": 0.119414455
+  },
+  {
+    "total": 0.180367724,
+    "Apply Exposures": 0.118898213,
+    "Apply Interventions": 0.00001773,
+    "Generate Exposures": 0.061448891
+  },
+  {
+    "Apply Interventions": 0.000014351,
+    "Generate Exposures": 0.061666322,
+    "Apply Exposures": 0.118997293,
+    "total": 0.180680726
+  },
+  {
+    "Apply Interventions": 0.0000149,
+    "Generate Exposures": 0.061476131,
+    "Apply Exposures": 0.119404075,
+    "total": 0.180898366
+  },
+  {
+    "Apply Exposures": 0.118577721,
+    "total": 0.179879282,
+    "Apply Interventions": 0.00001565,
+    "Generate Exposures": 0.061282921
+  },
+  {
+    "Apply Interventions": 0.00001734,
+    "total": 0.179927653,
+    "Generate Exposures": 0.061373861,
+    "Apply Exposures": 0.118533202
+  },
+  {
+    "Apply Exposures": 0.118748992,
+    "Apply Interventions": 0.00001578,
+    "total": 0.180144504,
+    "Generate Exposures": 0.061376552
+  },
+  {
+    "Generate Exposures": 0.061493623,
+    "Apply Exposures": 0.11828713,
+    "Apply Interventions": 0.00001863,
+    "total": 0.179802743
+  },
+  {
+    "Apply Interventions": 0.00001436,
+    "total": 0.177676712,
+    "Apply Exposures": 0.116918244,
+    "Generate Exposures": 0.060741148
+  },
+  {
+    "Apply Exposures": 0.119039254,
+    "total": 0.179933533,
+    "Generate Exposures": 0.060805798,
+    "Apply Interventions": 0.00001689
+  },
+  {
+    "Generate Exposures": 0.061721393,
+    "Apply Interventions": 0.00001449,
+    "total": 0.179676411,
+    "Apply Exposures": 0.117937628
+  },
+  {
+    "Apply Interventions": 0.00001627,
+    "Generate Exposures": 0.061166691,
+    "Apply Exposures": 0.117606688,
+    "total": 0.178792699
+  },
+  {
+    "Generate Exposures": 0.061221241,
+    "Apply Interventions": 0.00001459,
+    "Apply Exposures": 0.118427762,
+    "total": 0.179666643
+  },
+  {
+    "total": 0.180156396,
+    "Apply Interventions": 0.00001476,
+    "Generate Exposures": 0.061340362,
+    "Apply Exposures": 0.118798234
+  },
+  {
+    "Generate Exposures": 0.060771659,
+    "total": 0.181588193,
+    "Apply Exposures": 0.120798064,
+    "Apply Interventions": 0.00001571
+  },
+  {
+    "total": 0.184792159,
+    "Generate Exposures": 0.065499873,
+    "Apply Interventions": 0.00001815,
+    "Apply Exposures": 0.119271186
+  },
+  {
+    "Generate Exposures": 0.061266991,
+    "Apply Exposures": 0.117583989,
+    "Apply Interventions": 0.00001471,
+    "total": 0.17886876
+  },
+  {
+    "total": 0.186099218,
+    "Generate Exposures": 0.06089101,
+    "Apply Exposures": 0.125189248,
+    "Apply Interventions": 0.0000156
+  },
+  {
+    "Apply Exposures": 0.117618849,
+    "Generate Exposures": 0.060648178,
+    "Apply Interventions": 0.00001379,
+    "total": 0.178283967
+  },
+  {
+    "Apply Exposures": 0.117471988,
+    "total": 0.185498154,
+    "Apply Interventions": 0.00001659,
+    "Generate Exposures": 0.067941596
+  },
+  {
+    "total": 0.178186188,
+    "Generate Exposures": 0.061004021,
+    "Apply Interventions": 0.00001525,
+    "Apply Exposures": 0.117164287
+  },
+  {
+    "total": 0.17865079,
+    "Apply Interventions": 0.00001416,
+    "Apply Exposures": 0.117374638,
+    "Generate Exposures": 0.061258582
+  },
+  {
+    "Apply Interventions": 0.00001579,
+    "total": 0.178861772,
+    "Apply Exposures": 0.117309348,
+    "Generate Exposures": 0.061533174
+  },
+  {
+    "Apply Exposures": 0.117154187,
+    "total": 0.177633266,
+    "Generate Exposures": 0.060462669,
+    "Apply Interventions": 0.00001299
+  },
+  {
+    "Apply Exposures": 0.119914262,
+    "total": 0.181172555,
+    "Generate Exposures": 0.061237343,
+    "Apply Interventions": 0.00001744
+  },
+  {
+    "Apply Exposures": 0.116769835,
+    "Generate Exposures": 0.064356888,
+    "total": 0.181143883,
+    "Apply Interventions": 0.00001377
+  },
+  {
+    "Generate Exposures": 0.061683885,
+    "Apply Exposures": 0.117026466,
+    "Apply Interventions": 0.00001263,
+    "total": 0.178726371
+  },
+  {
+    "Apply Interventions": 0.00001605,
+    "Generate Exposures": 0.061253352,
+    "Apply Exposures": 0.117286619,
+    "total": 0.178559221
+  },
+  {
+    "total": 0.177001294,
+    "Apply Interventions": 0.00001455,
+    "Generate Exposures": 0.060337778,
+    "Apply Exposures": 0.116645576
+  },
+  {
+    "Generate Exposures": 0.060637839,
+    "Apply Interventions": 0.00001463,
+    "Apply Exposures": 0.117177109,
+    "total": 0.177903978
+  },
+  {
+    "Generate Exposures": 0.061346564,
+    "Apply Exposures": 0.116334554,
+    "Apply Interventions": 0.0000136,
+    "total": 0.177697918
+  },
+  {
+    "total": 0.176150411,
+    "Generate Exposures": 0.060399729,
+    "Apply Exposures": 0.115734832,
+    "Apply Interventions": 0.00001274
+  },
+  {
+    "Apply Exposures": 0.116340735,
+    "total": 0.176817923,
+    "Apply Interventions": 0.00001453,
+    "Generate Exposures": 0.060459148
+  },
+  {
+    "Apply Exposures": 0.116688728,
+    "Generate Exposures": 0.06077301,
+    "Apply Interventions": 0.00001522,
+    "total": 0.177480328
+  },
+  {
+    "Generate Exposures": 0.060510869,
+    "Apply Interventions": 0.000016341,
+    "total": 0.176434053,
+    "Apply Exposures": 0.115903043
+  },
+  {
+    "Apply Interventions": 0.00001336,
+    "Generate Exposures": 0.061027182,
+    "Apply Exposures": 0.116959619,
+    "total": 0.178003601
+  },
+  {
+    "total": 0.176726114,
+    "Apply Interventions": 0.00001628,
+    "Apply Exposures": 0.116191804,
+    "Generate Exposures": 0.06051511
+  },
+  {
+    "total": 0.179527388,
+    "Apply Interventions": 0.0000155,
+    "Generate Exposures": 0.063530014,
+    "Apply Exposures": 0.115978684
+  },
+  {
+    "Generate Exposures": 0.060744391,
+    "total": 0.177609279,
+    "Apply Interventions": 0.00001379,
+    "Apply Exposures": 0.116848298
+  },
+  {
+    "total": 0.176871897,
+    "Generate Exposures": 0.060889732,
+    "Apply Exposures": 0.115890384,
+    "Apply Interventions": 0.00001549
+  },
+  {
+    "Generate Exposures": 0.060982552,
+    "Apply Interventions": 0.00001379,
+    "total": 0.177266019,
+    "Apply Exposures": 0.116266037
+  },
+  {
+    "Generate Exposures": 0.061015943,
+    "total": 0.177105318,
+    "Apply Interventions": 0.000015931,
+    "Apply Exposures": 0.116070244
+  },
+  {
+    "total": 0.176250943,
+    "Generate Exposures": 0.060403599,
+    "Apply Exposures": 0.115830074,
+    "Apply Interventions": 0.00001442
+  },
+  {
+    "Apply Interventions": 0.00001325,
+    "Generate Exposures": 0.060182769,
+    "Apply Exposures": 0.114622907,
+    "total": 0.174822896
+  },
+  {
+    "Apply Exposures": 0.115649333,
+    "Generate Exposures": 0.060962263,
+    "Apply Interventions": 0.00001353,
+    "total": 0.176628276
+  },
+  {
+    "Apply Exposures": 0.115178232,
+    "Generate Exposures": 0.059937298,
+    "Apply Interventions": 0.00001441,
+    "total": 0.175133
+  },
+  {
+    "total": 0.175029048,
+    "Apply Exposures": 0.11483094,
+    "Generate Exposures": 0.060181438,
+    "Apply Interventions": 0.0000141
+  },
+  {
+    "Apply Interventions": 0.00001413,
+    "total": 0.181484842,
+    "Generate Exposures": 0.061649986,
+    "Apply Exposures": 0.119817726
+  },
+  {
+    "total": 0.176446856,
+    "Apply Exposures": 0.114536288,
+    "Generate Exposures": 0.061891358,
+    "Apply Interventions": 0.00001537
+  },
+  {
+    "Apply Exposures": 0.113873814,
+    "Apply Interventions": 0.00002179,
+    "Generate Exposures": 0.060177209,
+    "total": 0.174149104
+  },
+  {
+    "Generate Exposures": 0.061348025,
+    "total": 0.176863079,
+    "Apply Exposures": 0.115496734,
+    "Apply Interventions": 0.00001545
+  },
+  {
+    "total": 0.174175296,
+    "Generate Exposures": 0.06028674,
+    "Apply Exposures": 0.113869396,
+    "Apply Interventions": 0.00001628
+  },
+  {
+    "Apply Interventions": 0.00001357,
+    "Apply Exposures": 0.115112662,
+    "Generate Exposures": 0.060396321,
+    "total": 0.175526363
+  },
+  {
+    "Generate Exposures": 0.066515002,
+    "Apply Exposures": 0.114184437,
+    "Apply Interventions": 0.00001463,
+    "total": 0.180716919
+  },
+  {
+    "Apply Interventions": 0.00001811,
+    "Apply Exposures": 0.113309472,
+    "total": 0.173542542,
+    "Generate Exposures": 0.06021221
+  },
+  {
+    "Apply Exposures": 0.116163878,
+    "Apply Interventions": 0.00001337,
+    "total": 0.176581618,
+    "Generate Exposures": 0.06040109
+  },
+  {
+    "Apply Exposures": 0.113095663,
+    "total": 0.173652404,
+    "Apply Interventions": 0.00001581,
+    "Generate Exposures": 0.060537821
+  },
+  {
+    "Apply Exposures": 0.112773941,
+    "total": 0.173147172,
+    "Generate Exposures": 0.060354971,
+    "Apply Interventions": 0.00001457
+  },
+  {
+    "total": 0.174440329,
+    "Apply Interventions": 0.00001784,
+    "Generate Exposures": 0.060676383,
+    "Apply Exposures": 0.113742806
+  },
+  {
+    "total": 0.175510853,
+    "Apply Exposures": 0.114830611,
+    "Apply Interventions": 0.0000143,
+    "Generate Exposures": 0.060586552
+  },
+  {
+    "Generate Exposures": 0.060696962,
+    "Apply Interventions": 0.0000163,
+    "Apply Exposures": 0.115910247,
+    "total": 0.176626929
+  },
+  {
+    "total": 0.181736477,
+    "Apply Interventions": 0.00001436,
+    "Apply Exposures": 0.115541276,
+    "Generate Exposures": 0.066178071
+  },
+  {
+    "total": 0.172302629,
+    "Apply Exposures": 0.11254729,
+    "Generate Exposures": 0.059738168,
+    "Apply Interventions": 0.000013621
+  },
+  {
+    "Apply Interventions": 0.00001612,
+    "Apply Exposures": 0.113045763,
+    "Generate Exposures": 0.060346101,
+    "total": 0.173411804
+  },
+  {
+    "Apply Interventions": 0.00001452,
+    "Generate Exposures": 0.060646183,
+    "Apply Exposures": 0.123340696,
+    "total": 0.184004729
+  },
+  {
+    "Apply Interventions": 0.00001353,
+    "Generate Exposures": 0.060769833,
+    "Apply Exposures": 0.113298075,
+    "total": 0.174084388
+  },
+  {
+    "total": 0.173043563,
+    "Apply Exposures": 0.112712902,
+    "Apply Interventions": 0.00001986,
+    "Generate Exposures": 0.060307591
+  },
+  {
+    "Apply Exposures": 0.112962074,
+    "total": 0.172994873,
+    "Apply Interventions": 0.00001639,
+    "Generate Exposures": 0.060013609
+  },
+  {
+    "Apply Interventions": 0.00002105,
+    "total": 0.176932944,
+    "Apply Exposures": 0.116760113,
+    "Generate Exposures": 0.060148701
+  },
+  {
+    "Apply Interventions": 0.00001693,
+    "Generate Exposures": 0.060021239,
+    "Apply Exposures": 0.112695203,
+    "total": 0.172811812
+  },
+  {
+    "Apply Exposures": 0.115521226,
+    "Apply Interventions": 0.00001619,
+    "Generate Exposures": 0.060292792,
+    "total": 0.175833038
+  },
+  {
+    "total": 0.174476811,
+    "Apply Interventions": 0.00001667,
+    "Apply Exposures": 0.112485141,
+    "Generate Exposures": 0.06197192
+  },
+  {
+    "total": 0.172788233,
+    "Apply Exposures": 0.112524152,
+    "Apply Interventions": 0.00001707,
+    "Generate Exposures": 0.060244121
+  },
+  {
+    "Generate Exposures": 0.060392402,
+    "total": 0.173128366,
+    "Apply Interventions": 0.000015631,
+    "Apply Exposures": 0.112717053
+  },
+  {
+    "Apply Exposures": 0.112670113,
+    "Apply Interventions": 0.00001416,
+    "total": 0.173246847,
+    "Generate Exposures": 0.060560034
+  },
+  {
+    "Generate Exposures": 0.060205851,
+    "Apply Interventions": 0.00001787,
+    "total": 0.179171067,
+    "Apply Exposures": 0.118944256
+  },
+  {
+    "Apply Exposures": 0.11980588,
+    "Apply Interventions": 0.00001703,
+    "Generate Exposures": 0.0619116,
+    "total": 0.18173768
+  },
+  {
+    "Apply Exposures": 0.112236661,
+    "Apply Interventions": 0.00001375,
+    "total": 0.172268302,
+    "Generate Exposures": 0.060015251
+  },
+  {
+    "Generate Exposures": 0.060867325,
+    "total": 0.173272237,
+    "Apply Interventions": 0.00001738,
+    "Apply Exposures": 0.112384782
+  },
+  {
+    "total": 0.174811646,
+    "Apply Exposures": 0.114793745,
+    "Generate Exposures": 0.059931761,
+    "Apply Interventions": 0.00001884
+  },
+  {
+    "total": 0.172491954,
+    "Apply Exposures": 0.11195096,
+    "Apply Interventions": 0.00001361,
+    "Generate Exposures": 0.060524044
+  },
+  {
+    "Apply Interventions": 0.00001332,
+    "Generate Exposures": 0.061133567,
+    "Apply Exposures": 0.119793961,
+    "total": 0.180944198
+  },
+  {
+    "Generate Exposures": 0.059976131,
+    "Apply Interventions": 0.00001418,
+    "total": 0.172797036,
+    "Apply Exposures": 0.112803365
+  },
+  {
+    "Generate Exposures": 0.060242632,
+    "total": 0.172675555,
+    "Apply Exposures": 0.112415373,
+    "Apply Interventions": 0.00001461
+  },
+  {
+    "Generate Exposures": 0.060052511,
+    "Apply Exposures": 0.112323233,
+    "Apply Interventions": 0.00001621,
+    "total": 0.172395014
+  },
+  {
+    "Generate Exposures": 0.059836421,
+    "Apply Exposures": 0.112894896,
+    "Apply Interventions": 0.00001464,
+    "total": 0.172748617
+  },
+  {
+    "Apply Exposures": 0.112237303,
+    "total": 0.172080513,
+    "Generate Exposures": 0.05982572,
+    "Apply Interventions": 0.00001402
+  },
+  {
+    "Generate Exposures": 0.060180753,
+    "Apply Exposures": 0.112056831,
+    "Apply Interventions": 0.00001846,
+    "total": 0.172259404
+  },
+  {
+    "total": 0.172581347,
+    "Generate Exposures": 0.060061173,
+    "Apply Exposures": 0.112502284,
+    "Apply Interventions": 0.00001468
+  },
+  {
+    "Apply Exposures": 0.112104602,
+    "Generate Exposures": 0.060468153,
+    "Apply Interventions": 0.00001353,
+    "total": 0.172658626
+  },
+  {
+    "total": 0.171821744,
+    "Apply Exposures": 0.11149073,
+    "Generate Exposures": 0.060310094,
+    "Apply Interventions": 0.00001709
+  },
+  {
+    "total": 0.171500351,
+    "Generate Exposures": 0.05967975,
+    "Apply Interventions": 0.00001362,
+    "Apply Exposures": 0.111803921
+  },
+  {
+    "Generate Exposures": 0.059698471,
+    "Apply Exposures": 0.111495309,
+    "total": 0.17121208,
+    "Apply Interventions": 0.00001518
+  },
+  {
+    "Apply Exposures": 0.111418789,
+    "Generate Exposures": 0.059660051,
+    "total": 0.17109692,
+    "Apply Interventions": 0.00001506
+  },
+  {
+    "total": 0.18467677,
+    "Apply Exposures": 0.11746249,
+    "Apply Interventions": 0.000015841,
+    "Generate Exposures": 0.067195079
+  },
+  {
+    "Apply Exposures": 0.110888156,
+    "Generate Exposures": 0.059474269,
+    "Apply Interventions": 0.00001314,
+    "total": 0.170378545
+  },
+  {
+    "Generate Exposures": 0.059854662,
+    "Apply Interventions": 0.00001492,
+    "Apply Exposures": 0.110632966,
+    "total": 0.170505688
+  },
+  {
+    "total": 0.17087739,
+    "Generate Exposures": 0.059694461,
+    "Apply Exposures": 0.111162849,
+    "Apply Interventions": 0.0000162
+  },
+  {
+    "Apply Interventions": 0.0000143,
+    "Generate Exposures": 0.059678041,
+    "Apply Exposures": 0.110838327,
+    "total": 0.170533619
+  },
+  {
+    "Apply Exposures": 0.110284324,
+    "Generate Exposures": 0.059468519,
+    "Apply Interventions": 0.000017171,
+    "total": 0.169852464
+  },
+  {
+    "Generate Exposures": 0.059762571,
+    "Apply Interventions": 0.00001373,
+    "Apply Exposures": 0.110798867,
+    "total": 0.170577848
+  },
+  {
+    "Apply Interventions": 0.00001377,
+    "Generate Exposures": 0.059667831,
+    "Apply Exposures": 0.110551155,
+    "total": 0.170235636
+  },
+  {
+    "Apply Exposures": 0.109611122,
+    "Apply Interventions": 0.00001308,
+    "total": 0.169454914,
+    "Generate Exposures": 0.059827702
+  },
+  {
+    "total": 0.169200332,
+    "Apply Exposures": 0.109974103,
+    "Apply Interventions": 0.00001518,
+    "Generate Exposures": 0.059207479
+  },
+  {
+    "total": 0.176428969,
+    "Generate Exposures": 0.060077863,
+    "Apply Interventions": 0.00001528,
+    "Apply Exposures": 0.116332476
+  },
+  {
+    "total": 0.170419428,
+    "Generate Exposures": 0.05965425,
+    "Apply Exposures": 0.110747358,
+    "Apply Interventions": 0.00001433
+  },
+  {
+    "total": 0.170156558,
+    "Apply Interventions": 0.00001623,
+    "Generate Exposures": 0.05938242,
+    "Apply Exposures": 0.110754988
+  },
+  {
+    "Apply Exposures": 0.10732631,
+    "Apply Interventions": 0.00001418,
+    "total": 0.165271542,
+    "Generate Exposures": 0.057927542
+  },
+  {
+    "Generate Exposures": 0.055792461,
+    "total": 0.160630509,
+    "Apply Exposures": 0.104819648,
+    "Apply Interventions": 0.0000153
+  },
+  {
+    "total": 0.157861815,
+    "Apply Interventions": 0.00001775,
+    "Apply Exposures": 0.103370811,
+    "Generate Exposures": 0.054411184
+  },
+  {
+    "total": 0.154469466,
+    "Apply Exposures": 0.101075397,
+    "Apply Interventions": 0.0000164,
+    "Generate Exposures": 0.053374219
+  },
+  {
+    "Apply Interventions": 0.00001799,
+    "Apply Exposures": 0.098768836,
+    "Generate Exposures": 0.060795617,
+    "total": 0.159585563
+  },
+  {
+    "Generate Exposures": 0.060306805,
+    "Apply Interventions": 0.000305582,
+    "Apply Exposures": 0.098426984,
+    "total": 0.159042511
+  },
+  {
+    "total": 0.163756245,
+    "Apply Exposures": 0.096836225,
+    "Apply Interventions": 0.00001406,
+    "Generate Exposures": 0.06690221
+  },
+  {
+    "Generate Exposures": 0.046003551,
+    "total": 0.139676871,
+    "Apply Exposures": 0.09365544,
+    "Apply Interventions": 0.00001476
+  },
+  {
+    "Generate Exposures": 0.044203142,
+    "Apply Interventions": 0.00001319,
+    "total": 0.136492234,
+    "Apply Exposures": 0.092272912
+  },
+  {
+    "Generate Exposures": 0.044023071,
+    "Apply Exposures": 0.095390319,
+    "total": 0.13943415,
+    "Apply Interventions": 0.00001752
+  },
+  {
+    "Apply Exposures": 0.092628854,
+    "Generate Exposures": 0.044472493,
+    "Apply Interventions": 0.00001346,
+    "total": 0.137117247
+  },
+  {
+    "total": 0.137110776,
+    "Generate Exposures": 0.044221111,
+    "Apply Interventions": 0.00001331,
+    "Apply Exposures": 0.092873145
+  },
+  {
+    "Generate Exposures": 0.045029195,
+    "total": 0.13771664,
+    "Apply Exposures": 0.092602895,
+    "Apply Interventions": 0.00001499
+  },
+  {
+    "total": 0.137473439,
+    "Apply Exposures": 0.092266462,
+    "Generate Exposures": 0.045190067,
+    "Apply Interventions": 0.00001369
+  },
+  {
+    "total": 0.137760882,
+    "Apply Interventions": 0.00001489,
+    "Generate Exposures": 0.044337802,
+    "Apply Exposures": 0.09340456
+  },
+  {
+    "total": 0.136103513,
+    "Apply Exposures": 0.092108473,
+    "Apply Interventions": 0.00001351,
+    "Generate Exposures": 0.04397861
+  },
+  {
+    "Generate Exposures": 0.044081591,
+    "Apply Interventions": 0.00001542,
+    "total": 0.136100993,
+    "Apply Exposures": 0.092000592
+  },
+  {
+    "total": 0.13732782,
+    "Generate Exposures": 0.044318003,
+    "Apply Exposures": 0.092990577,
+    "Apply Interventions": 0.00001653
+  },
+  {
+    "total": 0.137277669,
+    "Generate Exposures": 0.04382168,
+    "Apply Exposures": 0.093440119,
+    "Apply Interventions": 0.00001334
+  },
+  {
+    "Apply Exposures": 0.091745381,
+    "total": 0.135831402,
+    "Generate Exposures": 0.044068131,
+    "Apply Interventions": 0.00001472
+  },
+  {
+    "Generate Exposures": 0.043968241,
+    "Apply Interventions": 0.00001452,
+    "Apply Exposures": 0.091819001,
+    "total": 0.135804802
+  },
+  {
+    "total": 0.15646771,
+    "Apply Exposures": 0.094214325,
+    "Generate Exposures": 0.061974134,
+    "Apply Interventions": 0.000276191
+  },
+  {
+    "Apply Interventions": 0.00001362,
+    "Apply Exposures": 0.256438265,
+    "total": 0.302596627,
+    "Generate Exposures": 0.046094311
+  },
+  {
+    "Generate Exposures": 0.027716805,
+    "Apply Interventions": 0.00001419,
+    "Apply Exposures": 0.256229655,
+    "total": 0.28396362
+  },
+  {
+    "Apply Interventions": 0.00001381,
+    "Generate Exposures": 0.026837011,
+    "total": 0.264013155,
+    "Apply Exposures": 0.237159934
+  },
+  {
+    "Apply Exposures": 0.2208006,
+    "Apply Interventions": 0.0000142,
+    "total": 0.246557255,
+    "Generate Exposures": 0.025739155
+  },
+  {
+    "Generate Exposures": 0.024956962,
+    "total": 0.231432977,
+    "Apply Interventions": 0.00001251,
+    "Apply Exposures": 0.206461005
+  },
+  {
+    "Apply Interventions": 0.0000135,
+    "total": 0.225787596,
+    "Apply Exposures": 0.201159217,
+    "Generate Exposures": 0.024610859
+  },
+  {
+    "Generate Exposures": 0.023607533,
+    "Apply Interventions": 0.00001351,
+    "Apply Exposures": 0.183562935,
+    "total": 0.207187018
+  },
+  {
+    "Apply Interventions": 0.000272381,
+    "Apply Exposures": 0.159269888,
+    "Generate Exposures": 0.044176392,
+    "total": 0.203721271
+  },
+  {
+    "total": 0.127639932,
+    "Apply Interventions": 0.00001361,
+    "Generate Exposures": 0.052984579,
+    "Apply Exposures": 0.074638443
+  },
+  {
+    "Apply Exposures": 0.072448572,
+    "Apply Interventions": 0.00001375,
+    "total": 0.107678977,
+    "Generate Exposures": 0.035213005
+  },
+  {
+    "Apply Interventions": 0.00001358,
+    "Generate Exposures": 0.034882524,
+    "Apply Exposures": 0.07238213,
+    "total": 0.107351755
+  },
+  {
+    "Apply Exposures": 0.072536662,
+    "Apply Interventions": 0.00001392,
+    "Generate Exposures": 0.035593707,
+    "total": 0.108147499
+  },
+  {
+    "Apply Exposures": 0.073813978,
+    "Generate Exposures": 0.040808905,
+    "total": 0.114640443,
+    "Apply Interventions": 0.00001464
+  },
+  {
+    "Apply Exposures": 0.073260595,
+    "Generate Exposures": 0.035162895,
+    "Apply Interventions": 0.00001367,
+    "total": 0.10844033
+  },
+  {
+    "Generate Exposures": 0.035333886,
+    "total": 0.107498616,
+    "Apply Exposures": 0.07214718,
+    "Apply Interventions": 0.00001414
+  },
+  {
+    "Apply Exposures": 0.072706223,
+    "total": 0.107848248,
+    "Apply Interventions": 0.00001403,
+    "Generate Exposures": 0.035124675
+  },
+  {
+    "Apply Exposures": 0.072972915,
+    "Apply Interventions": 0.00001447,
+    "Generate Exposures": 0.034621382,
+    "total": 0.107611917
+  },
+  {
+    "Apply Exposures": 0.07213574,
+    "total": 0.108385741,
+    "Generate Exposures": 0.036233371,
+    "Apply Interventions": 0.00001371
+  },
+  {
+    "Generate Exposures": 0.034749044,
+    "total": 0.106888894,
+    "Apply Exposures": 0.07212152,
+    "Apply Interventions": 0.0000156
+  },
+  {
+    "Apply Interventions": 0.00001302,
+    "Apply Exposures": 0.071565477,
+    "total": 0.106466821,
+    "Generate Exposures": 0.034885014
+  },
+  {
+    "total": 0.106934254,
+    "Apply Interventions": 0.000014721,
+    "Apply Exposures": 0.07217945,
+    "Generate Exposures": 0.034664513
+  },
+  {
+    "Generate Exposures": 0.035816109,
+    "total": 0.107493287,
+    "Apply Interventions": 0.00001376,
+    "Apply Exposures": 0.071660337
+  },
+  {
+    "Generate Exposures": 0.034539911,
+    "Apply Interventions": 0.00001502,
+    "Apply Exposures": 0.071819568,
+    "total": 0.106377959
+  },
+  {
+    "Apply Exposures": 0.075550787,
+    "Apply Interventions": 0.000275042,
+    "Generate Exposures": 0.053509392,
+    "total": 0.129338031
+  },
+  {
+    "Generate Exposures": 0.042267452,
+    "Apply Interventions": 0.00001361,
+    "Apply Exposures": 0.162261986,
+    "total": 0.204546018
+  },
+  {
+    "Apply Interventions": 0.00001305,
+    "total": 0.183104977,
+    "Generate Exposures": 0.022081646,
+    "Apply Exposures": 0.161007861
+  },
+  {
+    "Generate Exposures": 0.021782125,
+    "Apply Exposures": 0.151036907,
+    "Apply Interventions": 0.00001544,
+    "total": 0.172838132
+  },
+  {
+    "total": 0.167424234,
+    "Generate Exposures": 0.021169732,
+    "Apply Exposures": 0.146237302,
+    "Apply Interventions": 0.00001361
+  },
+  {
+    "total": 0.157870363,
+    "Apply Interventions": 0.0000153,
+    "Apply Exposures": 0.137244414,
+    "Generate Exposures": 0.020607939
+  },
+  {
+    "Generate Exposures": 0.020546738,
+    "Apply Interventions": 0.00001299,
+    "total": 0.150204842,
+    "Apply Exposures": 0.129642154
+  },
+  {
+    "Generate Exposures": 0.019723314,
+    "Apply Interventions": 0.00001365,
+    "total": 0.142917944,
+    "Apply Exposures": 0.12313468
+  },
+  {
+    "Apply Interventions": 0.000215701,
+    "Generate Exposures": 0.041261428,
+    "total": 0.152129734,
+    "Apply Exposures": 0.110649915
+  },
+  {
+    "Generate Exposures": 0.048997229,
+    "Apply Interventions": 0.00001417,
+    "Apply Exposures": 0.060598431,
+    "total": 0.1096132
+  },
+  {
+    "Apply Interventions": 0.00001418,
+    "Generate Exposures": 0.029832927,
+    "total": 0.088203936,
+    "Apply Exposures": 0.058353529
+  },
+  {
+    "total": 0.089719155,
+    "Apply Interventions": 0.00001455,
+    "Generate Exposures": 0.029444246,
+    "Apply Exposures": 0.060257669
+  },
+  {
+    "Generate Exposures": 0.029201964,
+    "Apply Interventions": 0.00001428,
+    "total": 0.087421232,
+    "Apply Exposures": 0.058202628
+  },
+  {
+    "Apply Exposures": 0.058093987,
+    "Generate Exposures": 0.029326765,
+    "total": 0.087436792,
+    "Apply Interventions": 0.00001376
+  },
+  {
+    "Generate Exposures": 0.029387155,
+    "Apply Exposures": 0.058059487,
+    "Apply Interventions": 0.00001356,
+    "total": 0.087462852
+  },
+  {
+    "Apply Exposures": 0.058002946,
+    "total": 0.087288511,
+    "Apply Interventions": 0.00001393,
+    "Generate Exposures": 0.029268455
+  },
+  {
+    "Generate Exposures": 0.029469696,
+    "Apply Exposures": 0.057153112,
+    "total": 0.086638888,
+    "Apply Interventions": 0.0000138
+  },
+  {
+    "total": 0.087853474,
+    "Apply Interventions": 0.00001331,
+    "Generate Exposures": 0.029113234,
+    "Apply Exposures": 0.05865412
+  },
+  {
+    "Apply Exposures": 0.057766265,
+    "total": 0.087168381,
+    "Apply Interventions": 0.00001682,
+    "Generate Exposures": 0.029381616
+  },
+  {
+    "Generate Exposures": 0.028959054,
+    "Apply Exposures": 0.056959512,
+    "total": 0.085933546,
+    "Apply Interventions": 0.00001229
+  },
+  {
+    "Apply Exposures": 0.057135062,
+    "Generate Exposures": 0.029008423,
+    "total": 0.086159816,
+    "Apply Interventions": 0.00001323
+  },
+  {
+    "Apply Exposures": 0.057300014,
+    "Generate Exposures": 0.029186644,
+    "Apply Interventions": 0.00001284,
+    "total": 0.086502678
+  },
+  {
+    "Apply Interventions": 0.00001435,
+    "Apply Exposures": 0.064461551,
+    "Generate Exposures": 0.029215455,
+    "total": 0.093696936
+  },
+  {
+    "total": 0.08866622,
+    "Apply Interventions": 0.000014,
+    "Generate Exposures": 0.031360816,
+    "Apply Exposures": 0.057288264
+  },
+  {
+    "Apply Interventions": 0.000599443,
+    "Generate Exposures": 0.063053993,
+    "Apply Exposures": 0.067974351,
+    "total": 0.131630947
+  },
+  {
+    "Apply Interventions": 0.00001528,
+    "Apply Exposures": 0.122945101,
+    "total": 0.172665634,
+    "Generate Exposures": 0.049701733
+  },
+  {
+    "Apply Exposures": 0.111823132,
+    "Apply Interventions": 0.00001447,
+    "Generate Exposures": 0.019045571,
+    "total": 0.130886363
+  },
+  {
+    "Apply Exposures": 0.104325483,
+    "total": 0.12285257,
+    "Apply Interventions": 0.00001377,
+    "Generate Exposures": 0.018454857
+  },
+  {
+    "Generate Exposures": 0.018336508,
+    "total": 0.122950332,
+    "Apply Interventions": 0.00001367,
+    "Apply Exposures": 0.104597424
+  },
+  {
+    "Apply Interventions": 0.00001418,
+    "total": 0.115458432,
+    "Generate Exposures": 0.018432478,
+    "Apply Exposures": 0.097008474
+  },
+  {
+    "Apply Interventions": 0.00001384,
+    "total": 0.110478935,
+    "Apply Exposures": 0.092928703,
+    "Generate Exposures": 0.017534152
+  },
+  {
+    "Generate Exposures": 0.017727074,
+    "Apply Interventions": 0.00001408,
+    "Apply Exposures": 0.09044817,
+    "total": 0.108192604
+  },
+  {
+    "Generate Exposures": 0.045395401,
+    "total": 0.130292451,
+    "Apply Interventions": 0.000211111,
+    "Apply Exposures": 0.084683029
+  },
+  {
+    "Apply Interventions": 0.00001285,
+    "total": 0.097632778,
+    "Generate Exposures": 0.047498072,
+    "Apply Exposures": 0.050119566
+  },
+  {
+    "Apply Interventions": 0.00001342,
+    "total": 0.07546091,
+    "Generate Exposures": 0.026513681,
+    "Apply Exposures": 0.048930959
+  },
+  {
+    "total": 0.075040438,
+    "Apply Exposures": 0.048865309,
+    "Apply Interventions": 0.00001313,
+    "Generate Exposures": 0.026159589
+  },
+  {
+    "Apply Interventions": 0.00001333,
+    "Generate Exposures": 0.026732922,
+    "Apply Exposures": 0.049196551,
+    "total": 0.075945513
+  },
+  {
+    "total": 0.074832217,
+    "Generate Exposures": 0.026240319,
+    "Apply Interventions": 0.000013,
+    "Apply Exposures": 0.048509598
+  },
+  {
+    "Generate Exposures": 0.02631082,
+    "Apply Interventions": 0.0000144,
+    "Apply Exposures": 0.048412277,
+    "total": 0.074740597
+  },
+  {
+    "total": 0.075109879,
+    "Apply Exposures": 0.048781299,
+    "Generate Exposures": 0.02631341,
+    "Apply Interventions": 0.00001249
+  },
+  {
+    "Apply Exposures": 0.048659709,
+    "Apply Interventions": 0.00001451,
+    "Generate Exposures": 0.026230519,
+    "total": 0.074907588
+  },
+  {
+    "Apply Exposures": 0.048621108,
+    "Apply Interventions": 0.00001348,
+    "Generate Exposures": 0.0263175,
+    "total": 0.074955008
+  },
+  {
+    "total": 0.076186244,
+    "Generate Exposures": 0.026185108,
+    "Apply Exposures": 0.049984815,
+    "Apply Interventions": 0.00001391
+  },
+  {
+    "Apply Exposures": 0.048216656,
+    "Generate Exposures": 0.027150024,
+    "Apply Interventions": 0.00001432,
+    "total": 0.07538423
+  },
+  {
+    "total": 0.074215283,
+    "Apply Interventions": 0.00001418,
+    "Apply Exposures": 0.048125735,
+    "Generate Exposures": 0.026072818
+  },
+  {
+    "total": 0.074435255,
+    "Apply Interventions": 0.00001539,
+    "Apply Exposures": 0.048414417,
+    "Generate Exposures": 0.026003358
+  },
+  {
+    "total": 0.076600637,
+    "Apply Exposures": 0.050246847,
+    "Apply Interventions": 0.00001392,
+    "Generate Exposures": 0.02633743
+  },
+  {
+    "Apply Exposures": 0.048790409,
+    "Generate Exposures": 0.025963868,
+    "total": 0.074838878,
+    "Apply Interventions": 0.00001356
+  },
+  {
+    "Generate Exposures": 0.044120684,
+    "Apply Interventions": 0.000238261,
+    "total": 0.095332816,
+    "Apply Exposures": 0.050971341
+  },
+  {
+    "Apply Exposures": 0.082042556,
+    "Apply Interventions": 0.00001314,
+    "Generate Exposures": 0.039333799,
+    "total": 0.121393505
+  },
+  {
+    "Generate Exposures": 0.016633488,
+    "Apply Exposures": 0.081621764,
+    "total": 0.098270902,
+    "Apply Interventions": 0.0000131
+  },
+  {
+    "Generate Exposures": 0.016142976,
+    "total": 0.09401467,
+    "Apply Exposures": 0.077856434,
+    "Apply Interventions": 0.00001264
+  },
+  {
+    "Apply Exposures": 0.069282698,
+    "Generate Exposures": 0.015720974,
+    "total": 0.085052782,
+    "Apply Interventions": 0.00004627
+  },
+  {
+    "Apply Exposures": 0.062474402,
+    "total": 0.077799763,
+    "Generate Exposures": 0.015310301,
+    "Apply Interventions": 0.00001299
+  },
+  {
+    "Generate Exposures": 0.014498757,
+    "Apply Interventions": 0.0000128,
+    "Apply Exposures": 0.058594951,
+    "total": 0.073108629
+  },
+  {
+    "Generate Exposures": 0.014275336,
+    "Apply Exposures": 0.054836861,
+    "Apply Interventions": 0.0000136,
+    "total": 0.069128877
+  },
+  {
+    "Apply Interventions": 0.000210892,
+    "Apply Exposures": 0.054096277,
+    "total": 0.090848793,
+    "Generate Exposures": 0.036539604
+  },
+  {
+    "Generate Exposures": 0.042188024,
+    "total": 0.079783004,
+    "Apply Exposures": 0.037491059,
+    "Apply Interventions": 0.00001452
+  },
+  {
+    "total": 0.055344704,
+    "Generate Exposures": 0.019106372,
+    "Apply Exposures": 0.036221952,
+    "Apply Interventions": 0.00001404
+  },
+  {
+    "total": 0.051917096,
+    "Generate Exposures": 0.018197516,
+    "Apply Interventions": 0.00001407,
+    "Apply Exposures": 0.03370278
+  },
+  {
+    "Generate Exposures": 0.017545493,
+    "Apply Interventions": 0.00001381,
+    "Apply Exposures": 0.031285357,
+    "total": 0.04884753
+  },
+  {
+    "total": 0.045760623,
+    "Apply Exposures": 0.029302656,
+    "Generate Exposures": 0.016441907,
+    "Apply Interventions": 0.00001374
+  },
+  {
+    "total": 0.044438257,
+    "Apply Exposures": 0.028530282,
+    "Generate Exposures": 0.015890175,
+    "Apply Interventions": 0.00001515
+  },
+  {
+    "Apply Exposures": 0.026029008,
+    "Generate Exposures": 0.015600123,
+    "total": 0.041646461,
+    "Apply Interventions": 0.0000142
+  },
+  {
+    "Apply Interventions": 0.00001412,
+    "Generate Exposures": 0.01490858,
+    "total": 0.039138789,
+    "Apply Exposures": 0.024213568
+  },
+  {
+    "Apply Interventions": 0.00001644,
+    "Apply Exposures": 0.022714271,
+    "total": 0.037352788,
+    "Generate Exposures": 0.014619627
+  },
+  {
+    "Apply Interventions": 0.000016661,
+    "Apply Exposures": 0.021107432,
+    "Generate Exposures": 0.012691607,
+    "total": 0.03381833
+  },
+  {
+    "Apply Interventions": 0.00001567,
+    "total": 0.032392022,
+    "Generate Exposures": 0.012393506,
+    "Apply Exposures": 0.019913786
+  },
+  {
+    "Generate Exposures": 0.012286996,
+    "Apply Exposures": 0.019110381,
+    "Apply Interventions": 0.00002962,
+    "total": 0.031429557
+  },
+  {
+    "total": 0.030558913,
+    "Apply Exposures": 0.018099027,
+    "Apply Interventions": 0.0000169,
+    "Generate Exposures": 0.012441056
+  },
+  {
+    "Apply Interventions": 0.00001848,
+    "total": 0.029199945,
+    "Generate Exposures": 0.012135554,
+    "Apply Exposures": 0.017043921
+  },
+  {
+    "total": 0.027732028,
+    "Apply Exposures": 0.015862074,
+    "Apply Interventions": 0.00003837,
+    "Generate Exposures": 0.011828464
+  },
+  {
+    "total": 0.053000433,
+    "Apply Interventions": 0.000212811,
+    "Generate Exposures": 0.034107082,
+    "Apply Exposures": 0.01867769
+  },
+  {
+    "Apply Interventions": 0.00001409,
+    "Apply Exposures": 0.027068654,
+    "total": 0.060459862,
+    "Generate Exposures": 0.033374368
+  },
+  {
+    "Apply Interventions": 0.00001299,
+    "total": 0.034374243,
+    "Apply Exposures": 0.025631627,
+    "Generate Exposures": 0.008727756
+  },
+  {
+    "total": 0.031275006,
+    "Apply Exposures": 0.02265932,
+    "Generate Exposures": 0.008600436,
+    "Apply Interventions": 0.00001319
+  },
+  {
+    "total": 0.027677767,
+    "Generate Exposures": 0.008122943,
+    "Apply Exposures": 0.019539364,
+    "Apply Interventions": 0.00001278
+  },
+  {
+    "Apply Interventions": 0.00001266,
+    "Generate Exposures": 0.007688901,
+    "Apply Exposures": 0.016040076,
+    "total": 0.023778027
+  },
+  {
+    "Generate Exposures": 0.007306079,
+    "Apply Exposures": 0.013369001,
+    "Apply Interventions": 0.00001291,
+    "total": 0.02069014
+  },
+  {
+    "Generate Exposures": 0.007175999,
+    "Apply Exposures": 0.01132642,
+    "Apply Interventions": 0.00001322,
+    "total": 0.018517959
+  },
+  {
+    "Generate Exposures": 0.030735894,
+    "Apply Interventions": 0.000215731,
+    "total": 0.045229251,
+    "Apply Exposures": 0.014275196
+  },
+  {
+    "Apply Interventions": 0.00004243,
+    "total": 0.039256899,
+    "Apply Exposures": 0.003942741,
+    "Generate Exposures": 0.035270058
+  },
+  {
+    "total": 0.009562671,
+    "Generate Exposures": 0.006805506,
+    "Apply Exposures": 0.002726545,
+    "Apply Interventions": 0.00002942
+  },
+  {
+    "Apply Exposures": 0.001682429,
+    "total": 0.008270524,
+    "Generate Exposures": 0.006565365,
+    "Apply Interventions": 0.0000216
+  },
+  {
+    "Generate Exposures": 0.006395994,
+    "Apply Interventions": 0.00003125,
+    "total": 0.00744194,
+    "Apply Exposures": 0.001013036
+  },
+  {
+    "Generate Exposures": 0.006136873,
+    "total": 0.006679006,
+    "Apply Exposures": 0.000511192,
+    "Apply Interventions": 0.000029501
+  },
+  {
+    "Apply Exposures": 0.000136221,
+    "total": 0.006303594,
+    "Apply Interventions": 0.00001645,
+    "Generate Exposures": 0.006149423
+  },
+  {
+    "Generate Exposures": 0.006069582,
+    "total": 0.006133752,
+    "Apply Interventions": 7.22e-6,
+    "Apply Exposures": 8.4e-7
+  }
+]

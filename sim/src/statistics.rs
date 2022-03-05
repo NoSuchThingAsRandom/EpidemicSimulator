@@ -19,18 +19,21 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, format, Formatter};
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::ops::AddAssign;
 use std::time::Instant;
 
-use log::{error, info};
+use anyhow::Context;
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer;
 
 use num_format::Locale::{el, lo};
+use num_format::Locale::{el, lo};
+use num_format::ToFormattedString;
 use num_format::ToFormattedString;
 
 use crate::config::{get_memory_usage, NUMBER_FORMATTING};
@@ -102,37 +105,51 @@ pub struct StatisticsRecorder {
     memory_usage_entries: Vec<String>,
     current_time_step: u32,
     pub global_stats: Vec<StatisticEntry>,
-    /// The infections counts per time step, per area
-    all_stats_per_building: HashMap<ID, Vec<StatisticEntry>>,
+    /// The amount of exposures that occured in this building
+    exposures_per_building_per_time_step: HashMap<ID, Vec<u32>>,
     /// The time steps currently being altered
-    pub current_entry: HashMap<ID, StatisticEntry>,
+    pub current_entry: HashMap<ID, u32>,
 }
 
 
 impl StatisticsRecorder {
-    pub fn dump_to_file(&mut self, filename: &str) {
+    pub fn dump_to_file(&mut self, directory: &str) {
         // Flush the recordings
         self.next();
-        let file = File::create(filename).expect("Failed to create results file!");
+        fs::create_dir_all(directory.clone()).expect(&format!("Failed to create statistics directory: '{}'", directory));
+        let file = File::create(directory.to_owned() + "exposures.json").expect("Failed to create results file!");
         let file_writer = BufWriter::new(file);
-        let mut data: HashMap<&str, HashMap<String, Vec<StatisticEntry>>> = HashMap::new();
-        for (place, records) in self.all_stats_per_building.drain() {
-            let mut entry = data.entry("All").or_default();
+        let mut exposure_counts: HashMap<&str, HashMap<String, Vec<u32>>> = HashMap::new();
+        for (place, records) in self.exposures_per_building_per_time_step.drain() {
+            let mut entry = exposure_counts.entry("All").or_default();
             entry.insert("All".to_string(), records.clone());
             match place {
                 ID::Building(id) => {}
                 ID::OutputArea(code) => {
-                    let mut entry = data.entry("OutputArea").or_default();
+                    let mut entry = exposure_counts.entry("OutputArea").or_default();
                     entry.insert(code.code().to_string(), records);
                 }
                 ID::PublicTransport(id) => {
-                    let mut entry = data.entry("PublicTransport").or_default();
+                    let mut entry = exposure_counts.entry("PublicTransport").or_default();
                     let code = String::new() + id.source.code() + "-" + id.destination.code();
                     //entry.insert(code, records);
                 }
             }
         }
-        to_writer(file_writer, &data).expect("Failed to write to file!");
+        to_writer(file_writer, &exposure_counts).expect("Failed to write to file!");
+
+        let file = File::create(directory.to_owned() + "timings.json").expect("Failed to create timings results file!");
+        let file_writer = BufWriter::new(file);
+        to_writer(file_writer, &self.timer_entries).expect("Failed to write to file!");
+
+        let file = File::create(directory.to_owned() + "memory.json").expect("Failed to create memory results file!");
+        let file_writer = BufWriter::new(file);
+        to_writer(file_writer, &self.memory_usage_entries).expect("Failed to write to file!");
+
+        let file = File::create(directory.to_owned() + "global_stats.json").expect("Failed to create global stats results file!");
+        let file_writer = BufWriter::new(file);
+        to_writer(file_writer, &self.global_stats).expect("Failed to write to file!");
+        info!("Dumped data to file: {}",directory);
     }
     pub fn current_time_step(&self) -> u32 {
         self.current_time_step
@@ -145,7 +162,7 @@ impl StatisticsRecorder {
             self.timer_entries.push(self.timer.finished());
             self.memory_usage_entries.push(get_memory_usage()?);
             for (area, entry) in self.current_entry.drain() {
-                let mut recording_entry = self.all_stats_per_building.entry(area).or_default();//tatisticEntry::with_time_step(self.current_time_step));
+                let mut recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();//tatisticEntry::with_time_step(self.current_time_step));
                 recording_entry.push(entry);
             }
         }
@@ -171,11 +188,12 @@ impl StatisticsRecorder {
         let current_entry = &mut self.current_entry;
         if let ID::Building(building) = &location {
             let area_id = ID::OutputArea(building.output_area_code());
-            let stat_entry = current_entry.entry(area_id).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-            stat_entry.citizen_exposed()?;
+            let mut stat_entry = current_entry.entry(area_id).or_default();
+            *stat_entry += 1;
+            ;
         }
-        let stat_entry = current_entry.entry(location).or_insert_with(|| StatisticEntry::with_time_step(time_step));
-        stat_entry.citizen_exposed()?;
+        let mut stat_entry = current_entry.entry(location).or_default();
+        *stat_entry += 1;
         Ok(())
     }
     pub fn disease_exists(&self) -> bool {
@@ -262,8 +280,8 @@ impl StatisticEntry {
             self.exposed += 1;
             Ok(())
         } else {
-            error!("Cannot log citizen being exposed, as no susceptible citizens left");
-            Err(crate::error::Error::new_simulation_error(String::from(
+            warn!("Cannot log citizen being exposed, as no susceptible citizens left");
+            Err(crate::error::SimError::new_simulation_error(String::from(
                 "Cannot expose citizen as no citizens are susceptible!",
             )))
         }
