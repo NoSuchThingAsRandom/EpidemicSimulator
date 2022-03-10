@@ -28,7 +28,7 @@ use std::rc::Rc;
 use anyhow::Context;
 use enum_map::EnumMap;
 use geo_types::{Coordinate, Point};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use num_format::ToFormattedString;
 use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
@@ -160,6 +160,10 @@ impl SimulatorBuilder {
             println!("Removing: {}", deletion - index);
             self.output_areas.remove(deletion - index);
         }
+        let lookup = self.output_areas.par_iter().enumerate().map(|(index, area)| {
+            (area.id().code().to_string(), index as u32)
+        }).collect();
+        self.output_area_lookup = lookup;
         debug!(
             "{} Buildings have been assigned. {} Output Areas remaining (with buildings)",
             count,
@@ -235,7 +239,8 @@ impl SimulatorBuilder {
                 }
                 assert_eq!(global_citizen_index as usize, citizen_output_area_lookup.len());
                 Ok(())
-            }() { error!("{:?}",e); }
+            }() { //trace!("{:?}",e);
+            }
         });
         info!(
             "Households and Citizen generation succeeded for {} Output Areas.",
@@ -434,7 +439,7 @@ impl SimulatorBuilder {
                             if let Some(school) = schools.first() {
                                 Some((*school, student))
                             } else {
-                                warn!("No schools available");
+                                //warn!("No schools available");
                                 None
                             }
                         }
@@ -483,57 +488,62 @@ impl SimulatorBuilder {
         // The amount of teachers that fail to be assigned
         let mut failed_teacher_count = 0;
         // Take a two pronged approach to assigning teachers
-        for teacher in teachers.into_iter() {
-            let mut placed = false;
+        teachers.into_par_iter().filter_map(|teacher| {
             match finding_closest_school(teacher, true) {
                 Ok(schools) => {
-                    // Attempt to assign Teacher as a Teacher to the closest Available School
-                    // Available, being that it exists, and does not have enough teachers for the number of students
-
-                    // The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
-                    let mut teacher = Some(teacher);
-                    for school in &schools {
-                        let school_entry = citizens_per_raw_school.get_mut(&school.center());
-                        if let Some((students, teachers, _)) = school_entry {
-                            let total_students = students
-                                .iter()
-                                .map(|age_group| {
-                                    ((age_group.len() as f64 / AVERAGE_CLASS_SIZE).ceil() as usize)
-                                        .max(1)
-                                })
-                                .sum::<usize>();
-                            if teachers.len() < total_students {
-                                placed = true;
-                                if let Some(teacher) = teacher {
-                                    teachers.push(teacher);
-                                }
-                                teacher = None;
-                                break;
-                            }
-                        }
-                    }
-                    // If all Schools are full, fallback to adding to the closest school as Secondary Staff
-                    if !placed {
-                        for school in &schools {
-                            let school_entry = citizens_per_raw_school.get_mut(&school.center());
-                            if let Some((_students, teachers, _)) = school_entry {
-                                if let Some(teacher) = teacher {
-                                    teachers.push(teacher);
-                                    placed = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    Some((teacher, schools))
                 }
                 Err(e) => {
                     warn!("Failed to assign school to teacher: {}", e);
+                    None
+                }
+            }
+        }).collect::<Vec<(&mut Citizen, Vec<&RawBuilding>)>>().into_iter().for_each(|(teacher, schools)| {
+            // Attempt to assign Teacher as a Teacher to the closest Available School
+            // Available, being that it exists, and does not have enough teachers for the number of students
+            let mut placed = false;
+
+            // The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
+            let mut teacher = Some(teacher);
+            for school in &schools {
+                let school_entry = citizens_per_raw_school.get_mut(&school.center());
+                if let Some((students, teachers, _)) = school_entry {
+                    let total_students = students
+                        .iter()
+                        .map(|age_group| {
+                            ((age_group.len() as f64 / AVERAGE_CLASS_SIZE).ceil() as usize)
+                                .max(1)
+                        })
+                        .sum::<usize>();
+                    if teachers.len() < total_students {
+                        placed = true;
+                        if let Some(teacher) = teacher {
+                            teachers.push(teacher);
+                        }
+                        teacher = None;
+                        break;
+                    }
+                }
+            }
+            // If all Schools are full, fallback to adding to the closest school as Secondary Staff
+            if !placed {
+                for school in &schools {
+                    let school_entry = citizens_per_raw_school.get_mut(&school.center());
+                    if let Some((_students, teachers, _)) = school_entry {
+                        if let Some(teacher) = teacher {
+                            teachers.push(teacher);
+                            placed = true;
+                            break;
+                        }
+                    }
                 }
             }
             if !placed {
                 failed_teacher_count += 1;
             }
-        }
+        });
+
+
         if crate::config::CREATE_DEBUG_DUMPS {
             let debug_directory = crate::config::DEBUG_DUMP_DIRECTORY.to_owned() + "schools/";
             fs::create_dir_all(debug_directory.clone())
