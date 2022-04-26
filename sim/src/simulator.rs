@@ -48,6 +48,7 @@ use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
 use crate::statistics::{StatisticsArea, StatisticsRecorder};
 
 pub struct Simulator {
+    pub area_code: String,
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
@@ -331,7 +332,7 @@ impl Simulator {
                 break;
             }
         }
-        self.statistics_recorder.dump_to_file("recordings/v1.0.1-test.json");
+        self.statistics_recorder.dump_to_file(&("statistics_results/v1.3/".to_string() + &self.area_code + "/"));
         Ok(())
     }
     /// Applies a single time step to the simulation
