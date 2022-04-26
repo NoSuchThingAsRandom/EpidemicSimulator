@@ -56,6 +56,7 @@ struct GeneratedExposures {
 
 //#[derive(Clone)]
 pub struct Simulator {
+    pub area_code: String,
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
@@ -86,7 +87,7 @@ impl Simulator {
                 start_time = Instant::now();
             }
         }
-        self.statistics_recorder.dump_to_file("statistics_results/v1.3/");
+        self.statistics_recorder.dump_to_file(&("statistics_results/v1.3/".to_string() + &self.area_code + "/"));
         Ok(())
     }
     /// Applies a single time step to the simulation
@@ -364,6 +365,7 @@ impl Simulator {
 impl From<SimulatorBuilder> for Simulator {
     fn from(builder: SimulatorBuilder) -> Self {
         Simulator {
+            area_code: builder.area_code,
             current_population: builder.citizens.len() as u32,
             output_areas: builder.output_areas,
             citizens: builder.citizens,
