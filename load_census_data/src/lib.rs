@@ -342,7 +342,6 @@ impl CensusData {
                 .await?);
         }
         let (population_counts, age_counts, occupation_counts, residents_workplace) = (population_counts.expect("Population Counts Table has not been loaded"), age_counts.expect("Age Counts Table has not been loaded"), occupation_counts.expect("Occupation Counts Table has not been loaded"), residents_workplace.expect("Residents Workplace Table has not been loaded"));
-        panic!("Loaded data");
         debug!(
             "Built {} residential workplace areas with {} records",
             residents_workplace.len(),
