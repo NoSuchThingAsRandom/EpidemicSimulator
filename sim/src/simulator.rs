@@ -86,6 +86,7 @@ impl AddAssign for GeneratedExposures {
 
 //#[derive(Clone)]
 pub struct Simulator {
+    pub area_code: String,
     /// This maps the String code of an Output Area to it's index
     pub output_area_lookup: HashMap<String, u32>,
     /// The total size of the population
@@ -121,7 +122,7 @@ impl Simulator {
                 start_time = Instant::now();
             }
         }
-        self.statistics_recorder.dump_to_file("statistics_results/v1.6_copy/");
+        self.statistics_recorder.dump_to_file(&("statistics_results/v1.6/".to_string() + &self.area_code + "/"));
         Ok(())
     }
     /// Applies a single time step to the simulation
@@ -615,6 +616,7 @@ impl From<SimulatorBuilder> for Simulator {
         );
 
         let sim = Simulator {
+            area_code: builder.area_code,
             output_area_lookup: builder.output_area_lookup,
             current_population,
             output_areas,
