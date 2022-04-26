@@ -56,6 +56,7 @@ use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::statistics::Timer;
 
 pub struct SimulatorBuilder {
+    pub area_code: String,
     census_data: CensusData,
     osm_data: OSMRawBuildings,
     pub output_areas: Vec<OutputArea>,
@@ -1141,11 +1142,13 @@ impl SimulatorBuilder {
     }
 
     pub fn new(
+        area: String,
         census_data: CensusData,
         osm_data: OSMRawBuildings,
         output_areas_polygons: PolygonContainer<String>,
     ) -> anyhow::Result<SimulatorBuilder> {
         Ok(SimulatorBuilder {
+            area_code: area,
             census_data,
             osm_data,
             output_areas: Default::default(),
