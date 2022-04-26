@@ -3,10 +3,10 @@
 #SBATCH --mail-type=NONE                        # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=sr1474@york.ac.uk           # Where to send mail
 #SBATCH --ntasks=1                              # Run a single task...
-#SBATCH --cpus-per-task=24                      # ...with four cores
-#SBATCH --mem=40gb                              # Job memory request
-#SBATCH --time=00:30:00                         # Time limit hrs:min:sec
-#SBATCH --output=threaded_job_%j.log            # Standard output and error log
+#SBATCH --cpus-per-task=40                      # ...with four cores
+#SBATCH --mem=64gb                              # Job memory request
+#SBATCH --time=4:00:00                         # Time limit hrs:min:sec
+#SBATCH --output=epidemic_sim_v1.7_england_%j.log            # Standard output and error log
 #SBATCH --account=cs-teach-2021                # Project account
 
 echo My working directory is `pwd`
@@ -17,8 +17,11 @@ echo
 
 module load lang/Rust/1.54.0-GCCcore-11.2.0
 
-RUST_LOG="warn,visualisation,osm_data=trace,sim=trace,run=debug,load_census_data=trace,voronoice=off"
-RUST_BACKTRACE=1
-cargo run --release -- 1946157112TYPE299 --directory=data --grid-size=250000 --simulate --use-cache
+export RUST_LOG="warn,visualisation,osm_data=trace,sim=trace,run=debug,load_census_data=trace,voronoice=off"
+export RUST_BACKTRACE=1
+#2013265923TYPE299
+#1946157112TYPE299
+echo "Log level: $RUST_LOG"
+cargo run --release -- 2013265923TYPE299 --directory=data --grid-size=250000 --simulate
 
 echo Job completed at `date`
