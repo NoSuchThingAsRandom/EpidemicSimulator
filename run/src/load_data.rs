@@ -137,7 +137,7 @@ pub async fn load_data_and_init_sim_with_debug_images(
 ) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
     let (census_data, osm_buildings, output_area_polygons) = load_data(
-        area,
+        area.to_string(),
         census_directory,
         grid_size,
         use_cache,
@@ -153,7 +153,7 @@ pub async fn load_data_and_init_sim_with_debug_images(
         .map(|(_, b)| b)
         .flatten()
         .collect();
-    let mut sim = SimulatorBuilder::new(census_data, osm_buildings, output_area_polygons)
+    let mut sim = SimulatorBuilder::new(area, census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();
     let mut rng = thread_rng();
