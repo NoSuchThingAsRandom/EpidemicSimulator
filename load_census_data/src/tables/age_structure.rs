@@ -63,7 +63,7 @@ impl AgePopulationRecord {
 
 impl TableEntry<PreProcessingAgePopulationRecord> for AgePopulationRecord {}
 
-impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulationRecord {
+impl<'a> TryFrom<&'a Vec<PreProcessingAgePopulationRecord>> for AgePopulationRecord {
     type Error = DataLoadingError;
     /// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
     ///
@@ -72,7 +72,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingAgePopulationRecord>>> for AgePopulati
     /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
     ///
     fn try_from(
-        records: &'a Vec<Box<PreProcessingAgePopulationRecord>>,
+        records: &'a Vec<PreProcessingAgePopulationRecord>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {

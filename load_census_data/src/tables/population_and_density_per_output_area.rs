@@ -77,7 +77,7 @@ pub struct PopulationRecord {
 
 impl TableEntry<PreProcessingPopulationDensityRecord> for PopulationRecord {}
 
-impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for PopulationRecord {
+impl<'a> TryFrom<&'a Vec<PreProcessingPopulationDensityRecord>> for PopulationRecord {
     type Error = DataLoadingError;
     /// Takes in a list of unsorted CSV record entries, and builds a hashmap of output areas with the given table data
     ///
@@ -86,7 +86,7 @@ impl<'a> TryFrom<&'a Vec<Box<PreProcessingPopulationDensityRecord>>> for Populat
     /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
     ///
     fn try_from(
-        records: &'a Vec<Box<PreProcessingPopulationDensityRecord>>,
+        records: &'a Vec<PreProcessingPopulationDensityRecord>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {

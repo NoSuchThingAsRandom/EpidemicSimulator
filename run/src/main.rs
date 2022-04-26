@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use clap::{App, Arg};
-use log::{error, info};
+use log::{debug, error, info, trace};
 use rayon;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
@@ -170,7 +170,6 @@ async fn main() -> anyhow::Result<()> {
         "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
         area, use_cache, !allow_downloads
     );
-
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
         CensusData::load_all_tables_async(census_directory, area.to_string(), allow_downloads)

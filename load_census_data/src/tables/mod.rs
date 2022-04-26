@@ -40,18 +40,15 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
     fn get_geography_code(&self) -> String;
 
     fn group_by_area<T: 'static + PreProcessingTable>(
-        data: Vec<impl PreProcessingTable + 'static>,
-    ) -> Result<HashMap<String, Vec<Box<T>>>, DataLoadingError> {
+        data: Vec<T>,
+    ) -> Result<HashMap<String, Vec<T>>, DataLoadingError> {
         let mut buffer = HashMap::new();
         // Group the pre processing records, by output area
         for entry in data {
             let container = buffer
                 .entry(entry.get_geography_code())
                 .or_insert_with(Vec::new);
-            let entry = Box::new(entry) as Box<dyn Any>;
-            if let Ok(entry) = entry.downcast::<T>() {
-                container.push(entry);
-            }
+            container.push(entry);
         }
         Ok(buffer)
     }
@@ -62,13 +59,13 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
 ///
 /// Should contain a hashmap of OutputArea Codes to TableEntries
 pub trait TableEntry<T: 'static + PreProcessingTable>:
-Debug + Sized + for<'a> TryFrom<&'a Vec<Box<T>>, Error=DataLoadingError>
+Debug + Sized + for<'a> TryFrom<&'a Vec<T>, Error=DataLoadingError>
 {
     /// Returns the entire processed CSV per output area
     fn generate(
-        data: Vec<impl PreProcessingTable + 'static>,
+        data: Vec<T>,
     ) -> Result<HashMap<String, Self>, DataLoadingError> {
-        let mut grouped: HashMap<String, Vec<Box<T>>> = T::group_by_area(data)?;
+        let mut grouped: HashMap<String, Vec<T>> = T::group_by_area(data).unwrap();
         // Convert into Population Records
         let mut output = HashMap::new();
         for (code, records) in grouped.drain() {
@@ -101,6 +98,21 @@ impl CensusTableNames {
                 "wf01bew_residential_vs_workplace_NM_1228_1.csv"
             }
             CensusTableNames::AgeStructure => "qs103ew_age_structure_NUM_503_1.csv",
+        }
+    }
+    /// Returns the filenames for BULK tables stored on disk
+    pub fn get_bulk_filename<'a>(&self) -> &'a str {
+        match &self {
+            CensusTableNames::PopulationDensity => "ks101ew_2011oa/KS101EWDATA.CSV",
+            CensusTableNames::OccupationCount => "KS608ew_2011_oa/KS608EWDATA.CSV",
+            // TODO Fix this
+            CensusTableNames::OutputAreaMap => {
+                "data/census_map_areas_converted/TestOutputAreas.shp"
+            }
+            CensusTableNames::ResidentialAreaVsWorkplaceArea => {
+                "wf01bew_oa.csv"
+            }
+            CensusTableNames::AgeStructure => "qs103ew_2011_oa/QS103EWDATA.CSV",
         }
     }
     /// Returns the api code for table

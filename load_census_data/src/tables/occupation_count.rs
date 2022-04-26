@@ -125,11 +125,11 @@ impl OccupationCountRecord {
 
 impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {}
 
-impl<'a> TryFrom<&'a Vec<Box<PreProcessingOccupationCountRecord>>> for OccupationCountRecord {
+impl<'a> TryFrom<&'a Vec<PreProcessingOccupationCountRecord>> for OccupationCountRecord {
     type Error = DataLoadingError;
 
     fn try_from(
-        records: &'a Vec<Box<PreProcessingOccupationCountRecord>>,
+        records: &'a Vec<PreProcessingOccupationCountRecord>,
     ) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {

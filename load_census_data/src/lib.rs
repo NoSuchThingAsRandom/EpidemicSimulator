@@ -23,10 +23,11 @@
 extern crate enum_map;
 
 use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::path::Path;
 use std::string::String;
 
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
@@ -38,9 +39,7 @@ use crate::tables::occupation_count::{OccupationCountRecord, PreProcessingOccupa
 use crate::tables::population_and_density_per_output_area::{
     PopulationRecord, PreProcessingPopulationDensityRecord,
 };
-use crate::tables::resides_vs_workplace::{
-    PreProcessingWorkplaceResidentialRecord, WorkplaceResidentialRecord,
-};
+use crate::tables::resides_vs_workplace::{PreProcessingBulkWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialTrait, WorkplaceResidentialRecord};
 
 mod nomis_download;
 pub mod parse_table;
@@ -162,43 +161,58 @@ impl CensusData {
                     .await?;
             }
         }
-        CensusData::read_generic_table_from_disk::<T, U>(&filename)
+        CensusData::read_generic_table_from_disk::<T, U>(&filename, false)
     }
     pub fn read_table_and_generate_filename<U: 'static + PreProcessingTable, T: TableEntry<U>>(
         census_directory: &str,
         region_code: &str,
         table_name: CensusTableNames,
+        is_bulk: bool,
     ) -> Result<HashMap<String, T>, DataLoadingError> {
-        let filename = String::new()
-            + census_directory
-            + "tables/"
-            + region_code
-            + "/"
-            + table_name.get_filename();
-        CensusData::read_generic_table_from_disk::<T, U>(&filename)
+        let filename =
+            if is_bulk {
+                String::new()
+                    + census_directory
+                    + "tables/"
+                    + region_code
+                    + "/"
+                    + table_name.get_bulk_filename()
+            } else {
+                String::new()
+                    + census_directory
+                    + "tables/"
+                    + region_code
+                    + "/"
+                    + table_name.get_filename()
+            };
+        CensusData::read_generic_table_from_disk::<T, U>(&filename, is_bulk)
     }
 
     /// This loads a census data table from disk
     pub fn read_generic_table_from_disk<T: TableEntry<U>, U: 'static + PreProcessingTable>(
         table_name: &str,
+        is_bulk: bool,
     ) -> Result<HashMap<String, T>, DataLoadingError> {
-        debug!("Reading census table: '{}' from disk", table_name);
+        info!("Reading census table: '{}' from disk", table_name);
         let mut reader =
             csv::Reader::from_path(table_name).map_err(|e| DataLoadingError::IOError {
                 source: Box::new(e),
                 context: format!("Failed to create csv reader for file: {}", table_name),
             })?;
-
-        let data = reader
-            .deserialize()
-            .collect::<Result<Vec<U>, csv::Error>>()
-            .map_err(|e| DataLoadingError::IOError {
-                source: Box::new(e),
-                context: format!("Failed to parse csv file: {}", table_name),
-            })?;
-        debug!("Loaded table into pre processing");
-        let data = T::generate(data)?;
-        Ok(data)
+        if is_bulk {
+            Ok(HashMap::new())
+        } else {
+            let data = reader
+                .deserialize()
+                .collect::<Result<Vec<U>, csv::Error>>()
+                .map_err(|e| DataLoadingError::IOError {
+                    source: Box::new(e),
+                    context: format!("Failed to parse csv file: {}", table_name),
+                })?;
+            debug!("Loaded table into pre processing");
+            let data = T::generate(data)?;
+            Ok(data)
+        }
     }
     /// Attempts to load all the Census Tables stored on disk into memory
     ///
@@ -208,61 +222,128 @@ impl CensusData {
         region_code: String,
         should_download: bool,
     ) -> Result<CensusData, DataLoadingError> {
-        let data_fetcher = if should_download {
-            Some(DataFetcher::default())
+        let mut population_counts = None;
+        let mut age_counts = None;
+        let mut occupation_counts = None;
+        let mut residents_workplace = None;
+        trace!("Loading all tables");
+        // TODO await doesn't work fetch all tables at once - But can't rayon scope with async downloads
+
+
+        // If we are using Bulk data, the file format is different, and we can't automate download - but we can thread
+        // Otherwise, we can download - but limited to single thread, which is fine as smaller data
+        if region_code == "England" {
+            info!("Using bulk tables");
+            rayon::scope(|s| {
+                s.spawn(|_| {
+                    // Build population table
+                    population_counts = Some(CensusData::read_table_and_generate_filename::<
+                        PreProcessingPopulationDensityRecord,
+                        PopulationRecord,
+                    >(
+                        &census_directory,
+                        &region_code,
+                        CensusTableNames::PopulationDensity,
+                        true,
+                    ).unwrap());
+                });
+                s.spawn(|_| {
+                    // Build population table
+                    age_counts = Some(CensusData::read_table_and_generate_filename::<
+                        PreProcessingAgePopulationRecord,
+                        AgePopulationRecord,
+                    >(
+                        &census_directory,
+                        &region_code,
+                        CensusTableNames::AgeStructure,
+                        true,
+                    )
+                        .unwrap());
+                });
+                s.spawn(|_| {
+                    // Build occupation table
+                    occupation_counts = Some(CensusData::read_table_and_generate_filename::<
+                        PreProcessingOccupationCountRecord,
+                        OccupationCountRecord,
+                    >(
+                        &census_directory,
+                        &region_code,
+                        CensusTableNames::OccupationCount,
+                        true,
+                    )
+                        .unwrap());
+                });
+                s.spawn(|_| {
+                    // Build residents workplace table
+                    residents_workplace = Some(CensusData::read_table_and_generate_filename::<
+                        PreProcessingBulkWorkplaceResidentialRecord,
+                        WorkplaceResidentialRecord,
+                    >(
+                        &census_directory,
+                        &region_code,
+                        CensusTableNames::ResidentialAreaVsWorkplaceArea,
+                        true,
+                    )
+                        .unwrap());
+                });
+            });
         } else {
-            None
-        };
-        // TODO await doesn't work fetch all tables at once
+            let data_fetcher = if should_download {
+                Some(DataFetcher::default())
+            } else {
+                None
+            };
+            // Build population table
+            population_counts = Some(CensusData::fetch_generic_table::<
+                PreProcessingPopulationDensityRecord,
+                PopulationRecord,
+            >(
+                &census_directory,
+                &region_code,
+                CensusTableNames::PopulationDensity,
+                &data_fetcher,
+            )
+                .await?);
 
-        // Build population table
-        let population_counts = CensusData::fetch_generic_table::<
-            PreProcessingPopulationDensityRecord,
-            PopulationRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::PopulationDensity,
-            &data_fetcher,
-        )
-            .await?;
+            // Build population table
+            age_counts = Some(CensusData::fetch_generic_table::<
+                PreProcessingAgePopulationRecord,
+                AgePopulationRecord,
+            >(
+                &census_directory,
+                &region_code,
+                CensusTableNames::AgeStructure,
+                &data_fetcher,
+            )
+                .await?);
 
-        // Build population table
-        let age_counts = CensusData::fetch_generic_table::<
-            PreProcessingAgePopulationRecord,
-            AgePopulationRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::AgeStructure,
-            &data_fetcher,
-        )
-            .await?;
+            // Build occupation table
+            occupation_counts = Some(CensusData::fetch_generic_table::<
+                PreProcessingOccupationCountRecord,
+                OccupationCountRecord,
+            >(
+                &census_directory,
+                &region_code,
+                CensusTableNames::OccupationCount,
+                &data_fetcher,
+            )
+                .await?);
 
-        // Build occupation table
-        let occupation_counts = CensusData::fetch_generic_table::<
-            PreProcessingOccupationCountRecord,
-            OccupationCountRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::OccupationCount,
-            &data_fetcher,
-        )
-            .await?;
-
-        // Build residents workplace table
-        let residents_workplace = CensusData::fetch_generic_table::<
-            PreProcessingWorkplaceResidentialRecord,
-            WorkplaceResidentialRecord,
-        >(
-            &census_directory,
-            &region_code,
-            CensusTableNames::ResidentialAreaVsWorkplaceArea,
-            &data_fetcher,
-        )
-            .await?;
-        println!(
+            // Build residents workplace table
+            residents_workplace = Some(CensusData::fetch_generic_table::<
+                PreProcessingWorkplaceResidentialRecord,
+                WorkplaceResidentialRecord,
+            >(
+                &census_directory,
+                &region_code,
+                CensusTableNames::ResidentialAreaVsWorkplaceArea,
+                &data_fetcher,
+            )
+                .await?);
+        }
+        let (population_counts, age_counts, occupation_counts, residents_workplace) = (population_counts.expect("Population Counts Table has not been loaded"), age_counts.expect("Age Counts Table has not been loaded"), occupation_counts.expect("Occupation Counts Table has not been loaded"), residents_workplace.expect("Residents Workplace Table has not been loaded"));
+        panic!("Loaded data");
+        debug!(
             "Built {} residential workplace areas with {} records",
             residents_workplace.len(),
             residents_workplace

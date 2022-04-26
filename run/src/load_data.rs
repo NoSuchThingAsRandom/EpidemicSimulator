@@ -46,7 +46,7 @@ pub async fn load_data(
             allow_downloads,
         )
             .await
-            .context("F"),
+            .context("Failed to load census tables"),
     );
     rayon::scope(|s| {
         // Load census data
