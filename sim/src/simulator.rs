@@ -122,7 +122,7 @@ impl Simulator {
                 start_time = Instant::now();
             }
         }
-        self.statistics_recorder.dump_to_file(&("statistics_results/v1.6/".to_string() + &self.area_code + "/"));
+        self.statistics_recorder.dump_to_file(&("statistics_results/v1.6/viking/".to_string() + &self.area_code + "/"));
         Ok(())
     }
     /// Applies a single time step to the simulation

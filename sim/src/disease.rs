@@ -122,7 +122,7 @@ impl DiseaseModel {
             death_rate: 0.2,
             exposed_time: 4 * 24,
             infected_time: 14 * 24,
-            max_time_step: 10000,
+            max_time_step: 5000,
             vaccination_rate: 5000,
             mask_percentage: 0.8,
         }
