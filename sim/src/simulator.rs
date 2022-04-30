@@ -479,6 +479,7 @@ impl Simulator {
                         });
                 }
                 InterventionsEnabled::Vaccination => {
+                    // TODO Somehow more Citizens are vaccinated than the amount reduced from Susceptible? Suspicious....
                     info!(
                         "Starting vaccination program at hour: {}",
                         self.statistics_recorder.current_time_step()
