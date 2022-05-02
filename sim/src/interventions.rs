@@ -51,8 +51,8 @@ impl MaskStatus {
         // TODO Make this loaded from a config file
         match self {
             MaskStatus::None(_) => 0.0,
-            MaskStatus::PublicTransport(_) => 0.2,
-            MaskStatus::Everywhere(_) => 0.4,
+            MaskStatus::PublicTransport(_) => 0.001,
+            MaskStatus::Everywhere(_) => 0.0022,
         }
     }
 }
@@ -71,8 +71,8 @@ pub struct InterventionThresholds {
 impl Default for InterventionThresholds {
     fn default() -> Self {
         Self {
-            lockdown: Some(0.6),
-            vaccination_threshold: Some(0.3),
+            lockdown: Some(0.0034),
+            vaccination_threshold: Some(0.005),
         }
     }
 }
