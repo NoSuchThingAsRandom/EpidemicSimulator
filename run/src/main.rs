@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -111,6 +111,19 @@ async fn main() -> anyhow::Result<()> {
                 .requires_all(&["table", "area"])
                 .conflicts_with_all(&["simulate", "render", "download"]),
         )
+        .arg(Arg::with_name("grid-size")
+            .require_equals(true)
+            .long("grid-size")
+            .takes_value(true)
+            .help("Specifies the size of the Voronoi Lookup Grids")
+            .required(true))
+        .arg(
+            Arg::with_name("output_name")
+                .long("output_name")
+                .help("Specifies the name of the output directory to store statistics")
+                .takes_value(true)
+                .require_equals(true)
+        )
         .get_matches();
 
     let directory = matches
@@ -118,7 +131,27 @@ async fn main() -> anyhow::Result<()> {
         .expect("Missing data directory argument");
     let census_directory = directory.to_owned() + "/tables/";
     let area = matches.value_of("area").expect("Missing area argument");
-    info!("Using area: {}", area);
+    let use_cache = matches.is_present("use-cache");
+    let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
+    let allow_downloads = !matches.is_present("disallow-download");
+    let grid_size = matches
+        .value_of("grid-size")
+        .expect("Missing grid-size argument")
+        .parse()
+        .expect("grid-size is not an integer!");
+
+    let mut output_directory = "statistics_output/v1.7/".to_string();
+    if let Some(name) = matches.value_of("output_name") {
+        // TODO Remove illegal characters to prevent directory traversal
+        //output_directory = sanitize(name)+"/";
+        output_directory = name.to_string();
+    }
+    info!(
+        "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
+        area, use_cache, !allow_downloads
+    );
+
+
     if matches.is_present("download") {
         info!("Downloading tables for area {}", area);
         CensusData::load_all_tables_async(census_directory, area.to_string(), true)
@@ -153,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
-        let mut sim = Simulator::new(census_data)
+        let mut sim = Simulator::new(census_data,output_directory)
             .context("Failed to initialise sim")
             .unwrap();
         info!("Initialised simulator, starting sim...");

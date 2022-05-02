@@ -52,8 +52,11 @@ pub struct StatisticsRecorder {
 
 
 impl StatisticsRecorder {
-    pub fn dump_to_file(&mut self, filename: &str) {
-        let file = File::create(filename).expect("Failed to create results file!");
+    pub fn dump_to_file(&mut self, directory: String) {
+        // Flush the recordings
+        self.next();
+        fs::create_dir_all(directory.clone()).expect(&format!("Failed to create statistics directory: '{}'", directory));
+        let file = File::create(directory.to_owned() + "exposures.json").expect("Failed to create results file!");
         let file_writer = BufWriter::new(file);
         let mut data: HashMap<&str, HashMap<String, Vec<StatisticEntry>>> = HashMap::new();
         for (place, records) in self.all_data.drain() {

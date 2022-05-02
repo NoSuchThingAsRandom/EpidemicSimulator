@@ -319,7 +319,8 @@ impl Simulator {
 
 /// Runtime Simulation Methods
 impl Simulator {
-    pub fn simulate(&mut self) -> anyhow::Result<()> {
+    /// Start the entire simulation process, until the disease is eradicated, or we reach teh max time step
+    pub fn simulate(&mut self, output_name: String) -> anyhow::Result<()> {
         let mut start_time = Instant::now();
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
@@ -332,7 +333,8 @@ impl Simulator {
                 break;
             }
         }
-        self.statistics_recorder.dump_to_file(&("statistics_results/v1.3/".to_string() + &self.area_code + "/"));
+        // TODO Change this to a cmd argument
+        self.statistics_recorder.dump_to_file(output_name);
         Ok(())
     }
     /// Applies a single time step to the simulation
