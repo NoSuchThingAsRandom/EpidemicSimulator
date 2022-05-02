@@ -68,8 +68,7 @@ impl AddAssign for GeneratedExposures {
         if self.building_exposure_list.len() < rhs.building_exposure_list.len() {
             self.building_exposure_list.extend(vec![
                 HashMap::new();
-                rhs.building_exposure_list.len()
-                    - self.building_exposure_list.len()
+                rhs.building_exposure_list.len() - self.building_exposure_list.len()
             ]);
         }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
@@ -106,7 +105,7 @@ pub struct Simulator {
 /// Runtime Simulation Methods
 impl Simulator {
     /// Start the entire simulation process, until the disease is eradicated, or we reach teh max time step
-    pub fn simulate(&mut self) -> anyhow::Result<()> {
+    pub fn simulate(&mut self, output_name: String) -> anyhow::Result<()> {
         let mut start_time = Instant::now();
         info!(
             "Starting simulation with {} areas",
@@ -123,7 +122,7 @@ impl Simulator {
             }
         }
         // TODO Change this to a cmd argument
-        self.statistics_recorder.dump_to_file(&("statistics_results/v1.7.1/".to_string() + &self.area_code + "/"));
+        self.statistics_recorder.dump_to_file(output_name);
         Ok(())
     }
     /// Applies a single time step to the simulation
