@@ -110,7 +110,7 @@ pub struct StatisticsRecorder {
 
 
 impl StatisticsRecorder {
-    pub fn dump_to_file(&mut self, directory: &str) {
+    pub fn dump_to_file(&mut self, directory: String) {
         // Flush the recordings
         self.next();
         fs::create_dir_all(directory.clone()).expect(&format!("Failed to create statistics directory: '{}'", directory));

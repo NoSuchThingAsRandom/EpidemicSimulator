@@ -141,7 +141,19 @@ async fn main() -> anyhow::Result<()> {
                 .requires_all(&["table", "area"])
                 .conflicts_with_all(&["simulate", "render", "download"]),
         )
-        .arg(Arg::with_name("grid-size").require_equals(true).long("grid-size").takes_value(true).help("Specifies the size of the Voronoi Lookup Grids").required(true))
+        .arg(Arg::with_name("grid-size")
+            .require_equals(true)
+            .long("grid-size")
+            .takes_value(true)
+            .help("Specifies the size of the Voronoi Lookup Grids")
+            .required(true))
+        .arg(
+            Arg::with_name("output_name")
+                .long("output_name")
+                .help("Specifies the name of the output directory to store statistics")
+                .takes_value(true)
+                .require_equals(true)
+        )
         .get_matches();
 
     let directory = matches
@@ -152,7 +164,18 @@ async fn main() -> anyhow::Result<()> {
     let use_cache = matches.is_present("use-cache");
     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
     let allow_downloads = !matches.is_present("disallow-download");
-    let grid_size = matches.value_of("grid-size").expect("Missing grid-size argument").parse().expect("grid-size is not an integer!");
+    let grid_size = matches
+        .value_of("grid-size")
+        .expect("Missing grid-size argument")
+        .parse()
+        .expect("grid-size is not an integer!");
+
+    let mut output_directory = "statistics_output/v1.7/".to_string();
+    if let Some(name) = matches.value_of("output_name") {
+        // TODO Remove illegal characters to prevent directory traversal
+        //output_directory = sanitize(name)+"/";
+        output_directory = name.to_string();
+    }
     info!(
         "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",
         area, use_cache, !allow_downloads
@@ -269,7 +292,7 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data and Initialising  simulator in {:.2}",
             total_time.elapsed().as_secs_f64()
         );
-        if let Err(e) = sim.simulate() {
+        if let Err(e) = sim.simulate(output_directory) {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
         } else {
