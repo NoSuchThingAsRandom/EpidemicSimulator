@@ -3,10 +3,10 @@
 #SBATCH --mail-type=NONE                        # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=sr1474@york.ac.uk           # Where to send mail
 #SBATCH --ntasks=1                              # Run a single task...
-#SBATCH --cpus-per-task=1                      # ...with four cores
-#SBATCH --mem=32gb                              # Job memory request
+#SBATCH --cpus-per-task=40                      # ...with four cores
+#SBATCH --mem=64gb                              # Job memory request
 #SBATCH --time=4:00:00                         # Time limit hrs:min:sec
-#SBATCH --output=epidemic_sim_v1.3_york_%j.log            # Standard output and error log
+#SBATCH --output=epidemic_sim_v1.5_york_%j.log            # Standard output and error log
 #SBATCH --account=cs-teach-2021                # Project account
 
 echo My working directory is `pwd`
@@ -21,7 +21,7 @@ export RUST_LOG="warn,visualisation,osm_data=trace,sim=trace,run=debug,load_cens
 export RUST_BACKTRACE=1
 #2013265923TYPE299
 #1946157112TYPE299
-version="v1.3"
+version="v1.5"
 machine="viking"
 area="1946157112TYPE299"
 
