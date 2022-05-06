@@ -9,8 +9,9 @@ load_census_data = { path = "../load_census_data" }
 
 anyhow = "1.0"
 csv = "1.1.6"
+dbase="=0.2.2"
 enum-map = "1.1.1"
-geo-types = "0.7.2"
+geo-types = { version = "=0.7.2", features = ["serde"] }
 lazy_static = "1.4.0"
 log = "0.4"
 rand = "0.8.4"
