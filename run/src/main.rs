@@ -134,11 +134,7 @@ async fn main() -> anyhow::Result<()> {
     let use_cache = matches.is_present("use-cache");
     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
     let allow_downloads = !matches.is_present("disallow-download");
-    let grid_size = matches
-        .value_of("grid-size")
-        .expect("Missing grid-size argument")
-        .parse()
-        .expect("grid-size is not an integer!");
+
 
     let mut output_directory = "statistics_output/v1.7/".to_string();
     if let Some(name) = matches.value_of("output_name") {

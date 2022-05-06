@@ -45,7 +45,7 @@ use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
-use crate::statistics::{StatisticsArea, StatisticsRecorder};
+use crate::statistics::StatisticsRecorder;
 
 pub struct Simulator {
     pub area_code: String,
@@ -326,16 +326,16 @@ impl Simulator {
         info!("Starting simulation...");
         for time_step in 0..self.disease_model.max_time_step {
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
-                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {:?},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics_recorder.current_entry.get(&StatisticsArea::All), get_memory_usage()?);
+                println!("Completed {: >3} time steps, in: {: >6} seconds  Statistics: {:?},   Memory usage: {}", DEBUG_ITERATION_PRINT, format!("{:.2}", start_time.elapsed().as_secs_f64()), self.statistics_recorder.global_stats.last(), get_memory_usage()?);
                 start_time = Instant::now();
             }
             if !self.step()? {
-                debug!("{:?}", self.statistics_recorder.current_entry.get(&StatisticsArea::All));
+                debug!("{:?}", self.statistics_recorder.global_stats.last());
                 break;
             }
         }
         // TODO Change this to a cmd argument
-        self.statistics_recorder.dump_to_file(output_name);
+        self.statistics_recorder.dump_to_file(&output_name);
         Ok(())
     }
     /// Applies a single time step to the simulation
@@ -381,7 +381,7 @@ impl Simulator {
                 &self.disease_model,
                 self.interventions.lockdown_enabled(),
             );
-            self.statistics_recorder.add_citizen(&citizen);
+            self.statistics_recorder.add_citizen(&citizen.disease_status);
 
             // Either generate public transport session, or add exposure for fixed building position
             if let Some(travel) = &citizen.on_public_transport {

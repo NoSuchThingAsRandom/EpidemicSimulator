@@ -31,19 +31,19 @@ use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer;
 
-use num_format::Locale::{el, lo};
-use num_format::Locale::{el, lo};
-use num_format::ToFormattedString;
-use num_format::ToFormattedString;
-
-use crate::config::{get_memory_usage, NUMBER_FORMATTING};
+use crate::config::get_memory_usage;
 use crate::disease::DiseaseStatus;
-use crate::error::SimError;
+use crate::error::Error;
 use crate::models::building::BuildingID;
 use crate::models::citizen::Citizen;
 use crate::models::ID;
 use crate::models::output_area::OutputAreaID;
 use crate::models::public_transport_route::PublicTransportID;
+
+/*use num_format::Locale::{el, lo};
+use num_format::Locale::{el, lo};
+use num_format::ToFormattedString;
+use num_format::ToFormattedString;*/
 
 /// A simple struct for benchmarking how long a block of code takes
 #[derive(Debug)]
@@ -181,7 +181,10 @@ impl StatisticsRecorder {
         let mut current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
         *current += entry;
     }
-    pub fn add_exposure(&mut self, location: ID) -> Result<(), SimError> {
+    pub fn add_citizen(&mut self, disease_status: &DiseaseStatus) {
+        self.global_stats.last_mut().expect("No global data recorded").add_citizen(disease_status)
+    }
+    pub fn add_exposure(&mut self, location: ID) -> Result<(), Error> {
         self.global_stats.last_mut().expect("No global data recorded").citizen_exposed()?;
         // If building, expose the Output Area as well
         let time_step = self.current_time_step;
@@ -281,7 +284,7 @@ impl StatisticEntry {
             Ok(())
         } else {
             warn!("Cannot log citizen being exposed, as no susceptible citizens left");
-            Err(crate::error::SimError::new_simulation_error(String::from(
+            Err(crate::error::Error::new_simulation_error(String::from(
                 "Cannot expose citizen as no citizens are susceptible!",
             )))
         }

@@ -39,7 +39,7 @@ use crate::models::output_area::OutputAreaID;
 /// * An `OutputArea` - for broad location in the country,
 /// * An `AreaClassification` for differentiating between (Rural, Urban, Etc),
 /// * A  `Uuid` for a unique building identifier
-#[derive(Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BuildingID {
     output_area_id: OutputAreaID,
     area_type: AreaClassification,
