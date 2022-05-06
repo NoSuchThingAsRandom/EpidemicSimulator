@@ -79,8 +79,6 @@ impl AddAssign for GeneratedExposures {
 //#[derive(Clone)]
 pub struct Simulator {
     pub area_code: String,
-    /// This maps the String code of an Output Area to it's index
-    pub output_area_lookup: HashMap<String, u32>,
     /// The total size of the population
     current_population: u32,
     /// A list of all the sub areas containing agents
