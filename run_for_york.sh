@@ -5,7 +5,7 @@ version="v1.5"
 machine="workstation"
 area="1946157112TYPE299"
 full_path="statistics_results/"$machine"/"$version"/"$area"/"
-for index in {1..5}
+for index in {1..1}
 do
   output=$full_path$index"/"
   mkdir -p $output
