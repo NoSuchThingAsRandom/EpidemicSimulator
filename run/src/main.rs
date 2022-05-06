@@ -186,11 +186,11 @@ async fn main() -> anyhow::Result<()> {
             "Finished loading data in {:?},     Now Initialising  simulator",
             total_time.elapsed()
         );
-        let mut sim = Simulator::new(census_data,output_directory)
+        let mut sim = Simulator::new(area.to_string(), census_data)
             .context("Failed to initialise sim")
             .unwrap();
         info!("Initialised simulator, starting sim...");
-        if let Err(e) = sim.simulate() {
+        if let Err(e) = sim.simulate(output_directory) {
             error!("{}", e);
             //sim.error_dump_json().expect("Failed to create core dump!");
         } else {

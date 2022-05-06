@@ -20,6 +20,7 @@
 
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 
@@ -77,7 +78,6 @@ impl StatisticsRecorder {
                 }
             }
         }
-        info!("Dumped data to file: {}",filename);
         to_writer(file_writer, &data).expect("Failed to write to file!");
     }
     pub fn current_time_step(&self) -> u32 {

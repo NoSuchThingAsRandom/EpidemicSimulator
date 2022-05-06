@@ -65,7 +65,7 @@ pub struct Simulator {
 
 /// Initialisation Methods
 impl Simulator {
-    pub fn new(census_data: CensusData) -> Result<Simulator> {
+    pub fn new(area: String, census_data: CensusData) -> Result<Simulator> {
         let start = Instant::now();
         let mut rng = thread_rng();
         let disease_model = DiseaseModel::covid();
@@ -110,6 +110,7 @@ impl Simulator {
         debug!("Current memory usage: {}", get_memory_usage()?);
 
         let mut simulator = Simulator {
+            area_code: area,
             current_population: starting_population,
             output_areas,
             citizens,

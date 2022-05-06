@@ -1,6 +1,6 @@
 /*
  * Epidemic Simulation Using Census Data (ESUCD)
- * Copyright (c)  2021. Sam Ralph
+ * Copyright (c)  2022. Sam Ralph
  *
  * This file is part of ESUCD.
  *
@@ -47,7 +47,7 @@ fn load_data(c: &mut Criterion) {
     //let area = "1946157112TYPE299".to_string();
     let area = "2013265923TYPE299".to_string();
     let census_data = CensusData::load_all_tables(directory, area, false).unwrap();
-    let mut sim = Simulator::new(census_data).expect("Failed to initialise sim");
+    let mut sim = Simulator::new(area, census_data).expect("Failed to initialise sim");
     for _ in 0..540 {
         sim.step().expect("Sim step failed!");
     }
