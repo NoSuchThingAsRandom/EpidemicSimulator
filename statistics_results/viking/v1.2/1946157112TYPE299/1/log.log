@@ -1,0 +1,660 @@
+warning: unused import: `std::collections::HashMap`
+  --> sim/src/disease.rs:21:5
+   |
+21 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::fs::File`
+  --> sim/src/disease.rs:23:5
+   |
+23 | use std::fs::File;
+   |     ^^^^^^^^^^^^^
+
+warning: unused import: `std::hash::Hash`
+  --> sim/src/disease.rs:24:5
+   |
+24 | use std::hash::Hash;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `BufWriter`
+  --> sim/src/disease.rs:25:15
+   |
+25 | use std::io::{BufWriter, Write};
+   |               ^^^^^^^^^
+
+warning: unused import: `log::error`
+  --> sim/src/disease.rs:27:5
+   |
+27 | use log::error;
+   |     ^^^^^^^^^^
+
+warning: unused import: `Deserialize`
+  --> sim/src/disease.rs:28:13
+   |
+28 | use serde::{Deserialize, Serialize};
+   |             ^^^^^^^^^^^
+
+warning: unused import: `serde_json::to_writer`
+  --> sim/src/disease.rs:29:5
+   |
+29 | use serde_json::to_writer;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `uuid::Uuid`
+  --> sim/src/disease.rs:30:5
+   |
+30 | use uuid::Uuid;
+   |     ^^^^^^^^^^
+
+warning: unused import: `crate::models::ID`
+  --> sim/src/disease.rs:33:5
+   |
+33 | use crate::models::ID;
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `format`
+  --> sim/src/statistics.rs:22:25
+   |
+22 | use std::fmt::{Display, format, Formatter};
+   |                         ^^^^^^
+
+warning: unused import: `anyhow::Context`
+  --> sim/src/statistics.rs:29:5
+   |
+29 | use anyhow::Context;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `error`
+  --> sim/src/statistics.rs:30:11
+   |
+30 | use log::{error, info, warn};
+   |           ^^^^^
+
+warning: unused import: `crate::models::building::BuildingID`
+  --> sim/src/statistics.rs:37:5
+   |
+37 | use crate::models::building::BuildingID;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::citizen::Citizen`
+  --> sim/src/statistics.rs:38:5
+   |
+38 | use crate::models::citizen::Citizen;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::output_area::OutputAreaID`
+  --> sim/src/statistics.rs:40:5
+   |
+40 | use crate::models::output_area::OutputAreaID;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::public_transport_route::PublicTransportID`
+  --> sim/src/statistics.rs:41:5
+   |
+41 | use crate::models::public_transport_route::PublicTransportID;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unnecessary trailing semicolon
+   --> sim/src/statistics.rs:196:13
+    |
+196 |             ;
+    |             ^ help: remove this semicolon
+    |
+    = note: `#[warn(redundant_semicolons)]` on by default
+
+warning: unused import: `Write`
+  --> sim/src/disease.rs:25:26
+   |
+25 | use std::io::{BufWriter, Write};
+   |                          ^^^^^
+
+warning: variable `hour` is assigned to, but never used
+   --> sim/src/interventions.rs:117:33
+    |
+117 |                 if let Some(mut hour) = self.lockdown {
+    |                                 ^^^^
+    |
+    = note: `#[warn(unused_variables)]` on by default
+    = note: consider using `_hour` instead
+
+warning: value assigned to `hour` is never read
+   --> sim/src/interventions.rs:118:21
+    |
+118 |                     hour += 1;
+    |                     ^^^^
+    |
+    = note: `#[warn(unused_assignments)]` on by default
+    = help: maybe it is overwritten before being read?
+
+warning: variable `hour` is assigned to, but never used
+   --> sim/src/interventions.rs:133:33
+    |
+133 |                 if let Some(mut hour) = self.vaccination {
+    |                                 ^^^^
+    |
+    = note: consider using `_hour` instead
+
+warning: value assigned to `hour` is never read
+   --> sim/src/interventions.rs:134:21
+    |
+134 |                     hour += 1;
+    |                     ^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `exposures`
+   --> sim/src/simulator.rs:349:13
+    |
+349 |         let exposures = self.generate_and_apply_exposures()?;
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_exposures`
+
+warning: unused variable: `id`
+   --> sim/src/statistics.rs:127:30
+    |
+127 |                 ID::Building(id) => {}
+    |                              ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `entry`
+   --> sim/src/statistics.rs:133:29
+    |
+133 |                     let mut entry = exposure_counts.entry("PublicTransport").or_default();
+    |                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_entry`
+
+warning: unused variable: `code`
+   --> sim/src/statistics.rs:134:25
+    |
+134 |                     let code = String::new() + id.source.code() + "-" + id.destination.code();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: unused variable: `time_step`
+   --> sim/src/statistics.rs:190:13
+    |
+190 |         let time_step = self.current_time_step;
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_time_step`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:124:17
+    |
+124 |             let mut entry = exposure_counts.entry("All").or_default();
+    |                 ----^^^^^
+    |                 |
+    |                 help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:129:25
+    |
+129 |                     let mut entry = exposure_counts.entry("OutputArea").or_default();
+    |                         ----^^^^^
+    |                         |
+    |                         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:133:25
+    |
+133 |                     let mut entry = exposure_counts.entry("PublicTransport").or_default();
+    |                         ----^^^^^
+    |                         |
+    |                         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:165:21
+    |
+165 | ...   let mut recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();//tatisticEntry::with_time_step(self.c...
+    |           ----^^^^^^^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:181:13
+    |
+181 |         let mut current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
+    |             ----^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:194:17
+    |
+194 |             let mut stat_entry = current_entry.entry(area_id).or_default();
+    |                 ----^^^^^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> sim/src/statistics.rs:198:13
+    |
+198 |         let mut stat_entry = current_entry.entry(location).or_default();
+    |             ----^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused `Result` that must be used
+   --> sim/src/simulator.rs:346:9
+    |
+346 |         self.statistics_recorder.next();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_must_use)]` on by default
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `Result` that must be used
+   --> sim/src/statistics.rs:118:9
+    |
+118 |         self.next();
+    |         ^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: 36 warnings emitted
+
+warning: unused variable: `visualise_building_boundaries`
+   --> run/src/main.rs:135:9
+    |
+135 |     let visualise_building_boundaries = matches.is_present("visualise-building-boundaries");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_visualise_building_boundaries`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: 1 warning emitted
+
+    Finished release [optimized] target(s) in 3.48s
+     Running `target/release/run 1946157112TYPE299 --directory=data --grid-size=250000 --simulate --output_name=statistics_results/viking/v1.2/1946157112TYPE299/1/`
+ 2022-05-06T15:13:20.121Z INFO  run > Using area: 1946157112TYPE299, Utilizing Cache: false, Allowing downloads: false
+ 2022-05-06T15:13:20.121Z INFO  run > Using mode simulate for area '1946157112TYPE299'
+ 2022-05-06T15:13:20.121Z INFO  run > Loading data from disk...
+ 2022-05-06T15:13:20.132Z INFO  load_census_data > Fetching table 'data/tables/1946157112TYPE299/ks101ew_population_144.csv'
+ 2022-05-06T15:13:20.134Z DEBUG load_census_data > Reading census table: 'data/tables/1946157112TYPE299/ks101ew_population_144.csv' from disk
+ 2022-05-06T15:13:20.184Z DEBUG load_census_data > Loaded table into pre processing
+ 2022-05-06T15:13:20.189Z TRACE load_census_data::tables > Grouped table by area
+ 2022-05-06T15:13:20.193Z INFO  load_census_data         > Fetching table 'data/tables/1946157112TYPE299/ks608uk_occupation_count_NM_1518_1.csv'
+ 2022-05-06T15:13:20.194Z DEBUG load_census_data         > Reading census table: 'data/tables/1946157112TYPE299/ks608uk_occupation_count_NM_1518_1.csv' from disk
+ 2022-05-06T15:13:20.320Z DEBUG load_census_data         > Loaded table into pre processing
+ 2022-05-06T15:13:20.324Z TRACE load_census_data::tables > Grouped table by area
+ 2022-05-06T15:13:20.328Z INFO  load_census_data         > Fetching table 'data/tables/1946157112TYPE299/wf01bew_residential_vs_workplace_NM_1228_1.csv'
+ 2022-05-06T15:13:20.329Z DEBUG load_census_data         > Reading census table: 'data/tables/1946157112TYPE299/wf01bew_residential_vs_workplace_NM_1228_1.csv' from disk
+ 2022-05-06T15:13:20.418Z DEBUG load_census_data         > Loaded table into pre processing
+ 2022-05-06T15:13:20.425Z TRACE load_census_data::tables > Grouped table by area
+ 2022-05-06T15:13:20.439Z INFO  run                      > Finished loading data in 318.741283ms,     Now Initialising  simulator
+ 2022-05-06T15:13:20.440Z DEBUG sim::simulator           > Current memory usage: 0.099 GB
+ 2022-05-06T15:13:20.925Z INFO  sim::simulator           > Built residential population in 485.182733ms
+ 2022-05-06T15:13:20.925Z DEBUG sim::simulator           > Current memory usage: 0.187 GB
+ 2022-05-06T15:13:21.168Z INFO  sim::simulator           > Generated workplaces in 729.020553ms
+ 2022-05-06T15:13:21.169Z DEBUG sim::simulator           > Current memory usage: 0.191 GB
+ 2022-05-06T15:13:21.170Z INFO  sim::simulator           > Initialization completed in 0.7309126 seconds
+ 2022-05-06T15:13:21.170Z DEBUG sim::simulator           > Current memory usage: 0.191 GB
+ 2022-05-06T15:13:21.170Z DEBUG sim::simulator           > Starting Statistics:
+      There are 197080 total Citizens
+      637 Output Areas
+ 2022-05-06T15:13:21.170Z INFO  run                      > Initialised simulator, starting sim...
+ 2022-05-06T15:13:21.171Z INFO  sim::simulator           > Starting simulation...
+Completed  10 time steps, in:   0.00 seconds  Statistics: None,   Memory usage: 0.191 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 10, susceptible: 197070, exposed: 0, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.196 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 20, susceptible: 197066, exposed: 4, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 30, susceptible: 197065, exposed: 5, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 40, susceptible: 197062, exposed: 8, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 50, susceptible: 197061, exposed: 9, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 60, susceptible: 197057, exposed: 13, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 70, susceptible: 197053, exposed: 17, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 80, susceptible: 197053, exposed: 17, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.27 seconds  Statistics: Some(StatisticEntry { time_step: 90, susceptible: 197045, exposed: 25, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 100, susceptible: 197045, exposed: 25, infected: 10, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 110, susceptible: 197041, exposed: 26, infected: 13, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 120, susceptible: 197040, exposed: 25, infected: 15, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 130, susceptible: 197038, exposed: 26, infected: 16, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 140, susceptible: 197030, exposed: 31, infected: 19, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 150, susceptible: 197030, exposed: 31, infected: 19, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 160, susceptible: 197023, exposed: 30, infected: 27, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 170, susceptible: 197022, exposed: 31, infected: 27, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 180, susceptible: 197017, exposed: 33, infected: 30, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 190, susceptible: 197011, exposed: 34, infected: 35, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 200, susceptible: 197008, exposed: 37, infected: 35, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.31 seconds  Statistics: Some(StatisticEntry { time_step: 210, susceptible: 196998, exposed: 42, infected: 40, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 220, susceptible: 196997, exposed: 42, infected: 41, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 230, susceptible: 196985, exposed: 47, infected: 48, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 240, susceptible: 196980, exposed: 50, infected: 50, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 250, susceptible: 196974, exposed: 55, infected: 51, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 260, susceptible: 196961, exposed: 61, infected: 58, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 270, susceptible: 196959, exposed: 63, infected: 58, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.30 seconds  Statistics: Some(StatisticEntry { time_step: 280, susceptible: 196940, exposed: 71, infected: 69, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 290, susceptible: 196937, exposed: 74, infected: 69, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 300, susceptible: 196925, exposed: 80, infected: 75, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 310, susceptible: 196918, exposed: 79, infected: 83, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 320, susceptible: 196913, exposed: 84, infected: 83, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.32 seconds  Statistics: Some(StatisticEntry { time_step: 330, susceptible: 196892, exposed: 89, infected: 99, recovered: 0, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 340, susceptible: 196888, exposed: 92, infected: 90, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 350, susceptible: 196868, exposed: 99, infected: 103, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 360, susceptible: 196860, exposed: 100, infected: 110, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 370, susceptible: 196853, exposed: 101, infected: 116, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 380, susceptible: 196835, exposed: 104, infected: 131, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 390, susceptible: 196834, exposed: 102, infected: 134, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.30 seconds  Statistics: Some(StatisticEntry { time_step: 400, susceptible: 196800, exposed: 120, infected: 150, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 410, susceptible: 196792, exposed: 124, infected: 154, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 420, susceptible: 196775, exposed: 129, infected: 166, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 430, susceptible: 196761, exposed: 131, infected: 178, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 440, susceptible: 196759, exposed: 129, infected: 182, recovered: 10, vaccinated: 0 }),   Memory usage: 0.198 GB
+ 2022-05-06T15:13:30.033Z INFO  sim::interventions       > Mask wearing on public transport is enacted
+ 2022-05-06T15:13:30.033Z INFO  sim::simulator           > Mask wearing status has changed: Only Public Transport at hour 447
+Completed  10 time steps, in:   0.35 seconds  Statistics: Some(StatisticEntry { time_step: 450, susceptible: 196731, exposed: 133, infected: 202, recovered: 14, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 460, susceptible: 196727, exposed: 133, infected: 205, recovered: 15, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.29 seconds  Statistics: Some(StatisticEntry { time_step: 470, susceptible: 196698, exposed: 149, infected: 215, recovered: 18, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.27 seconds  Statistics: Some(StatisticEntry { time_step: 480, susceptible: 196686, exposed: 148, infected: 227, recovered: 19, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 490, susceptible: 196664, exposed: 160, infected: 237, recovered: 19, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 500, susceptible: 196636, exposed: 160, infected: 257, recovered: 27, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 510, susceptible: 196627, exposed: 163, infected: 263, recovered: 27, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.31 seconds  Statistics: Some(StatisticEntry { time_step: 520, susceptible: 196574, exposed: 193, infected: 280, recovered: 33, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 530, susceptible: 196569, exposed: 191, infected: 285, recovered: 35, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.27 seconds  Statistics: Some(StatisticEntry { time_step: 540, susceptible: 196534, exposed: 215, infected: 295, recovered: 36, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 550, susceptible: 196500, exposed: 230, infected: 310, recovered: 40, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 560, susceptible: 196496, exposed: 229, infected: 313, recovered: 42, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.29 seconds  Statistics: Some(StatisticEntry { time_step: 570, susceptible: 196441, exposed: 250, infected: 339, recovered: 50, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 580, susceptible: 196430, exposed: 255, infected: 345, recovered: 50, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 590, susceptible: 196371, exposed: 285, infected: 372, recovered: 52, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 600, susceptible: 196345, exposed: 287, infected: 390, recovered: 58, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 610, susceptible: 196327, exposed: 292, infected: 402, recovered: 59, vaccinated: 0 }),   Memory usage: 0.198 GB
+ 2022-05-06T15:13:33.986Z INFO  sim::interventions       > Mask wearing everywhere is enacted
+ 2022-05-06T15:13:33.986Z INFO  sim::simulator           > Mask wearing status has changed: Everywhere at hour 617
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 620, susceptible: 196269, exposed: 305, infected: 437, recovered: 69, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 630, susceptible: 196263, exposed: 302, infected: 445, recovered: 70, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 640, susceptible: 196178, exposed: 335, infected: 487, recovered: 80, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 650, susceptible: 196170, exposed: 330, infected: 497, recovered: 83, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 660, susceptible: 196113, exposed: 362, infected: 516, recovered: 89, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 670, susceptible: 196058, exposed: 378, infected: 545, recovered: 99, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 680, susceptible: 196041, exposed: 385, infected: 552, recovered: 102, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.33 seconds  Statistics: Some(StatisticEntry { time_step: 690, susceptible: 195954, exposed: 402, infected: 605, recovered: 119, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 700, susceptible: 195937, exposed: 406, infected: 616, recovered: 121, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 710, susceptible: 195848, exposed: 446, infected: 656, recovered: 130, vaccinated: 0 }),   Memory usage: 0.198 GB
+ 2022-05-06T15:13:36.053Z INFO  sim::simulator           > Lockdown is enabled at hour 718
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 720, susceptible: 195807, exposed: 459, infected: 673, recovered: 141, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 730, susceptible: 195796, exposed: 453, infected: 687, recovered: 144, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 740, susceptible: 195775, exposed: 401, infected: 742, recovered: 162, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 750, susceptible: 195756, exposed: 413, infected: 745, recovered: 166, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.07 seconds  Statistics: Some(StatisticEntry { time_step: 760, susceptible: 195741, exposed: 332, infected: 824, recovered: 183, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 770, susceptible: 195719, exposed: 334, infected: 837, recovered: 190, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 780, susceptible: 195702, exposed: 310, infected: 872, recovered: 196, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 790, susceptible: 195677, exposed: 269, infected: 916, recovered: 218, vaccinated: 0 }),   Memory usage: 0.198 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 800, susceptible: 195645, exposed: 285, infected: 930, recovered: 220, vaccinated: 0 }),   Memory usage: 0.198 GB
+ 2022-05-06T15:13:36.881Z INFO  sim::simulator           > Starting vaccination program at hour: 806
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 810, susceptible: 195275, exposed: 204, infected: 1019, recovered: 242, vaccinated: 340 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 820, susceptible: 194399, exposed: 216, infected: 1029, recovered: 246, vaccinated: 1190 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 830, susceptible: 193536, exposed: 215, infected: 1021, recovered: 268, vaccinated: 2040 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 840, susceptible: 192670, exposed: 209, infected: 1024, recovered: 287, vaccinated: 2890 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 850, susceptible: 191796, exposed: 212, infected: 1040, recovered: 292, vaccinated: 3740 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 860, susceptible: 190919, exposed: 227, infected: 1026, recovered: 318, vaccinated: 4590 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 870, susceptible: 190048, exposed: 224, infected: 1048, recovered: 320, vaccinated: 5440 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 880, susceptible: 189173, exposed: 228, infected: 1046, recovered: 343, vaccinated: 6290 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 890, susceptible: 188306, exposed: 221, infected: 1061, recovered: 352, vaccinated: 7140 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 900, susceptible: 187439, exposed: 206, infected: 1081, recovered: 364, vaccinated: 7990 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 910, susceptible: 186578, exposed: 191, infected: 1081, recovered: 390, vaccinated: 8840 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 920, susceptible: 185708, exposed: 188, infected: 1096, recovered: 398, vaccinated: 9690 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 930, susceptible: 184843, exposed: 186, infected: 1069, recovered: 442, vaccinated: 10540 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 940, susceptible: 183969, exposed: 194, infected: 1076, recovered: 451, vaccinated: 11390 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 950, susceptible: 183098, exposed: 190, infected: 1073, recovered: 479, vaccinated: 12240 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 960, susceptible: 182227, exposed: 183, infected: 1072, recovered: 508, vaccinated: 13090 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 970, susceptible: 181366, exposed: 175, infected: 1081, recovered: 518, vaccinated: 13940 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 980, susceptible: 180497, exposed: 170, infected: 1048, recovered: 575, vaccinated: 14790 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 990, susceptible: 179629, exposed: 174, infected: 1054, recovered: 583, vaccinated: 15640 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1000, susceptible: 178761, exposed: 173, infected: 1033, recovered: 623, vaccinated: 16490 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1010, susceptible: 177894, exposed: 179, infected: 1022, recovered: 645, vaccinated: 17340 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1020, susceptible: 177029, exposed: 172, infected: 1015, recovered: 674, vaccinated: 18190 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1030, susceptible: 176167, exposed: 172, infected: 972, recovered: 729, vaccinated: 19040 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1040, susceptible: 175305, exposed: 161, infected: 987, recovered: 737, vaccinated: 19890 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1050, susceptible: 174450, exposed: 144, infected: 938, recovered: 808, vaccinated: 20740 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1060, susceptible: 173586, exposed: 137, infected: 953, recovered: 814, vaccinated: 21590 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1070, susceptible: 172722, exposed: 141, infected: 908, recovered: 869, vaccinated: 22440 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1080, susceptible: 171856, exposed: 134, infected: 893, recovered: 907, vaccinated: 23290 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1090, susceptible: 170997, exposed: 125, infected: 903, recovered: 915, vaccinated: 24140 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1100, susceptible: 170138, exposed: 116, infected: 819, recovered: 1017, vaccinated: 24990 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1110, susceptible: 169274, exposed: 115, infected: 820, recovered: 1031, vaccinated: 25840 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1120, susceptible: 168416, exposed: 110, infected: 766, recovered: 1098, vaccinated: 26690 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1130, susceptible: 167559, exposed: 106, infected: 737, recovered: 1138, vaccinated: 27540 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1140, susceptible: 166704, exposed: 99, infected: 709, recovered: 1178, vaccinated: 28390 }),   Memory usage: 0.202 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1150, susceptible: 165853, exposed: 91, infected: 627, recovered: 1269, vaccinated: 29240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 1160, susceptible: 165000, exposed: 83, infected: 626, recovered: 1281, vaccinated: 30090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.28 seconds  Statistics: Some(StatisticEntry { time_step: 1170, susceptible: 163972, exposed: 247, infected: 625, recovered: 1296, vaccinated: 30940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1180, susceptible: 163118, exposed: 235, infected: 617, recovered: 1320, vaccinated: 31790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 1190, susceptible: 162129, exposed: 364, infected: 612, recovered: 1335, vaccinated: 32640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1200, susceptible: 161235, exposed: 399, infected: 603, recovered: 1353, vaccinated: 33490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1210, susceptible: 160332, exposed: 441, infected: 591, recovered: 1376, vaccinated: 34340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 1220, susceptible: 159368, exposed: 547, infected: 576, recovered: 1399, vaccinated: 35190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1230, susceptible: 158511, exposed: 547, infected: 557, recovered: 1425, vaccinated: 36040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.30 seconds  Statistics: Some(StatisticEntry { time_step: 1240, susceptible: 157500, exposed: 704, infected: 529, recovered: 1457, vaccinated: 36890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 1250, susceptible: 156648, exposed: 704, infected: 509, recovered: 1479, vaccinated: 37740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 1260, susceptible: 155740, exposed: 693, infected: 559, recovered: 1498, vaccinated: 38590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.27 seconds  Statistics: Some(StatisticEntry { time_step: 1270, susceptible: 154803, exposed: 667, infected: 655, recovered: 1515, vaccinated: 39440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 1280, susceptible: 153947, exposed: 671, infected: 639, recovered: 1533, vaccinated: 40290 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:13:44.086Z INFO  sim::simulator           > Lockdown is enabled at hour 1283
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 1290, susceptible: 153016, exposed: 576, infected: 790, recovered: 1558, vaccinated: 41140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1300, susceptible: 152162, exposed: 571, infected: 774, recovered: 1583, vaccinated: 41990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1310, susceptible: 151304, exposed: 475, infected: 852, recovered: 1609, vaccinated: 42840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1320, susceptible: 150440, exposed: 425, infected: 899, recovered: 1626, vaccinated: 43690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1330, susceptible: 149574, exposed: 416, infected: 910, recovered: 1640, vaccinated: 44540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1340, susceptible: 148710, exposed: 290, infected: 1031, recovered: 1659, vaccinated: 45390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1350, susceptible: 147847, exposed: 300, infected: 1018, recovered: 1675, vaccinated: 46240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1360, susceptible: 146978, exposed: 200, infected: 1118, recovered: 1694, vaccinated: 47090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1370, susceptible: 146111, exposed: 189, infected: 1130, recovered: 1710, vaccinated: 47940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1380, susceptible: 145242, exposed: 131, infected: 1186, recovered: 1731, vaccinated: 48790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1390, susceptible: 144371, exposed: 145, infected: 1173, recovered: 1751, vaccinated: 49640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1400, susceptible: 143505, exposed: 153, infected: 1163, recovered: 1769, vaccinated: 50490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1410, susceptible: 142639, exposed: 162, infected: 1155, recovered: 1784, vaccinated: 51340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1420, susceptible: 141768, exposed: 169, infected: 1148, recovered: 1805, vaccinated: 52190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1430, susceptible: 140898, exposed: 172, infected: 1147, recovered: 1823, vaccinated: 53040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1440, susceptible: 140031, exposed: 174, infected: 1144, recovered: 1841, vaccinated: 53890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1450, susceptible: 139161, exposed: 180, infected: 1142, recovered: 1857, vaccinated: 54740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1460, susceptible: 138294, exposed: 179, infected: 1150, recovered: 1867, vaccinated: 55590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1470, susceptible: 137426, exposed: 179, infected: 1156, recovered: 1879, vaccinated: 56440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1480, susceptible: 136558, exposed: 175, infected: 1169, recovered: 1888, vaccinated: 57290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1490, susceptible: 135697, exposed: 169, infected: 1174, recovered: 1900, vaccinated: 58140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1500, susceptible: 134827, exposed: 171, infected: 1179, recovered: 1913, vaccinated: 58990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1510, susceptible: 133966, exposed: 167, infected: 1178, recovered: 1929, vaccinated: 59840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1520, susceptible: 133104, exposed: 158, infected: 1190, recovered: 1938, vaccinated: 60690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1530, susceptible: 132242, exposed: 151, infected: 1198, recovered: 1949, vaccinated: 61540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1540, susceptible: 131371, exposed: 152, infected: 1203, recovered: 1964, vaccinated: 62390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1550, susceptible: 130501, exposed: 156, infected: 1215, recovered: 1968, vaccinated: 63240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1560, susceptible: 129633, exposed: 155, infected: 1225, recovered: 1977, vaccinated: 64090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1570, susceptible: 128772, exposed: 151, infected: 1232, recovered: 1985, vaccinated: 64940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1580, susceptible: 127910, exposed: 146, infected: 1248, recovered: 1986, vaccinated: 65790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1590, susceptible: 127049, exposed: 139, infected: 1263, recovered: 1989, vaccinated: 66640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1600, susceptible: 126182, exposed: 141, infected: 1146, recovered: 2121, vaccinated: 67490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1610, susceptible: 125315, exposed: 148, infected: 1107, recovered: 2170, vaccinated: 68340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1620, susceptible: 124449, exposed: 153, infected: 1074, recovered: 2214, vaccinated: 69190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1630, susceptible: 123587, exposed: 150, infected: 954, recovered: 2349, vaccinated: 70040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1640, susceptible: 122729, exposed: 136, infected: 967, recovered: 2358, vaccinated: 70890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1650, susceptible: 121871, exposed: 120, infected: 829, recovered: 2520, vaccinated: 71740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1660, susceptible: 121012, exposed: 118, infected: 834, recovered: 2526, vaccinated: 72590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1670, susceptible: 120157, exposed: 111, infected: 767, recovered: 2605, vaccinated: 73440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1680, susceptible: 119299, exposed: 109, infected: 690, recovered: 2692, vaccinated: 74290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1690, susceptible: 118445, exposed: 95, infected: 705, recovered: 2695, vaccinated: 75140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1700, susceptible: 117592, exposed: 82, infected: 581, recovered: 2835, vaccinated: 75990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1710, susceptible: 116738, exposed: 67, infected: 594, recovered: 2841, vaccinated: 76840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.33 seconds  Statistics: Some(StatisticEntry { time_step: 1720, susceptible: 115782, exposed: 160, infected: 528, recovered: 2920, vaccinated: 77690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1730, susceptible: 114930, exposed: 157, infected: 528, recovered: 2925, vaccinated: 78540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 1740, susceptible: 114032, exposed: 193, infected: 532, recovered: 2933, vaccinated: 79390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1750, susceptible: 113128, exposed: 240, infected: 531, recovered: 2941, vaccinated: 80240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 1760, susceptible: 112276, exposed: 234, infected: 522, recovered: 2958, vaccinated: 81090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.28 seconds  Statistics: Some(StatisticEntry { time_step: 1770, susceptible: 111353, exposed: 300, infected: 515, recovered: 2972, vaccinated: 81940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 1780, susceptible: 110498, exposed: 301, infected: 503, recovered: 2988, vaccinated: 82790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.30 seconds  Statistics: Some(StatisticEntry { time_step: 1790, susceptible: 109576, exposed: 368, infected: 491, recovered: 3005, vaccinated: 83640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.27 seconds  Statistics: Some(StatisticEntry { time_step: 1800, susceptible: 108702, exposed: 389, infected: 475, recovered: 3024, vaccinated: 84490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 1810, susceptible: 107834, exposed: 390, infected: 476, recovered: 3040, vaccinated: 85340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 1820, susceptible: 106901, exposed: 380, infected: 547, recovered: 3062, vaccinated: 86190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 1830, susceptible: 106045, exposed: 385, infected: 532, recovered: 3078, vaccinated: 87040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.29 seconds  Statistics: Some(StatisticEntry { time_step: 1840, susceptible: 105114, exposed: 373, infected: 609, recovered: 3094, vaccinated: 87890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 1850, susceptible: 104255, exposed: 372, infected: 600, recovered: 3113, vaccinated: 88740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.29 seconds  Statistics: Some(StatisticEntry { time_step: 1860, susceptible: 103351, exposed: 400, infected: 603, recovered: 3136, vaccinated: 89590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.32 seconds  Statistics: Some(StatisticEntry { time_step: 1870, susceptible: 102464, exposed: 388, infected: 636, recovered: 3152, vaccinated: 90440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 1880, susceptible: 101608, exposed: 388, infected: 622, recovered: 3172, vaccinated: 91290 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:13:53.842Z INFO  sim::simulator           > Lockdown is enabled at hour 1887
+Completed  10 time steps, in:   0.29 seconds  Statistics: Some(StatisticEntry { time_step: 1890, susceptible: 100663, exposed: 391, infected: 697, recovered: 3189, vaccinated: 92140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1900, susceptible: 99806, exposed: 395, infected: 680, recovered: 3209, vaccinated: 92990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1910, susceptible: 98953, exposed: 343, infected: 723, recovered: 3221, vaccinated: 93840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1920, susceptible: 98092, exposed: 308, infected: 755, recovered: 3235, vaccinated: 94690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1930, susceptible: 97236, exposed: 297, infected: 749, recovered: 3258, vaccinated: 95540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 1940, susceptible: 96382, exposed: 229, infected: 809, recovered: 3270, vaccinated: 96390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 1950, susceptible: 95526, exposed: 228, infected: 801, recovered: 3285, vaccinated: 97240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 1960, susceptible: 94669, exposed: 152, infected: 878, recovered: 3291, vaccinated: 98090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1970, susceptible: 93806, exposed: 157, infected: 869, recovered: 3308, vaccinated: 98940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 1980, susceptible: 92944, exposed: 126, infected: 889, recovered: 3331, vaccinated: 99790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 1990, susceptible: 92087, exposed: 76, infected: 924, recovered: 3353, vaccinated: 100640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2000, susceptible: 91222, exposed: 84, infected: 922, recovered: 3362, vaccinated: 101490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2010, susceptible: 90364, exposed: 87, infected: 912, recovered: 3377, vaccinated: 102340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 2020, susceptible: 89508, exposed: 83, infected: 913, recovered: 3386, vaccinated: 103190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2030, susceptible: 88647, exposed: 88, infected: 899, recovered: 3406, vaccinated: 104040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2040, susceptible: 87790, exposed: 92, infected: 886, recovered: 3422, vaccinated: 104890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2050, susceptible: 86928, exposed: 95, infected: 879, recovered: 3438, vaccinated: 105740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 2060, susceptible: 86067, exposed: 99, infected: 875, recovered: 3449, vaccinated: 106590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 2070, susceptible: 85207, exposed: 98, infected: 881, recovered: 3454, vaccinated: 107440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2080, susceptible: 84346, exposed: 97, infected: 880, recovered: 3467, vaccinated: 108290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2090, susceptible: 83493, exposed: 85, infected: 888, recovered: 3474, vaccinated: 109140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2100, susceptible: 82629, exposed: 90, infected: 890, recovered: 3481, vaccinated: 109990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2110, susceptible: 81771, exposed: 92, infected: 888, recovered: 3489, vaccinated: 110840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2120, susceptible: 80916, exposed: 91, infected: 890, recovered: 3493, vaccinated: 111690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2130, susceptible: 80060, exposed: 85, infected: 897, recovered: 3498, vaccinated: 112540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2140, susceptible: 79206, exposed: 80, infected: 904, recovered: 3500, vaccinated: 113390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2150, susceptible: 78353, exposed: 73, infected: 854, recovered: 3560, vaccinated: 114240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2160, susceptible: 77495, exposed: 66, infected: 819, recovered: 3610, vaccinated: 115090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2170, susceptible: 76641, exposed: 60, infected: 828, recovered: 3611, vaccinated: 115940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2180, susceptible: 75783, exposed: 62, infected: 733, recovered: 3712, vaccinated: 116790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2190, susceptible: 74930, exposed: 59, infected: 738, recovered: 3713, vaccinated: 117640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2200, susceptible: 74069, exposed: 57, infected: 694, recovered: 3770, vaccinated: 118490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2210, susceptible: 73211, exposed: 59, infected: 682, recovered: 3788, vaccinated: 119340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2220, susceptible: 72355, exposed: 59, infected: 660, recovered: 3816, vaccinated: 120190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 2230, susceptible: 71503, exposed: 56, infected: 595, recovered: 3886, vaccinated: 121040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 2240, susceptible: 70648, exposed: 57, infected: 595, recovered: 3890, vaccinated: 121890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.30 seconds  Statistics: Some(StatisticEntry { time_step: 2250, susceptible: 69724, exposed: 125, infected: 505, recovered: 3986, vaccinated: 122740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2260, susceptible: 68871, exposed: 123, infected: 503, recovered: 3993, vaccinated: 123590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 2270, susceptible: 67982, exposed: 159, infected: 464, recovered: 4035, vaccinated: 124440 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:13:59.165Z INFO  sim::interventions       > Mask wearing everywhere is removed
+ 2022-05-06T15:13:59.166Z INFO  sim::simulator           > Mask wearing status has changed: Only Public Transport at hour 2274
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 2280, susceptible: 67117, exposed: 165, infected: 427, recovered: 4081, vaccinated: 125290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 2290, susceptible: 66250, exposed: 177, infected: 426, recovered: 4087, vaccinated: 126140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 2300, susceptible: 65362, exposed: 207, infected: 345, recovered: 4176, vaccinated: 126990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.11 seconds  Statistics: Some(StatisticEntry { time_step: 2310, susceptible: 64512, exposed: 199, infected: 351, recovered: 4178, vaccinated: 127840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.38 seconds  Statistics: Some(StatisticEntry { time_step: 2320, susceptible: 63618, exposed: 236, infected: 278, recovered: 4258, vaccinated: 128690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.30 seconds  Statistics: Some(StatisticEntry { time_step: 2330, susceptible: 62768, exposed: 234, infected: 258, recovered: 4280, vaccinated: 129540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.39 seconds  Statistics: Some(StatisticEntry { time_step: 2340, susceptible: 61901, exposed: 219, infected: 285, recovered: 4285, vaccinated: 130390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 2350, susceptible: 61035, exposed: 189, infected: 321, recovered: 4295, vaccinated: 131240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 2360, susceptible: 60182, exposed: 189, infected: 317, recovered: 4302, vaccinated: 132090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.29 seconds  Statistics: Some(StatisticEntry { time_step: 2370, susceptible: 59288, exposed: 180, infected: 365, recovered: 4307, vaccinated: 132940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2380, susceptible: 58437, exposed: 180, infected: 364, recovered: 4309, vaccinated: 133790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2390, susceptible: 57560, exposed: 163, infected: 399, recovered: 4318, vaccinated: 134640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2400, susceptible: 56695, exposed: 167, infected: 400, recovered: 4328, vaccinated: 135490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2410, susceptible: 55831, exposed: 175, infected: 392, recovered: 4342, vaccinated: 136340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2420, susceptible: 54956, exposed: 162, infected: 423, recovered: 4349, vaccinated: 137190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2430, susceptible: 54105, exposed: 162, infected: 410, recovered: 4363, vaccinated: 138040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 2440, susceptible: 53214, exposed: 176, infected: 429, recovered: 4371, vaccinated: 138890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 2450, susceptible: 52360, exposed: 174, infected: 428, recovered: 4378, vaccinated: 139740 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:14:03.200Z INFO  sim::interventions       > Mask wearing everywhere is enacted
+ 2022-05-06T15:14:03.200Z INFO  sim::simulator           > Mask wearing status has changed: Everywhere at hour 2460
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2460, susceptible: 51488, exposed: 178, infected: 436, recovered: 4388, vaccinated: 140590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2470, susceptible: 50617, exposed: 171, infected: 456, recovered: 4396, vaccinated: 141440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 2480, susceptible: 49767, exposed: 170, infected: 445, recovered: 4408, vaccinated: 142290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 2490, susceptible: 48877, exposed: 173, infected: 472, recovered: 4418, vaccinated: 143140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2500, susceptible: 48022, exposed: 173, infected: 465, recovered: 4430, vaccinated: 143990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2510, susceptible: 47147, exposed: 176, infected: 475, recovered: 4442, vaccinated: 144840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2520, susceptible: 46278, exposed: 178, infected: 487, recovered: 4447, vaccinated: 145690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2530, susceptible: 45418, exposed: 185, infected: 481, recovered: 4456, vaccinated: 146540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2540, susceptible: 44547, exposed: 166, infected: 511, recovered: 4466, vaccinated: 147390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2550, susceptible: 43695, exposed: 163, infected: 509, recovered: 4473, vaccinated: 148240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 2560, susceptible: 42803, exposed: 165, infected: 543, recovered: 4479, vaccinated: 149090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 2570, susceptible: 41949, exposed: 168, infected: 540, recovered: 4483, vaccinated: 149940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2580, susceptible: 41078, exposed: 169, infected: 558, recovered: 4485, vaccinated: 150790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2590, susceptible: 40212, exposed: 163, infected: 572, recovered: 4493, vaccinated: 151640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 2600, susceptible: 39360, exposed: 161, infected: 572, recovered: 4497, vaccinated: 152490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.26 seconds  Statistics: Some(StatisticEntry { time_step: 2610, susceptible: 38486, exposed: 147, infected: 604, recovered: 4503, vaccinated: 153340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2620, susceptible: 37635, exposed: 143, infected: 602, recovered: 4510, vaccinated: 154190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.21 seconds  Statistics: Some(StatisticEntry { time_step: 2630, susceptible: 36764, exposed: 140, infected: 619, recovered: 4517, vaccinated: 155040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2640, susceptible: 35905, exposed: 142, infected: 621, recovered: 4522, vaccinated: 155890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2650, susceptible: 35045, exposed: 143, infected: 618, recovered: 4534, vaccinated: 156740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2660, susceptible: 34159, exposed: 142, infected: 652, recovered: 4537, vaccinated: 157590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2670, susceptible: 33309, exposed: 139, infected: 652, recovered: 4540, vaccinated: 158440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 2680, susceptible: 32429, exposed: 138, infected: 622, recovered: 4601, vaccinated: 159290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 2690, susceptible: 31576, exposed: 136, infected: 611, recovered: 4617, vaccinated: 160140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2700, susceptible: 30714, exposed: 137, infected: 607, recovered: 4632, vaccinated: 160990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2710, susceptible: 29850, exposed: 136, infected: 581, recovered: 4673, vaccinated: 161840 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 2720, susceptible: 28998, exposed: 137, infected: 582, recovered: 4673, vaccinated: 162690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 2730, susceptible: 28131, exposed: 127, infected: 554, recovered: 4728, vaccinated: 163540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2740, susceptible: 27281, exposed: 124, infected: 557, recovered: 4728, vaccinated: 164390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2750, susceptible: 26414, exposed: 116, infected: 557, recovered: 4753, vaccinated: 165240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2760, susceptible: 25560, exposed: 99, infected: 559, recovered: 4772, vaccinated: 166090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2770, susceptible: 24705, exposed: 97, infected: 565, recovered: 4773, vaccinated: 166940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2780, susceptible: 23846, exposed: 83, infected: 557, recovered: 4804, vaccinated: 167790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.10 seconds  Statistics: Some(StatisticEntry { time_step: 2790, susceptible: 22993, exposed: 82, infected: 558, recovered: 4807, vaccinated: 168640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 2800, susceptible: 22131, exposed: 70, infected: 548, recovered: 4841, vaccinated: 169490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.15 seconds  Statistics: Some(StatisticEntry { time_step: 2810, susceptible: 21280, exposed: 70, infected: 538, recovered: 4852, vaccinated: 170340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2820, susceptible: 20420, exposed: 75, infected: 533, recovered: 4862, vaccinated: 171190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.20 seconds  Statistics: Some(StatisticEntry { time_step: 2830, susceptible: 19564, exposed: 67, infected: 517, recovered: 4892, vaccinated: 172040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 2840, susceptible: 18713, exposed: 66, infected: 516, recovered: 4895, vaccinated: 172890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.25 seconds  Statistics: Some(StatisticEntry { time_step: 2850, susceptible: 17847, exposed: 64, infected: 496, recovered: 4933, vaccinated: 173740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 2860, susceptible: 16996, exposed: 64, infected: 495, recovered: 4935, vaccinated: 174590 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2870, susceptible: 16143, exposed: 57, infected: 489, recovered: 4951, vaccinated: 175440 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2880, susceptible: 15289, exposed: 57, infected: 467, recovered: 4977, vaccinated: 176290 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2890, susceptible: 14433, exposed: 60, infected: 464, recovered: 4983, vaccinated: 177140 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2900, susceptible: 13576, exposed: 55, infected: 436, recovered: 5023, vaccinated: 177990 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 2910, susceptible: 12726, exposed: 54, infected: 437, recovered: 5023, vaccinated: 178840 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:14:11.544Z INFO  sim::interventions       > Mask wearing everywhere is removed
+ 2022-05-06T15:14:11.544Z INFO  sim::simulator           > Mask wearing status has changed: Only Public Transport at hour 2917
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 2920, susceptible: 11868, exposed: 49, infected: 419, recovered: 5054, vaccinated: 179690 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 2930, susceptible: 11016, exposed: 47, infected: 410, recovered: 5067, vaccinated: 180540 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2940, susceptible: 10160, exposed: 47, infected: 406, recovered: 5077, vaccinated: 181390 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2950, susceptible: 9307, exposed: 39, infected: 383, recovered: 5111, vaccinated: 182240 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 2960, susceptible: 8457, exposed: 39, infected: 382, recovered: 5112, vaccinated: 183090 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.24 seconds  Statistics: Some(StatisticEntry { time_step: 2970, susceptible: 7596, exposed: 43, infected: 358, recovered: 5143, vaccinated: 183940 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.09 seconds  Statistics: Some(StatisticEntry { time_step: 2980, susceptible: 6746, exposed: 42, infected: 358, recovered: 5144, vaccinated: 184790 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 2990, susceptible: 5895, exposed: 34, infected: 345, recovered: 5166, vaccinated: 185640 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3000, susceptible: 5044, exposed: 32, infected: 325, recovered: 5189, vaccinated: 186490 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3010, susceptible: 4194, exposed: 30, infected: 324, recovered: 5192, vaccinated: 187340 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 3020, susceptible: 3343, exposed: 24, infected: 298, recovered: 5225, vaccinated: 188190 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3030, susceptible: 2493, exposed: 22, infected: 297, recovered: 5228, vaccinated: 189040 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 3040, susceptible: 1642, exposed: 15, infected: 285, recovered: 5248, vaccinated: 189890 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.14 seconds  Statistics: Some(StatisticEntry { time_step: 3050, susceptible: 792, exposed: 15, infected: 278, recovered: 5255, vaccinated: 190740 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3060, susceptible: 0, exposed: 13, infected: 274, recovered: 5261, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3070, susceptible: 0, exposed: 4, infected: 260, recovered: 5284, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 3080, susceptible: 0, exposed: 4, infected: 259, recovered: 5285, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 3090, susceptible: 0, exposed: 2, infected: 216, recovered: 5330, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3100, susceptible: 0, exposed: 2, infected: 215, recovered: 5331, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.19 seconds  Statistics: Some(StatisticEntry { time_step: 3110, susceptible: 0, exposed: 1, infected: 198, recovered: 5349, vaccinated: 191532 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:14:14.790Z INFO  sim::interventions       > Mask wearing on public transport is removed
+ 2022-05-06T15:14:14.790Z INFO  sim::simulator           > Mask wearing status has changed: None at hour 3111
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3120, susceptible: 0, exposed: 1, infected: 183, recovered: 5364, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3130, susceptible: 0, exposed: 1, infected: 182, recovered: 5365, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3140, susceptible: 0, exposed: 0, infected: 158, recovered: 5390, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3150, susceptible: 0, exposed: 0, infected: 158, recovered: 5390, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 3160, susceptible: 0, exposed: 0, infected: 146, recovered: 5402, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 3170, susceptible: 0, exposed: 0, infected: 139, recovered: 5409, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3180, susceptible: 0, exposed: 0, infected: 132, recovered: 5416, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3190, susceptible: 0, exposed: 0, infected: 118, recovered: 5430, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 3200, susceptible: 0, exposed: 0, infected: 117, recovered: 5431, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 3210, susceptible: 0, exposed: 0, infected: 105, recovered: 5443, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3220, susceptible: 0, exposed: 0, infected: 104, recovered: 5444, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3230, susceptible: 0, exposed: 0, infected: 95, recovered: 5453, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3240, susceptible: 0, exposed: 0, infected: 88, recovered: 5460, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 3250, susceptible: 0, exposed: 0, infected: 86, recovered: 5462, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3260, susceptible: 0, exposed: 0, infected: 72, recovered: 5476, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3270, susceptible: 0, exposed: 0, infected: 71, recovered: 5477, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 3280, susceptible: 0, exposed: 0, infected: 58, recovered: 5490, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 3290, susceptible: 0, exposed: 0, infected: 54, recovered: 5494, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 3300, susceptible: 0, exposed: 0, infected: 53, recovered: 5495, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3310, susceptible: 0, exposed: 0, infected: 47, recovered: 5501, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 3320, susceptible: 0, exposed: 0, infected: 46, recovered: 5502, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.23 seconds  Statistics: Some(StatisticEntry { time_step: 3330, susceptible: 0, exposed: 0, infected: 35, recovered: 5513, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3340, susceptible: 0, exposed: 0, infected: 34, recovered: 5514, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 3350, susceptible: 0, exposed: 0, infected: 29, recovered: 5519, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3360, susceptible: 0, exposed: 0, infected: 25, recovered: 5523, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.17 seconds  Statistics: Some(StatisticEntry { time_step: 3370, susceptible: 0, exposed: 0, infected: 23, recovered: 5525, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3380, susceptible: 0, exposed: 0, infected: 15, recovered: 5533, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3390, susceptible: 0, exposed: 0, infected: 15, recovered: 5533, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 3400, susceptible: 0, exposed: 0, infected: 8, recovered: 5540, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.12 seconds  Statistics: Some(StatisticEntry { time_step: 3410, susceptible: 0, exposed: 0, infected: 4, recovered: 5544, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.18 seconds  Statistics: Some(StatisticEntry { time_step: 3420, susceptible: 0, exposed: 0, infected: 4, recovered: 5544, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.16 seconds  Statistics: Some(StatisticEntry { time_step: 3430, susceptible: 0, exposed: 0, infected: 2, recovered: 5546, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.13 seconds  Statistics: Some(StatisticEntry { time_step: 3440, susceptible: 0, exposed: 0, infected: 2, recovered: 5546, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.22 seconds  Statistics: Some(StatisticEntry { time_step: 3450, susceptible: 0, exposed: 0, infected: 1, recovered: 5547, vaccinated: 191532 }),   Memory usage: 0.205 GB
+Completed  10 time steps, in:   0.08 seconds  Statistics: Some(StatisticEntry { time_step: 3460, susceptible: 0, exposed: 0, infected: 1, recovered: 5547, vaccinated: 191532 }),   Memory usage: 0.205 GB
+ 2022-05-06T15:14:20.484Z INFO  sim::simulator           > Disease finished as no one has the disease
+ 2022-05-06T15:14:20.484Z DEBUG sim::simulator           > Some(StatisticEntry { time_step: 3468, susceptible: 0, exposed: 0, infected: 0, recovered: 5548, vaccinated: 191532 })
+ 2022-05-06T15:14:20.507Z INFO  sim::statistics          > Dumped data to file: statistics_results/viking/v1.2/1946157112TYPE299/1/
+ 2022-05-06T15:14:20.507Z INFO  run                      > Finished in 60.386447146s

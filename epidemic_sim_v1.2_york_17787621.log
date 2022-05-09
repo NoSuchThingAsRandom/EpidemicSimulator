@@ -1,0 +1,40 @@
+My working directory is /users/sr1474/scratch/git/V1.2/EpidemicSimulator
+Running job on host:
+	node025.pri.viking.alces.network at Fri 6 May 15:46:34 BST 2022
+1 CPU cores available
+
+Saving results to: 'statistics_results/viking/v1.2/1946157112TYPE299/1/'
+    Updating crates.io index
+ Downloading crates ...
+error: failed to download `geo-types v0.7.4`
+
+Caused by:
+  unable to get packages from source
+
+Caused by:
+  failed to parse manifest at `/users/sr1474/.cargo/registry/src/github.com-1ecc6299db9ec823/geo-types-0.7.4/Cargo.toml`
+
+Caused by:
+  feature `edition2021` is required
+
+  consider adding `cargo-features = ["edition2021"]` to the manifest
+Job completed at Fri 6 May 15:46:49 BST 2022
+
+============================
+ Job utilisation efficiency
+============================
+
+Job ID: 17787621
+Cluster: viking
+User/Group: sr1474/clusterusers
+State: COMPLETED (exit code 0)
+Cores: 1
+CPU Utilized: 00:00:09
+CPU Efficiency: 60.00% of 00:00:15 core-walltime
+Job Wall-clock time: 00:00:15
+Memory Utilized: 1.04 MB
+Memory Efficiency: 0.00% of 32.00 GB
+ Requested wall clock time: 04:00:00
+    Actual wall clock time: 00:00:15
+Wall clock time efficiency: 0.1%
+           Job queued time: 00:01:12
