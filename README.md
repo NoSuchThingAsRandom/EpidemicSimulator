@@ -5,27 +5,33 @@ discover the impact that real world census data can have on the simulation.
 
 It is inspired by EpiRust (https://github.com/thoughtworks/epirust) and similar projects.
 
-It utilises UK Census data from 2011, to model the population of the UK and their movements.
+It utilises UK Census data from 2011, to model the population of the UK and their movements. As well as open street
+maps, to build an abstracted model of the real world
 
-## V1
+## V1-V1.7
 
-This is a first initial baseline version, that can load in a population from Census Files.
+These branches are part of the initial development phase, for my Dissertation. Key Features are:
+A reasonably accurate simulator capable of predicting the 6th month period from the 14/08/2020 to 14/03/202 in York,
+England. Utilising census data, to build a population with age, occupation and gender characteristics Uses OSM mapping
+data to represent homes, schools and workplaces Unique schedules for each Citizen, where they travel between work and
+home, sometimes using public transport Can simulate 3.5 million Citizens in just over an hour for 5000 timesteps (~7
+months) on a workstation PC Scalability using multithreading Configurable Interventions to reduce the spread of the
+disease
 
-It also allocates workplaces based on Occupations Types and in different OutputAreas depending on the Home Residence to
-Workpalce position Table (https://www.nomisweb.co.uk/census/2011/wf01bew)
+## Goals for Future Iterations
 
-## TODO In Future Iterations
-
-* Implement Multithreading
+* Expand the complexity of a Citizens schedule to account for things like shopping, social events and weekends.
+* Horizontal Scaling using MPI or similar
+* Improve user experience and configuration of the disease
 * Add dynamic disease risks, dependent on occupation
-* Add support for disease intervention techniques (mask wearing, lockdowns, vaccinations, etc)
+* Improve support for disease intervention techniques (mask wearing, lockdowns, vaccinations, etc)
 * Better visualisation support for summaries
+*
 
-## Environment Variables
+## V2
 
-| Name             | Description                                                                                  | Example                       |
-|------------------|----------------------------------------------------------------------------------------------|-------------------------------|
-| CENSUS_DIRECTORY | The area to use for loading census data from. (Can either be a NOMIS Area Code, or nickname) | 2092957699TYPE299  or England |
-| USE_RENDERER     | Whether to use the live rendering engine                                                     | false                         |
-| DOWNLOAD_DATA    | If any Census tables are missing locally, should they be downloaded?                         | false                         |
-| DISEASE_MODEL    | The name of the file to load disease data from                                               | data/diseases/covid.json      |
+This is an extension of the Dissertation, to make the simulator more user-friendly and implement additional features.
+Hopefully implementing some of the aforementioned goals
+
+External Contributors are welcome, and new ideas/thoughts are much appreciated.
+
