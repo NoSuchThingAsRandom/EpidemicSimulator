@@ -32,10 +32,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_writer;
 
 use crate::config::{get_memory_usage, NUMBER_FORMATTING};
-use crate::DayOfWeek;
 use crate::disease::DiseaseStatus;
 use crate::error::SimError;
 use crate::models::ID;
+use crate::DayOfWeek;
 
 /// A simple struct for benchmarking how long a block of code takes
 #[derive(Debug)]
@@ -69,12 +69,22 @@ impl Timer {
         Ok(())
     }
     pub fn finished(&mut self) -> HashMap<String, f64> {
-        self.function_times.insert("total".to_string(), self.function_timer.elapsed().as_secs_f64());
+        self.function_times.insert(
+            "total".to_string(),
+            self.function_timer.elapsed().as_secs_f64(),
+        );
         self.function_times.clone()
     }
     pub fn finished_with_print(&mut self, function_name: String) -> HashMap<String, f64> {
-        self.function_times.insert("total".to_string(), self.function_timer.elapsed().as_secs_f64());
-        println!("{} finished in {:.2} seconds", function_name, self.function_timer.elapsed().as_secs_f64());
+        self.function_times.insert(
+            "total".to_string(),
+            self.function_timer.elapsed().as_secs_f64(),
+        );
+        println!(
+            "{} finished in {:.2} seconds",
+            function_name,
+            self.function_timer.elapsed().as_secs_f64()
+        );
         self.function_times.clone()
     }
 }
@@ -104,15 +114,18 @@ pub struct StatisticsRecorder {
     pub current_entry: HashMap<ID, u32>,
 }
 
-
 impl StatisticsRecorder {
     pub fn dump_to_file(&mut self, directory: String) {
         // Flush the recordings
         if let Err(e) = self.next() {
-            error!("Failed to create final statistics log: {:?}",e);
+            error!("Failed to create final statistics log: {:?}", e);
         }
-        fs::create_dir_all(directory.clone()).expect(&format!("Failed to create statistics directory: '{}'", directory));
-        let file = File::create(directory.to_owned() + "exposures.json").expect("Failed to create results file!");
+        fs::create_dir_all(directory.clone()).expect(&format!(
+            "Failed to create statistics directory: '{}'",
+            directory
+        ));
+        let file = File::create(directory.to_owned() + "exposures.json")
+            .expect("Failed to create results file!");
         let file_writer = BufWriter::new(file);
         let mut exposure_counts: HashMap<&str, HashMap<String, Vec<u32>>> = HashMap::new();
         for (place, records) in self.exposures_per_building_per_time_step.drain() {
@@ -133,18 +146,21 @@ impl StatisticsRecorder {
         }
         to_writer(file_writer, &exposure_counts).expect("Failed to write to file!");
 
-        let file = File::create(directory.to_owned() + "timings.json").expect("Failed to create timings results file!");
+        let file = File::create(directory.to_owned() + "timings.json")
+            .expect("Failed to create timings results file!");
         let file_writer = BufWriter::new(file);
         to_writer(file_writer, &self.timer_entries).expect("Failed to write to file!");
 
-        let file = File::create(directory.to_owned() + "memory.json").expect("Failed to create memory results file!");
+        let file = File::create(directory.to_owned() + "memory.json")
+            .expect("Failed to create memory results file!");
         let file_writer = BufWriter::new(file);
         to_writer(file_writer, &self.memory_usage_entries).expect("Failed to write to file!");
 
-        let file = File::create(directory.to_owned() + "global_stats.json").expect("Failed to create global stats results file!");
+        let file = File::create(directory.to_owned() + "global_stats.json")
+            .expect("Failed to create global stats results file!");
         let file_writer = BufWriter::new(file);
         to_writer(file_writer, &self.global_stats).expect("Failed to write to file!");
-        info!("Dumped data to file: {}",directory);
+        info!("Dumped data to file: {}", directory);
     }
     pub fn current_time_step(&self) -> u32 {
         self.current_time_step
@@ -160,7 +176,10 @@ impl StatisticsRecorder {
             self.timer_entries.push(self.timer.finished());
             self.memory_usage_entries.push(get_memory_usage()?);
             for (area, entry) in self.current_entry.drain() {
-                let recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();
+                let recording_entry = self
+                    .exposures_per_building_per_time_step
+                    .entry(area)
+                    .or_default();
                 recording_entry.push(entry);
             }
         }
@@ -170,7 +189,8 @@ impl StatisticsRecorder {
         if self.current_time_step % 24 == 0 {
             self.current_day = self.current_day.next_day();
         }
-        self.global_stats.push(StatisticEntry::with_time_step(self.current_time_step()));
+        self.global_stats
+            .push(StatisticEntry::with_time_step(self.current_time_step()));
         self.current_entry = HashMap::new();
         Ok(())
     }
@@ -180,11 +200,17 @@ impl StatisticsRecorder {
 
     /// Increment the current global stats, with the other
     pub fn update_global_stats_entry(&mut self, entry: StatisticEntry) {
-        let current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
+        let current = self
+            .global_stats
+            .last_mut()
+            .expect("Need to call next() to start a recording!");
         *current += entry;
     }
     pub fn add_exposure(&mut self, location: ID) -> Result<(), SimError> {
-        self.global_stats.last_mut().expect("No global data recorded").citizen_exposed()?;
+        self.global_stats
+            .last_mut()
+            .expect("No global data recorded")
+            .citizen_exposed()?;
         // If building, expose the Output Area as well
         let current_entry = &mut self.current_entry;
         if let ID::Building(building) = &location {
@@ -197,13 +223,21 @@ impl StatisticsRecorder {
         Ok(())
     }
     pub fn disease_exists(&self) -> bool {
-        self.global_stats.last().expect("No data recorded").disease_exists()
+        self.global_stats
+            .last()
+            .expect("No data recorded")
+            .disease_exists()
     }
 
     pub fn infected_percentage(&self) -> f64 {
-        self.global_stats.last().expect("No data recorded").infected_percentage()
+        self.global_stats
+            .last()
+            .expect("No data recorded")
+            .infected_percentage()
     }
-    pub fn time_step(&self) -> u32 { self.current_time_step }
+    pub fn time_step(&self) -> u32 {
+        self.current_time_step
+    }
 }
 
 /// A snapshot of the disease per time step

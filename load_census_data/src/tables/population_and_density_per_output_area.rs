@@ -126,7 +126,7 @@ impl<'a> TryFrom<&'a Vec<PreProcessingPopulationDensityRecord>> for PopulationRe
                     },
                 });
             }
-            if record.rural_urban_name!="Total"{
+            if record.rural_urban_name != "Total" {
                 continue;
             }
             if record.measures_name == "Value" {

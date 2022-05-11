@@ -31,14 +31,17 @@ use rand::{Rng, RngCore};
 
 use crate::nomis_download::{build_table_request_string, DataFetcher};
 use crate::parsing_error::DataLoadingError;
-use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 use crate::tables::age_structure::{AgePopulationRecord, PreProcessingAgePopulationRecord};
 use crate::tables::employment_densities::EmploymentDensities;
 use crate::tables::occupation_count::{OccupationCountRecord, PreProcessingOccupationCountRecord};
 use crate::tables::population_and_density_per_output_area::{
     PopulationRecord, PreProcessingPopulationDensityRecord,
 };
-use crate::tables::resides_vs_workplace::{PreProcessingBulkWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialRecord, WorkplaceResidentialRecord};
+use crate::tables::resides_vs_workplace::{
+    PreProcessingBulkWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialRecord,
+    WorkplaceResidentialRecord,
+};
+use crate::tables::{CensusTableNames, PreProcessingTable, TableEntry};
 
 mod nomis_download;
 pub mod parse_table;
@@ -168,22 +171,21 @@ impl CensusData {
         table_name: CensusTableNames,
         is_bulk: bool,
     ) -> Result<HashMap<String, T>, DataLoadingError> {
-        let filename =
-            if is_bulk {
-                String::new()
-                    + census_directory
-                    + "tables/"
-                    + region_code
-                    + "/"
-                    + table_name.get_bulk_filename()
-            } else {
-                String::new()
-                    + census_directory
-                    + "tables/"
-                    + region_code
-                    + "/"
-                    + table_name.get_filename()
-            };
+        let filename = if is_bulk {
+            String::new()
+                + census_directory
+                + "tables/"
+                + region_code
+                + "/"
+                + table_name.get_bulk_filename()
+        } else {
+            String::new()
+                + census_directory
+                + "tables/"
+                + region_code
+                + "/"
+                + table_name.get_filename()
+        };
         CensusData::read_generic_table_from_disk::<T, U>(&filename, is_bulk)
     }
 
@@ -228,7 +230,6 @@ impl CensusData {
         trace!("Loading all tables");
         // TODO await doesn't work fetch all tables at once - But can't rayon scope with async downloads
 
-
         // If we are using Bulk data, the file format is different, and we can't automate download - but we can thread
         // Otherwise, we can download - but limited to single thread, which is fine as smaller data
         if region_code == "England" {
@@ -236,54 +237,63 @@ impl CensusData {
             rayon::scope(|s| {
                 s.spawn(|_| {
                     // Build population table
-                    population_counts = Some(CensusData::read_table_and_generate_filename::<
-                        PreProcessingPopulationDensityRecord,
-                        PopulationRecord,
-                    >(
-                        &census_directory,
-                        &region_code,
-                        CensusTableNames::PopulationDensity,
-                        true,
-                    ).unwrap());
+                    population_counts = Some(
+                        CensusData::read_table_and_generate_filename::<
+                            PreProcessingPopulationDensityRecord,
+                            PopulationRecord,
+                        >(
+                            &census_directory,
+                            &region_code,
+                            CensusTableNames::PopulationDensity,
+                            true,
+                        )
+                        .unwrap(),
+                    );
                 });
                 s.spawn(|_| {
                     // Build population table
-                    age_counts = Some(CensusData::read_table_and_generate_filename::<
-                        PreProcessingAgePopulationRecord,
-                        AgePopulationRecord,
-                    >(
-                        &census_directory,
-                        &region_code,
-                        CensusTableNames::AgeStructure,
-                        true,
-                    )
-                        .unwrap());
+                    age_counts = Some(
+                        CensusData::read_table_and_generate_filename::<
+                            PreProcessingAgePopulationRecord,
+                            AgePopulationRecord,
+                        >(
+                            &census_directory,
+                            &region_code,
+                            CensusTableNames::AgeStructure,
+                            true,
+                        )
+                        .unwrap(),
+                    );
                 });
                 s.spawn(|_| {
                     // Build occupation table
-                    occupation_counts = Some(CensusData::read_table_and_generate_filename::<
-                        PreProcessingOccupationCountRecord,
-                        OccupationCountRecord,
-                    >(
-                        &census_directory,
-                        &region_code,
-                        CensusTableNames::OccupationCount,
-                        true,
-                    )
-                        .unwrap());
+                    occupation_counts = Some(
+                        CensusData::read_table_and_generate_filename::<
+                            PreProcessingOccupationCountRecord,
+                            OccupationCountRecord,
+                        >(
+                            &census_directory,
+                            &region_code,
+                            CensusTableNames::OccupationCount,
+                            true,
+                        )
+                        .unwrap(),
+                    );
                 });
                 s.spawn(|_| {
                     // Build residents workplace table
-                    residents_workplace = Some(CensusData::read_table_and_generate_filename::<
-                        PreProcessingBulkWorkplaceResidentialRecord,
-                        WorkplaceResidentialRecord,
-                    >(
-                        &census_directory,
-                        &region_code,
-                        CensusTableNames::ResidentialAreaVsWorkplaceArea,
-                        true,
-                    )
-                        .unwrap());
+                    residents_workplace = Some(
+                        CensusData::read_table_and_generate_filename::<
+                            PreProcessingBulkWorkplaceResidentialRecord,
+                            WorkplaceResidentialRecord,
+                        >(
+                            &census_directory,
+                            &region_code,
+                            CensusTableNames::ResidentialAreaVsWorkplaceArea,
+                            true,
+                        )
+                        .unwrap(),
+                    );
                 });
             });
         } else {
@@ -293,54 +303,67 @@ impl CensusData {
                 None
             };
             // Build population table
-            population_counts = Some(CensusData::fetch_generic_table::<
-                PreProcessingPopulationDensityRecord,
-                PopulationRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::PopulationDensity,
-                &data_fetcher,
-            )
-                .await?);
+            population_counts = Some(
+                CensusData::fetch_generic_table::<
+                    PreProcessingPopulationDensityRecord,
+                    PopulationRecord,
+                >(
+                    &census_directory,
+                    &region_code,
+                    CensusTableNames::PopulationDensity,
+                    &data_fetcher,
+                )
+                .await?,
+            );
 
             // Build population table
-            age_counts = Some(CensusData::fetch_generic_table::<
-                PreProcessingAgePopulationRecord,
-                AgePopulationRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::AgeStructure,
-                &data_fetcher,
-            )
-                .await?);
+            age_counts = Some(
+                CensusData::fetch_generic_table::<
+                    PreProcessingAgePopulationRecord,
+                    AgePopulationRecord,
+                >(
+                    &census_directory,
+                    &region_code,
+                    CensusTableNames::AgeStructure,
+                    &data_fetcher,
+                )
+                .await?,
+            );
 
             // Build occupation table
-            occupation_counts = Some(CensusData::fetch_generic_table::<
-                PreProcessingOccupationCountRecord,
-                OccupationCountRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::OccupationCount,
-                &data_fetcher,
-            )
-                .await?);
+            occupation_counts = Some(
+                CensusData::fetch_generic_table::<
+                    PreProcessingOccupationCountRecord,
+                    OccupationCountRecord,
+                >(
+                    &census_directory,
+                    &region_code,
+                    CensusTableNames::OccupationCount,
+                    &data_fetcher,
+                )
+                .await?,
+            );
 
             // Build residents workplace table
-            residents_workplace = Some(CensusData::fetch_generic_table::<
-                PreProcessingWorkplaceResidentialRecord,
-                WorkplaceResidentialRecord,
-            >(
-                &census_directory,
-                &region_code,
-                CensusTableNames::ResidentialAreaVsWorkplaceArea,
-                &data_fetcher,
-            )
-                .await?);
+            residents_workplace = Some(
+                CensusData::fetch_generic_table::<
+                    PreProcessingWorkplaceResidentialRecord,
+                    WorkplaceResidentialRecord,
+                >(
+                    &census_directory,
+                    &region_code,
+                    CensusTableNames::ResidentialAreaVsWorkplaceArea,
+                    &data_fetcher,
+                )
+                .await?,
+            );
         }
-        let (population_counts, age_counts, occupation_counts, residents_workplace) = (population_counts.expect("Population Counts Table has not been loaded"), age_counts.expect("Age Counts Table has not been loaded"), occupation_counts.expect("Occupation Counts Table has not been loaded"), residents_workplace.expect("Residents Workplace Table has not been loaded"));
+        let (population_counts, age_counts, occupation_counts, residents_workplace) = (
+            population_counts.expect("Population Counts Table has not been loaded"),
+            age_counts.expect("Age Counts Table has not been loaded"),
+            occupation_counts.expect("Occupation Counts Table has not been loaded"),
+            residents_workplace.expect("Residents Workplace Table has not been loaded"),
+        );
         debug!(
             "Built {} residential workplace areas with {} records",
             residents_workplace.len(),

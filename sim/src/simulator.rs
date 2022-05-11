@@ -23,7 +23,7 @@ use std::ops::AddAssign;
 use std::sync::{Mutex, RwLock};
 use std::time::Instant;
 
-use anyhow::{Context};
+use anyhow::Context;
 use log::{debug, error, info};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
@@ -33,15 +33,15 @@ use rayon::prelude::{
     IntoParallelRefMutIterator, ParallelIterator,
 };
 
-use crate::config::{DEBUG_ITERATION_PRINT, get_memory_usage};
-use crate::disease::{DiseaseModel, DiseaseStatus};
+use crate::config::{get_memory_usage, DEBUG_ITERATION_PRINT};
 use crate::disease::DiseaseStatus::Infected;
-use crate::interventions::{InterventionsEnabled, InterventionStatus};
+use crate::disease::{DiseaseModel, DiseaseStatus};
+use crate::interventions::{InterventionStatus, InterventionsEnabled};
 use crate::models::building::BuildingID;
 use crate::models::citizen::{Citizen, CitizenID};
-use crate::models::ID;
 use crate::models::output_area::{OutputArea, OutputAreaID};
 use crate::models::public_transport_route::{PublicTransport, PublicTransportID};
+use crate::models::ID;
 use crate::simulator_builder::SimulatorBuilder;
 use crate::statistics::{StatisticEntry, StatisticsRecorder};
 
@@ -67,7 +67,10 @@ impl AddAssign for GeneratedExposures {
         }
         if self.building_exposure_list.len() < rhs.building_exposure_list.len() {
             self.building_exposure_list.extend(vec![
-                HashMap::new(); rhs.building_exposure_list.len() - self.building_exposure_list.len()]);
+                HashMap::new();
+                rhs.building_exposure_list.len()
+                    - self.building_exposure_list.len()
+            ]);
         }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
             let area_entry = self.building_exposure_list.get_mut(area_index).expect(
@@ -111,7 +114,13 @@ impl Simulator {
         );
         for time_step in 0..self.disease_model.max_time_step {
             if !self.step()? {
-                debug!("{:?}", self.statistics_recorder.global_stats.last().expect("No data recorded!"));
+                debug!(
+                    "{:?}",
+                    self.statistics_recorder
+                        .global_stats
+                        .last()
+                        .expect("No data recorded!")
+                );
                 break;
             }
             if time_step % DEBUG_ITERATION_PRINT as u16 == 0 {
@@ -132,14 +141,16 @@ impl Simulator {
         // Reset public transport containers
         self.public_transport = Default::default();
         let exposures = self.generate_exposures()?;
-        self.statistics_recorder.record_function_time("Generate Exposures".to_string());
+        self.statistics_recorder
+            .record_function_time("Generate Exposures".to_string());
 
         self.apply_exposures(exposures)?;
-        self.statistics_recorder.record_function_time("Apply Exposures".to_string());
+        self.statistics_recorder
+            .record_function_time("Apply Exposures".to_string());
 
         self.apply_interventions()?;
-        self.statistics_recorder.record_function_time("Apply Interventions".to_string());
-
+        self.statistics_recorder
+            .record_function_time("Apply Interventions".to_string());
 
         if !self.statistics_recorder.disease_exists() {
             info!("Disease finished as no one has the disease");
@@ -255,7 +266,8 @@ impl Simulator {
                 ),
             };
         }
-        self.statistics_recorder.update_global_stats_entry(statistics);
+        self.statistics_recorder
+            .update_global_stats_entry(statistics);
         return Ok(exposures);
     }
     /// Applies the exposure cycle on any Citizens that have come in contact with an infected Citizen
@@ -336,11 +348,11 @@ impl Simulator {
                         };
                         if citizen.is_susceptible()
                             && citizen.expose(
-                            exposure_count,
-                            disease,
-                            mask_status,
-                            &mut thread_rng(),
-                        )
+                                exposure_count,
+                                disease,
+                                mask_status,
+                                &mut thread_rng(),
+                            )
                         {
                             exposures.push(ID::Building(building_id.clone()));
                             if let Some(vaccine_list) = &mut area.citizens_eligible_for_vaccine {
@@ -435,11 +447,11 @@ impl Simulator {
             let citizen = citizen.unwrap();
             if citizen.is_susceptible()
                 & &citizen.expose(
-                exposure_count,
-                &self.disease_model,
-                &self.interventions.mask_status,
-                &mut self.rng,
-            )
+                    exposure_count,
+                    &self.disease_model,
+                    &self.interventions.mask_status,
+                    &mut self.rng,
+                )
             {
                 self.statistics_recorder
                     .add_exposure(location.clone())

@@ -35,11 +35,11 @@ use uuid::Uuid;
 use load_census_data::tables::occupation_count::RawOccupationType;
 
 use crate::config::PUBLIC_TRANSPORT_PERCENTAGE;
-use crate::DayOfWeek;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::interventions::MaskStatus;
 use crate::models::building::BuildingID;
 use crate::models::output_area::OutputAreaID;
+use crate::DayOfWeek;
 
 lazy_static! {
     /// This is a random uniform distribution, for fast random generation

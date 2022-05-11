@@ -30,25 +30,25 @@ use enum_map::EnumMap;
 use geo_types::{Coordinate, Point};
 use log::{debug, error, info, warn};
 use num_format::ToFormattedString;
-use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
+use rand::{thread_rng, RngCore};
 use rayon::prelude::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
     IntoParallelRefMutIterator, ParallelIterator,
 };
 use strum::IntoEnumIterator;
 
-use load_census_data::CensusData;
 use load_census_data::parsing_error::{DataLoadingError, ParseErrorType};
-use osm_data::{BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
+use load_census_data::CensusData;
 use osm_data::polygon_lookup::PolygonContainer;
+use osm_data::{BuildingBoundaryID, OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
 
-use crate::config::{MAX_STUDENT_AGE, NUMBER_FORMATTING};
 use crate::config::STARTING_INFECTED_COUNT;
+use crate::config::{MAX_STUDENT_AGE, NUMBER_FORMATTING};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::error::SimError;
 use crate::models::building::{
-    AVERAGE_CLASS_SIZE, Building, BuildingID, BuildingType, School, Workplace,
+    Building, BuildingID, BuildingType, School, Workplace, AVERAGE_CLASS_SIZE,
 };
 use crate::models::citizen::{Citizen, CitizenID, OccupationType};
 use crate::models::get_density_for_occupation;
@@ -99,7 +99,7 @@ impl SimulatorBuilder {
                 polygon.clone(),
                 self.disease_model.mask_percentage,
             )
-                .context("Failed to create Output Area")?;
+            .context("Failed to create Output Area")?;
             self.output_areas.push(new_area);
         }
         Ok(())
@@ -161,9 +161,12 @@ impl SimulatorBuilder {
             println!("Removing: {}", deletion - index);
             self.output_areas.remove(deletion - index);
         }
-        let lookup = self.output_areas.par_iter().enumerate().map(|(index, area)| {
-            (area.id().code().to_string(), index as u32)
-        }).collect();
+        let lookup = self
+            .output_areas
+            .par_iter()
+            .enumerate()
+            .map(|(index, area)| (area.id().code().to_string(), index as u32))
+            .collect();
         self.output_area_lookup = lookup;
         debug!(
             "{} Buildings have been assigned. {} Output Areas remaining (with buildings)",
@@ -417,7 +420,7 @@ impl SimulatorBuilder {
                                 output_areas_polygons,
                                 building_boundaries,
                             )
-                                .expect("School building is not inside any Output areas!");
+                            .expect("School building is not inside any Output areas!");
                             let output_area_id = area_codes.keys().next()?;
                             //.expect("School building is not inside any Output areas!");
                             if output_area_lookup.contains_key(output_area_id) {
@@ -489,61 +492,61 @@ impl SimulatorBuilder {
         // The amount of teachers that fail to be assigned
         let mut failed_teacher_count = 0;
         // Take a two pronged approach to assigning teachers
-        teachers.into_par_iter().filter_map(|teacher| {
-            match finding_closest_school(teacher, true) {
-                Ok(schools) => {
-                    Some((teacher, schools))
-                }
+        teachers
+            .into_par_iter()
+            .filter_map(|teacher| match finding_closest_school(teacher, true) {
+                Ok(schools) => Some((teacher, schools)),
                 Err(e) => {
                     warn!("Failed to assign school to teacher: {}", e);
                     None
                 }
-            }
-        }).collect::<Vec<(&mut Citizen, Vec<&RawBuilding>)>>().into_iter().for_each(|(teacher, schools)| {
-            // Attempt to assign Teacher as a Teacher to the closest Available School
-            // Available, being that it exists, and does not have enough teachers for the number of students
-            let mut placed = false;
+            })
+            .collect::<Vec<(&mut Citizen, Vec<&RawBuilding>)>>()
+            .into_iter()
+            .for_each(|(teacher, schools)| {
+                // Attempt to assign Teacher as a Teacher to the closest Available School
+                // Available, being that it exists, and does not have enough teachers for the number of students
+                let mut placed = false;
 
-            // The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
-            let mut teacher = Some(teacher);
-            for school in &schools {
-                let school_entry = citizens_per_raw_school.get_mut(&school.center());
-                if let Some((students, teachers, _)) = school_entry {
-                    let total_students = students
-                        .iter()
-                        .map(|age_group| {
-                            ((age_group.len() as f64 / AVERAGE_CLASS_SIZE).ceil() as usize)
-                                .max(1)
-                        })
-                        .sum::<usize>();
-                    if teachers.len() < total_students {
-                        placed = true;
-                        if let Some(teacher) = teacher {
-                            teachers.push(teacher);
-                        }
-                        teacher = None;
-                        break;
-                    }
-                }
-            }
-            // If all Schools are full, fallback to adding to the closest school as Secondary Staff
-            if !placed {
+                // The Option is a hacky thing to get around the borrow checker, moving teacher into `citizens_per_raw_school` twice
+                let mut teacher = Some(teacher);
                 for school in &schools {
                     let school_entry = citizens_per_raw_school.get_mut(&school.center());
-                    if let Some((_students, teachers, _)) = school_entry {
-                        if let Some(teacher) = teacher {
-                            teachers.push(teacher);
+                    if let Some((students, teachers, _)) = school_entry {
+                        let total_students = students
+                            .iter()
+                            .map(|age_group| {
+                                ((age_group.len() as f64 / AVERAGE_CLASS_SIZE).ceil() as usize)
+                                    .max(1)
+                            })
+                            .sum::<usize>();
+                        if teachers.len() < total_students {
                             placed = true;
+                            if let Some(teacher) = teacher {
+                                teachers.push(teacher);
+                            }
+                            teacher = None;
                             break;
                         }
                     }
                 }
-            }
-            if !placed {
-                failed_teacher_count += 1;
-            }
-        });
-
+                // If all Schools are full, fallback to adding to the closest school as Secondary Staff
+                if !placed {
+                    for school in &schools {
+                        let school_entry = citizens_per_raw_school.get_mut(&school.center());
+                        if let Some((_students, teachers, _)) = school_entry {
+                            if let Some(teacher) = teacher {
+                                teachers.push(teacher);
+                                placed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if !placed {
+                    failed_teacher_count += 1;
+                }
+            });
 
         if crate::config::CREATE_DEBUG_DUMPS {
             let debug_directory = crate::config::DEBUG_DUMP_DIRECTORY.to_owned() + "schools/";
@@ -646,7 +649,7 @@ impl SimulatorBuilder {
                 let output_area_id = (*output_area_ids
                     .get(*index as usize)
                     .expect("No buildings exist in area"))
-                    .clone();
+                .clone();
                 let building_id =
                     BuildingID::new(output_area_id, BuildingType::School, buildings.len() as u32);
 
@@ -809,10 +812,10 @@ impl SimulatorBuilder {
             );
         // Create buildings for each Workplace output area
         'citizen_allocation_loop: for ((workplace_area_index, mut _citizen_ids), citizens) in
-        citizens_to_allocate
-            .into_iter()
-            .enumerate()
-            .zip(output_area_citizens)
+            citizens_to_allocate
+                .into_iter()
+                .enumerate()
+                .zip(output_area_citizens)
         {
             // Retrieve the buildings or skip this area
             let workplace_output_area_buildings =
@@ -829,7 +832,7 @@ impl SimulatorBuilder {
             let workplace_output_id = (*(output_area_ids
                 .get(workplace_area_index)
                 .expect("Cannot retrieve workplace output area id")))
-                .clone();
+            .clone();
             let possible_buildings =
                 match possible_buildings_per_area.get_mut(workplace_output_id.code()) {
                     Some(buildings) => buildings,
@@ -1128,8 +1131,8 @@ impl SimulatorBuilder {
                     let error = DataLoadingError::ValueParsingError {
                         source: ParseErrorType::IsEmpty {
                             message:
-                            "No citizens exist in the output areas for seeding the disease"
-                                .to_string(),
+                                "No citizens exist in the output areas for seeding the disease"
+                                    .to_string(),
                         },
                     };
                     error!("{:?}", error);
@@ -1172,7 +1175,9 @@ impl SimulatorBuilder {
         let mut possible_buildings_per_area = self
             .assign_buildings_to_output_areas()
             .context("Failed to assign buildings to output areas")?;
-        timer.code_block_finished_with_print("Assigned Possible Buildings to Output Areas".to_string())?;
+        timer.code_block_finished_with_print(
+            "Assigned Possible Buildings to Output Areas".to_string(),
+        )?;
         self.generate_citizens(&mut rng, &mut possible_buildings_per_area)
             .context("Failed to generate Citizens")?;
 
@@ -1190,8 +1195,8 @@ impl SimulatorBuilder {
                     assert!(
                         citizen.is_student()
                             || citizen
-                            .detailed_occupation()
-                            .eq(&Some(OccupationType::Teaching)),
+                                .detailed_occupation()
+                                .eq(&Some(OccupationType::Teaching)),
                         "Citizen {} should not be in a school, with job: {:?}",
                         citizen.id(),
                         citizen.detailed_occupation()
@@ -1247,7 +1252,9 @@ impl SimulatorBuilder {
         );
         self.build_workplaces(possible_workplaces)
             .context("Failed to build workplaces")?;
-        timer.code_block_finished_with_print("Generated workplaces for {} Output Areas".to_string())?;
+        timer.code_block_finished_with_print(
+            "Generated workplaces for {} Output Areas".to_string(),
+        )?;
 
         let work_from_home_count: u32 = self
             .output_areas

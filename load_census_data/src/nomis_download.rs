@@ -28,9 +28,9 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, trace};
 use serde_json::Value;
 
+use crate::parsing_error::DataLoadingError;
 use crate::CensusTableNames;
 use crate::CensusTableNames::ResidentialAreaVsWorkplaceArea;
-use crate::parsing_error::DataLoadingError;
 
 lazy_static! {
     pub static ref NOMIS_API_KEY: String =

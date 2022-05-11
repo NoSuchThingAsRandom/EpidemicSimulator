@@ -58,12 +58,10 @@ pub trait PreProcessingTable: Debug + DeserializeOwned + Sized {
 ///
 /// Should contain a hashmap of OutputArea Codes to TableEntries
 pub trait TableEntry<T: 'static + PreProcessingTable>:
-Debug + Sized + for<'a> TryFrom<&'a Vec<T>, Error=DataLoadingError>
+    Debug + Sized + for<'a> TryFrom<&'a Vec<T>, Error = DataLoadingError>
 {
     /// Returns the entire processed CSV per output area
-    fn generate(
-        data: Vec<T>,
-    ) -> Result<HashMap<String, Self>, DataLoadingError> {
+    fn generate(data: Vec<T>) -> Result<HashMap<String, Self>, DataLoadingError> {
         let mut grouped: HashMap<String, Vec<T>> = T::group_by_area(data).unwrap();
         // Convert into Population Records
         let mut output = HashMap::new();
@@ -108,9 +106,7 @@ impl CensusTableNames {
             CensusTableNames::OutputAreaMap => {
                 "data/census_map_areas_converted/TestOutputAreas.shp"
             }
-            CensusTableNames::ResidentialAreaVsWorkplaceArea => {
-                "wf01bew_oa.csv"
-            }
+            CensusTableNames::ResidentialAreaVsWorkplaceArea => "wf01bew_oa.csv",
             CensusTableNames::AgeStructure => "qs103ew_2011_oa/QS103EWDATA.CSV",
         }
     }

@@ -62,7 +62,7 @@ impl Debug for MyDrawingError {
 }
 
 impl<T: 'static + std::error::Error + Send + Sync> From<plotters::drawing::DrawingAreaErrorKind<T>>
-for MyDrawingError
+    for MyDrawingError
 {
     fn from(e: DrawingAreaErrorKind<T>) -> Self {
         Self::Drawing {

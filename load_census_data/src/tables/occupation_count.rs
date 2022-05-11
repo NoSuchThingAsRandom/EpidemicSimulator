@@ -21,8 +21,8 @@
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
-use rand::{distributions::Distribution, RngCore};
 use rand::distributions::WeightedIndex;
+use rand::{distributions::Distribution, RngCore};
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumCount as EnumCountMacro, EnumIter};
 
@@ -30,7 +30,7 @@ use crate::parsing_error::{DataLoadingError, ParseErrorType};
 use crate::tables::{PreProcessingTable, TableEntry};
 
 #[derive(
-Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy, EnumIter,
+    Deserialize, Serialize, Debug, Enum, PartialEq, Eq, Hash, EnumCountMacro, Clone, Copy, EnumIter,
 )]
 pub enum RawOccupationType {
     #[serde(alias = "All categories: Occupation")]
@@ -69,7 +69,7 @@ pub struct PreProcessingOccupationCountRecordOLD {
     #[serde(alias = "Occupation: 2. professional occupations; measures: Value")]
     professional: u32,
     #[serde(
-    alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
+        alias = "Occupation: 3. Associate professional and technical occupations; measures: Value"
     )]
     technical: u32,
     #[serde(alias = "Occupation: 4. administrative and secretarial occupations; measures: Value")]
@@ -77,7 +77,7 @@ pub struct PreProcessingOccupationCountRecordOLD {
     #[serde(alias = "Occupation: 5. Skilled trades occupations; measures: Value")]
     skilled_trades: u32,
     #[serde(
-    alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
+        alias = "Occupation: 6. caring, leisure and other service occupations; measures: Value"
     )]
     caring: u32,
     #[serde(alias = "Occupation: 7. sales and customer service occupations; measures: Value")]
@@ -128,9 +128,7 @@ impl TableEntry<PreProcessingOccupationCountRecord> for OccupationCountRecord {}
 impl<'a> TryFrom<&'a Vec<PreProcessingOccupationCountRecord>> for OccupationCountRecord {
     type Error = DataLoadingError;
 
-    fn try_from(
-        records: &'a Vec<PreProcessingOccupationCountRecord>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(records: &'a Vec<PreProcessingOccupationCountRecord>) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {

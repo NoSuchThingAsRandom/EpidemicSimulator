@@ -22,10 +22,10 @@ use std::cmp::{max, min};
 use std::fmt::format;
 use std::time::Instant;
 
-use ggez::{ContextBuilder, event, GameError, graphics};
 use ggez::conf::WindowMode;
 use ggez::event::EventHandler;
 use ggez::graphics::{Color, DrawMode, DrawParam, FillOptions, Font, PxScale, Rect, StrokeOptions};
+use ggez::{event, graphics, ContextBuilder, GameError};
 use log::{error, info};
 
 use sim::models::output_area::OutputArea;

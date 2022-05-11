@@ -31,9 +31,9 @@ pub mod simulator;
 pub mod simulator_builder;
 mod statistics;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy,Clone,Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub enum DayOfWeek {
     Monday,
     Tuesday,
@@ -54,21 +54,20 @@ impl DayOfWeek {
     /// Returns the next day of the week
     pub fn next_day(self) -> Self {
         match self {
-            DayOfWeek::Monday => { DayOfWeek::Tuesday }
-            DayOfWeek::Tuesday => { DayOfWeek::Wednesday }
-            DayOfWeek::Wednesday => { DayOfWeek::Thursday }
-            DayOfWeek::Thursday => { DayOfWeek::Friday }
-            DayOfWeek::Friday => { DayOfWeek::Saturday }
-            DayOfWeek::Saturday => { DayOfWeek::Sunday }
-            DayOfWeek::Sunday => { DayOfWeek::Monday }
+            DayOfWeek::Monday => DayOfWeek::Tuesday,
+            DayOfWeek::Tuesday => DayOfWeek::Wednesday,
+            DayOfWeek::Wednesday => DayOfWeek::Thursday,
+            DayOfWeek::Thursday => DayOfWeek::Friday,
+            DayOfWeek::Friday => DayOfWeek::Saturday,
+            DayOfWeek::Saturday => DayOfWeek::Sunday,
+            DayOfWeek::Sunday => DayOfWeek::Monday,
         }
     }
     /// Returns True if the day is a weekend
     pub fn is_weekend(&self) -> bool {
         match self {
-            DayOfWeek::Saturday |
-            DayOfWeek::Sunday => true,
-            _ => false
+            DayOfWeek::Saturday | DayOfWeek::Sunday => true,
+            _ => false,
         }
     }
 }

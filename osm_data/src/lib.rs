@@ -342,7 +342,7 @@ impl<'a> TryFrom<DenseNode<'a>> for RawOSMNode {
 ///     a.extend(b);
 ///     println!("{:?}",a); // {2: 4, 1: 2, 3: 2}
 /// ```
-pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item=T>>(
+pub fn merge_iterators<T, U: Extend<T> + IntoIterator<Item = T>>(
     a: Option<U>,
     b: Option<U>,
 ) -> Option<U> {
@@ -370,8 +370,8 @@ pub struct OSMRawBuildings {
 }
 
 fn deserialize_to_none<'de, D, T>(_deserializer: D) -> Result<Option<T>, D::Error>
-    where
-        D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     Ok(None)
 }
@@ -465,10 +465,10 @@ impl OSMRawBuildings {
                 context: "Failed to serialize OSM data with bincode!".to_string(),
             })?,
         )
-            .map_err(|e| OSMError::IOError {
-                source: Box::new(e),
-                context: "Failed to write bincode OSM data to file!".to_string(),
-            })?;
+        .map_err(|e| OSMError::IOError {
+            source: Box::new(e),
+            context: "Failed to write bincode OSM data to file!".to_string(),
+        })?;
         info!("Completed and saved parsing data");
         Ok(building_locations)
     }
@@ -596,7 +596,7 @@ impl OSMRawBuildings {
             let mut building_exists = false;
             for classification in building_classification {
                 if let Some(building) =
-                RawBuilding::new(classification, &building_shape, building_boundary_id)
+                    RawBuilding::new(classification, &building_shape, building_boundary_id)
                 {
                     let building_entry = buildings.entry(classification).or_default();
                     building_entry.push(building);
@@ -607,7 +607,7 @@ impl OSMRawBuildings {
             }
             if building_exists {
                 if let Some(duplicate_building) =
-                building_boundaries.insert(building_boundary_id, building_shape.clone())
+                    building_boundaries.insert(building_boundary_id, building_shape.clone())
                 {
                     panic!(
                         "Building ID {:?}, has multiple entries which shouldn't be possible!\nOriginal: {:?}\nNew:      {:?}",
@@ -628,16 +628,16 @@ impl OSMRawBuildings {
                         (node.location.x(), node.location.y()),
                         (node.location.x(), node.location.y()),
                     ]
-                        .into(),
+                    .into(),
                     vec![],
                 );
                 if let Some(building) =
-                RawBuilding::new(node.classification, &building_shape, building_boundary_id)
+                    RawBuilding::new(node.classification, &building_shape, building_boundary_id)
                 {
                     let building_entry = buildings.entry(node.classification).or_default();
                     building_entry.push(building);
                     if let Some(b) =
-                    building_boundaries.insert(building_boundary_id, building_shape.clone())
+                        building_boundaries.insert(building_boundary_id, building_shape.clone())
                     {
                         // TODO THIS IS FUCKED, or has it been fixed?
                         assert_eq!(b, building_shape, "This shouldn't be possible!");
@@ -710,8 +710,8 @@ impl OSMRawBuildings {
 
 #[cfg(test)]
 mod tests {
-    use crate::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings};
     use crate::voronoi_generator::find_seed_bounds;
+    use crate::{OSMRawBuildings, OSM_CACHE_FILENAME, OSM_FILENAME};
 
     #[test]
     pub fn check_x_y_range() {
@@ -736,8 +736,8 @@ mod tests {
             .flatten()
             .collect();
         let bounds = find_seed_bounds(&points);
-        let width = bounds.1.0 - bounds.0.0;
-        let height = bounds.1.1 - bounds.0.1;
+        let width = bounds.1 .0 - bounds.0 .0;
+        let height = bounds.1 .1 - bounds.0 .1;
         println!("Bounds: {:?}", bounds);
         println!("Height: {:?}", height);
         println!("Width: {:?}", width);

@@ -27,9 +27,9 @@ use std::io::{BufWriter, Write};
 use anyhow::Context;
 use bimap::BiMap;
 use log::info;
-use petgraph::{Directed, EdgeType, Undirected};
 use petgraph::dot::Config::{EdgeNoLabel, NodeIndexLabel};
 use petgraph::graphmap::GraphMap;
+use petgraph::{Directed, EdgeType, Undirected};
 
 use load_census_data::tables::resides_vs_workplace::WorkplaceResidentialRecord;
 use sim::models::citizen::Citizen;

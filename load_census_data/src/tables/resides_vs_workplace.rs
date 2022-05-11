@@ -23,8 +23,8 @@ use std::fmt::Debug;
 
 use serde::Deserialize;
 
-use crate::{DataLoadingError, PreProcessingTable, TableEntry};
 use crate::parsing_error::ParseErrorType;
+use crate::{DataLoadingError, PreProcessingTable, TableEntry};
 
 pub trait PreProcessingWorkplaceResidentialTrait: PreProcessingTable + Debug + Sized {
     //fn get_geography_code(&self) -> String;
@@ -60,7 +60,9 @@ impl PreProcessingWorkplaceResidentialTrait for PreProcessingWorkplaceResidentia
     }
 
     fn get_count(&self) -> u32 {
-        self.obs_value.parse().expect("Failed to parse the count for WorkplaceResidential Record")
+        self.obs_value
+            .parse()
+            .expect("Failed to parse the count for WorkplaceResidential Record")
     }
 }
 
@@ -93,24 +95,22 @@ impl PreProcessingWorkplaceResidentialTrait for PreProcessingBulkWorkplaceReside
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub struct WorkplaceResidentialRecord {
     pub workplace_count: HashMap<String, u32>,
     pub total_workplace_count: u32,
 }
 
-
 impl TableEntry<PreProcessingWorkplaceResidentialRecord> for WorkplaceResidentialRecord {}
 
 impl TableEntry<PreProcessingBulkWorkplaceResidentialRecord> for WorkplaceResidentialRecord {}
 
-impl<'a, T: PreProcessingWorkplaceResidentialTrait> TryFrom<&'a Vec<T>> for WorkplaceResidentialRecord {
+impl<'a, T: PreProcessingWorkplaceResidentialTrait> TryFrom<&'a Vec<T>>
+    for WorkplaceResidentialRecord
+{
     type Error = DataLoadingError;
 
-    fn try_from(
-        records: &'a Vec<T>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(records: &'a Vec<T>) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {

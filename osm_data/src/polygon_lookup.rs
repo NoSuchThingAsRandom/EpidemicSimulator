@@ -52,9 +52,9 @@ use shapefile::dbase::FieldValue;
 use shapefile::Shape;
 
 use crate::convert::decimal_latitude_and_longitude_to_northing_and_eastings;
-use crate::OSMError;
 use crate::quadtree::QuadTree;
 use crate::voronoi_generator::Scaling;
+use crate::OSMError;
 
 /// Converts a geo type Polygon to a quadtree Area (using the Polygon Bounding Box)
 #[inline]
@@ -171,7 +171,7 @@ impl<T: Debug + Clone + Eq + Ord + Hash> PolygonContainer<T> {
     pub fn find_polygons_containing_polygon<'a>(
         &'a self,
         polygon: &'a geo_types::Polygon<i32>,
-    ) -> Result<Box<dyn Iterator<Item=&T> + 'a>, OSMError> {
+    ) -> Result<Box<dyn Iterator<Item = &T> + 'a>, OSMError> {
         // TODO Move this scaling
 
         let scaled_polygon: geo_types::Polygon<i32> =

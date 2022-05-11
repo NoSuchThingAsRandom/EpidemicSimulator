@@ -141,8 +141,8 @@ pub trait Building: Display + Debug {
 
 impl Serialize for dyn Building {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let raw = self.as_any();
         if let Some(workplace) = raw.downcast_ref::<Workplace>() {
@@ -395,7 +395,7 @@ impl School {
         let mut classes: Vec<Class> = Vec::new();
 
         for ((_age, age_group), class_count) in
-        students.iter().zip(statistic.classes_per_age_group.iter())
+            students.iter().zip(statistic.classes_per_age_group.iter())
         {
             let mut new_classes = Vec::new();
             let class_size = (age_group.len() as f64 / *class_count as f64).ceil() as usize;
@@ -530,16 +530,16 @@ mod tests {
     use strum::IntoEnumIterator;
 
     use load_census_data::osm_parsing::{
-        BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding,
+        convert_polygon_to_float, BuildingBoundaryID, RawBuilding, TagClassifiedBuilding,
     };
     use load_census_data::tables::employment_densities::EmploymentDensities;
     use load_census_data::tables::occupation_count::OccupationType;
     use osm_data::{
-        BuildingBoundaryID, convert_polygon_to_float, RawBuilding, TagClassifiedBuilding,
+        convert_polygon_to_float, BuildingBoundaryID, RawBuilding, TagClassifiedBuilding,
     };
 
     use crate::models::building::{
-        Building, BuildingID, BuildingType, MINIMUM_FLOOR_SPACE_SIZE, Workplace,
+        Building, BuildingID, BuildingType, Workplace, MINIMUM_FLOOR_SPACE_SIZE,
     };
     use crate::models::citizen::{CitizenID, OccupationType};
     use crate::models::output_area::OutputAreaID;
@@ -559,7 +559,7 @@ mod tests {
             &building_size,
             BuildingBoundaryID::default(),
         )
-            .unwrap();
+        .unwrap();
         let float: Polygon<f64> = convert_polygon_to_float(&building_size);
         assert_eq!(float.unsigned_area(), MINIMUM_FLOOR_SPACE_SIZE as f64);
         for occupation_type in OccupationType::iter() {
@@ -589,7 +589,7 @@ mod tests {
             &building_size,
             BuildingBoundaryID::default(),
         )
-            .unwrap();
+        .unwrap();
         let float: Polygon<f64> = convert_polygon_to_float(&building_size);
         assert!(float.unsigned_area() < MINIMUM_FLOOR_SPACE_SIZE as f64);
         let mut workplace = Workplace::new(id.clone(), raw, OccupationType::All);

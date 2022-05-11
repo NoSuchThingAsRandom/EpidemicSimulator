@@ -24,20 +24,20 @@ use std::time::Instant;
 use geo_types::{Coordinate, Polygon};
 use log::{debug, info};
 use plotters::chart::ChartContext;
-use plotters::coord::Shift;
 use plotters::coord::types::RangedCoordi32;
+use plotters::coord::Shift;
 use plotters::drawing::DrawingArea;
 use plotters::prelude::{
     BitMapBackend, Cartesian2d, ChartBuilder, Color, IntoDrawingArea, IntoFont, Palette, Palette99,
-    RED, ShapeStyle, WHITE,
+    ShapeStyle, RED, WHITE,
 };
 use plotters::style::TextStyle;
 use polylabel::polylabel;
 
 use osm_data::TagClassifiedBuilding;
 
-use crate::{convert_geo_point_to_pixel, GRID_SIZE, PIXEL_SIZE, SCALE};
 use crate::error::DrawingResult;
+use crate::{convert_geo_point_to_pixel, GRID_SIZE, PIXEL_SIZE, SCALE};
 
 /// This is a representation of an Output Area to be passed to the Draw function
 pub struct DrawingRecord {

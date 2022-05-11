@@ -21,10 +21,10 @@
 use anyhow::Context;
 use log::info;
 
-use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
-use osm_data::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings};
+use load_census_data::CensusData;
 use osm_data::polygon_lookup::PolygonContainer;
+use osm_data::{OSMRawBuildings, OSM_CACHE_FILENAME, OSM_FILENAME};
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;
 
@@ -45,8 +45,8 @@ pub async fn load_data(
             area.to_string(),
             allow_downloads,
         )
-            .await
-            .context("Failed to load census tables"),
+        .await
+        .context("Failed to load census tables"),
     );
     rayon::scope(|s| {
         // Load census data
@@ -74,7 +74,7 @@ pub async fn load_data(
                     visualise_building_boundaries,
                     grid_size,
                 )
-                    .context("Failed to load OSM map")
+                .context("Failed to load OSM map")
             };
             osm_buildings = Some(buildings());
         });
@@ -86,7 +86,7 @@ pub async fn load_data(
                     CensusTableNames::OutputAreaMap.get_filename(),
                     grid_size,
                 )
-                    .context("Loading polygons for output areas")
+                .context("Loading polygons for output areas")
             };
             output_area_polygons = Some(polygon());
         });
@@ -116,7 +116,7 @@ pub async fn load_data_and_init_sim(
         allow_downloads,
         visualise_building_boundaries,
     )
-        .await?;
+    .await?;
     let mut sim = SimulatorBuilder::new(area, census_data, osm_buildings, output_area_polygons)
         .context("Failed to initialise sim")
         .unwrap();

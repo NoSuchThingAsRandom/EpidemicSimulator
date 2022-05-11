@@ -22,14 +22,14 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use cpuprofiler::PROFILER;
-use criterion::{Criterion, criterion_group, criterion_main, SamplingMode};
 use criterion::profiler::Profiler;
+use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
 use rand::prelude::IteratorRandom;
 use rand::thread_rng;
 
-use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use load_census_data::osm_parsing::{OSMRawBuildings, RawBuilding, TagClassifiedBuilding};
 use load_census_data::tables::CensusTableNames;
+use load_census_data::{CensusData, OSM_CACHE_FILENAME, OSM_FILENAME};
 use osm_data::polygon_lookup::PolygonContainer;
 use sim::simulator::Simulator;
 
@@ -99,12 +99,12 @@ fn building_assignment(c: &mut Criterion) {
         false,
         30000,
     )
-        .expect("Failed to load osm data");
+    .expect("Failed to load osm data");
     let polygons = PolygonContainer::load_polygons_from_file(
         ("../".to_owned() + CensusTableNames::OutputAreaMap.get_filename()).as_str(),
         30000,
     )
-        .unwrap();
+    .unwrap();
     let mut chosen: HashMap<TagClassifiedBuilding, Vec<RawBuilding>> = HashMap::new();
     let mut rng = thread_rng();
     for x in 0..100 {

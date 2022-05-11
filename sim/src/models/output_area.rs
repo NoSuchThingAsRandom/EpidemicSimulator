@@ -29,8 +29,8 @@ use rand::distributions::{Bernoulli, Distribution};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
-use load_census_data::CensusDataEntry;
 use load_census_data::tables::population_and_density_per_output_area::PersonType;
+use load_census_data::CensusDataEntry;
 use osm_data::{RawBuilding, TagClassifiedBuilding};
 
 use crate::config::MAX_STUDENT_AGE;

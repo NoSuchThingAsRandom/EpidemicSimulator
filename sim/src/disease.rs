@@ -85,7 +85,6 @@ impl Display for DiseaseStatus {
     }
 }
 
-
 #[derive(Clone)]
 pub struct DiseaseModel {
     pub exposure_chance: f64,
@@ -129,16 +128,16 @@ impl DiseaseModel {
     ) -> f64 {
         let mut chance = self.exposure_chance
             - match global_mask_status {
-            MaskStatus::None(_) => 0.0,
-            MaskStatus::PublicTransport(_) => {
-                if is_on_public_transport_and_mask_compliant {
-                    self.exposure_chance * self.mask_effectiveness
-                } else {
-                    0.0
+                MaskStatus::None(_) => 0.0,
+                MaskStatus::PublicTransport(_) => {
+                    if is_on_public_transport_and_mask_compliant {
+                        self.exposure_chance * self.mask_effectiveness
+                    } else {
+                        0.0
+                    }
                 }
+                MaskStatus::Everywhere(_) => self.exposure_chance * self.mask_effectiveness,
             }
-            MaskStatus::Everywhere(_) => self.exposure_chance * self.mask_effectiveness,
-        }
             - if is_vaccinated { 1.0 } else { 0.0 };
         if chance.is_sign_negative() {
             chance = 0.0;

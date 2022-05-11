@@ -30,9 +30,9 @@ use log::{error, info};
 use rayon;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
-use osm_data::{OSM_CACHE_FILENAME, OSM_FILENAME, OSMRawBuildings};
+use load_census_data::CensusData;
+use osm_data::{OSMRawBuildings, OSM_CACHE_FILENAME, OSM_FILENAME};
 use visualisation::image_export::DrawingRecord;
 
 use crate::load_data::load_data;
@@ -219,11 +219,11 @@ async fn main() -> anyhow::Result<()> {
             visualise_building_boundaries,
             grid_size,
         )?
-            .building_locations
-            .drain()
-            .map(|(_, b)| b)
-            .flatten()
-            .collect();
+        .building_locations
+        .drain()
+        .map(|(_, b)| b)
+        .flatten()
+        .collect();
         visualisation::image_export::draw_buildings(
             "raw_buildings.png".to_string(),
             osm_buildings,
@@ -239,7 +239,7 @@ async fn main() -> anyhow::Result<()> {
             false,
             grid_size,
         )
-            .await?;
+        .await?;
 
         let total_buildings = 100.0;
         let data: Vec<visualisation::image_export::DrawingRecord> = sim
@@ -268,7 +268,7 @@ async fn main() -> anyhow::Result<()> {
             allow_downloads,
             false,
         )
-            .await?;
+        .await?;
         let polygon_data: Vec<visualisation::image_export::DrawingRecord> = polygons
             .polygons
             .iter()
@@ -297,7 +297,7 @@ async fn main() -> anyhow::Result<()> {
             visualise_building_boundaries,
             grid_size,
         )
-            .await?;
+        .await?;
         info!(
             "Finished loading data and Initialising  simulator in {:.2}",
             total_time.elapsed().as_secs_f64()

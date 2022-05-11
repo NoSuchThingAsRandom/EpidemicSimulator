@@ -23,13 +23,13 @@ use std::fmt::{Debug, Display};
 
 use geo::contains::Contains;
 use geo::prelude::BoundingRect;
-use geo_types::{Coordinate, CoordNum, LineString, Point};
+use geo_types::{CoordNum, Coordinate, LineString, Point};
 use log::{debug, info, trace};
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use voronoice::{ClipBehavior, VoronoiBuilder};
 
-use crate::OSMError;
 use crate::polygon_lookup::PolygonContainer;
+use crate::OSMError;
 
 const MAX_SIZE: i32 = 700000;
 
@@ -287,7 +287,7 @@ impl Voronoi {
         );
         trace!("Voronoi Boundary: {:?}", boundary);
         // The size must be even, otherwise we get a negative bounding box
-        let mut grid_size = boundary.1.0.max(boundary.1.1);
+        let mut grid_size = boundary.1 .0.max(boundary.1 .1);
         if grid_size % 2 != 0 {
             grid_size += 1;
         }
@@ -375,10 +375,10 @@ impl Voronoi {
 
 #[cfg(test)]
 mod tests {
-    use rand::{Rng, thread_rng};
+    use rand::{thread_rng, Rng};
 
-    use crate::OSMError;
     use crate::voronoi_generator::{PolygonContainer, Scaling, Voronoi};
+    use crate::OSMError;
 
     #[test]
     fn voronoi_seed_generation_and_retrieval() {
@@ -420,35 +420,35 @@ mod tests {
             line_string_to_polygon_container(
                 (vec![(0, 0), (0, size), (size, size), (size, 0), (0, 0)]).into()
             )
-                .is_ok(),
+            .is_ok(),
             "Max Boundaries fail"
         );
         assert!(
             line_string_to_polygon_container(
                 (vec![(0, 0), (0, size), (size + 1, size), (size + 1, 0), (0, 0)]).into()
             )
-                .is_err(),
+            .is_err(),
             "Exceeding max X isn't detected"
         );
         assert!(
             line_string_to_polygon_container(
                 (vec![(0, 0), (0, size + 1), (size, size + 1), (size, 0), (0, 0)]).into()
             )
-                .is_err(),
+            .is_err(),
             "Exceeding max Y isn't detected"
         );
         assert!(
             line_string_to_polygon_container(
                 (vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()
             )
-                .is_err(),
+            .is_err(),
             "Negative X isn't detected"
         );
         assert!(
             line_string_to_polygon_container(
                 (vec![(0, -1), (0, size), (size, size), (size, 0), (0, -1)]).into()
             )
-                .is_err(),
+            .is_err(),
             "Negative Y isn't detected"
         );
     }

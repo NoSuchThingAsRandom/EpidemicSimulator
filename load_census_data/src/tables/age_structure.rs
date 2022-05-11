@@ -25,8 +25,8 @@ use rand::prelude::Distribution;
 use serde::Deserialize;
 
 use crate::parsing_error::{DataLoadingError, ParseErrorType};
-use crate::RngCore;
 use crate::tables::{PreProcessingTable, TableEntry};
+use crate::RngCore;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -71,9 +71,7 @@ impl<'a> TryFrom<&'a Vec<PreProcessingAgePopulationRecord>> for AgePopulationRec
     ///
     /// Then converts all the PreProcessingRecords for one output area into a consolidated PopulationRecord
     ///
-    fn try_from(
-        records: &'a Vec<PreProcessingAgePopulationRecord>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(records: &'a Vec<PreProcessingAgePopulationRecord>) -> Result<Self, Self::Error> {
         if records.is_empty() {
             return Err(DataLoadingError::ValueParsingError {
                 source: ParseErrorType::IsEmpty {

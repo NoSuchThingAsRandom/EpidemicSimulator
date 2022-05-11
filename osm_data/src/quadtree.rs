@@ -23,11 +23,11 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use geo::prelude::Intersects;
-use geo_types::{Coordinate, CoordNum};
+use geo_types::{CoordNum, Coordinate};
 use log::{trace, warn};
 use serde;
-use serde::{Serialize, Serializer};
 use serde::ser::SerializeSeq;
+use serde::{Serialize, Serializer};
 
 pub const MIN_BOUNDARY_SIZE: usize = 100;
 
@@ -123,8 +123,8 @@ pub struct Items<T: Clone, U: CoordNum> {
 
 impl<T: Clone, U: CoordNum + Serialize> Serialize for Items<T, U> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(self.items.len()))?;
         for (_, rect) in &self.items {
