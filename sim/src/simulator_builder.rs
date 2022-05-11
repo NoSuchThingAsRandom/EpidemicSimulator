@@ -28,7 +28,7 @@ use std::rc::Rc;
 use anyhow::Context;
 use enum_map::EnumMap;
 use geo_types::{Coordinate, Point};
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info, warn};
 use num_format::ToFormattedString;
 use rand::{RngCore, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
@@ -137,7 +137,7 @@ impl SimulatorBuilder {
             })
             .sum();
 
-        let mut output_areas = &mut self.output_areas;
+        let output_areas = &mut self.output_areas;
         // TODO This is broke
         // Remove any areas without any buildings
         let to_delete: Vec<usize> = output_areas
@@ -153,7 +153,7 @@ impl SimulatorBuilder {
             .collect();
         for deletion in &to_delete {
             for index in *deletion..output_areas.len() {
-                let mut area = output_areas.get_mut(index).unwrap();
+                let area = output_areas.get_mut(index).unwrap();
                 area.decrement_index();
             }
         }
@@ -188,7 +188,7 @@ impl SimulatorBuilder {
 
         // This ref self is needed, because we have a mut borrow (Output Areas) and an immutable borrow (Census Data)
         // TODO This is super hacky and I hate it
-        let mut citizen_output_area_lookup = &mut self.citizen_output_area_lookup;
+        let citizen_output_area_lookup = &mut self.citizen_output_area_lookup;
         let ref_output_areas = Rc::new(RefCell::new(&mut self.output_areas));
         let census_data_ref = &mut self.census_data;
         // This is the total Citizen counter
@@ -240,7 +240,7 @@ impl SimulatorBuilder {
                 }
                 assert_eq!(global_citizen_index as usize, citizen_output_area_lookup.len());
                 Ok(())
-            }() { //trace!("{:?}",e);
+            }() { warn!("{:?}",e);
             }
         });
         info!(
@@ -389,7 +389,7 @@ impl SimulatorBuilder {
         let output_areas_polygons = &self.output_areas_polygons;
         // Function to find the closest school to a given Citizen
         let finding_closest_school =
-            |citizen: &Citizen, get_multiple: bool| -> Result<Vec<&RawBuilding>, SimError> {
+            |citizen: &Citizen, _get_multiple: bool| -> Result<Vec<&RawBuilding>, SimError> {
                 let area_code = citizen.household_code.output_area_code();
                 let buildings = output_area_buildings
                     .get(area_code.index())
@@ -637,7 +637,7 @@ impl SimulatorBuilder {
                     return;
                 };
 
-                let mut buildings =
+                let buildings =
                     if let Some(output_area) = output_area_buildings.get_mut(*index as usize) {
                         output_area
                     } else {
@@ -787,7 +787,7 @@ impl SimulatorBuilder {
             self.citizen_output_area_lookup.len() - citizens_allocated_count
         );
         // Unroll the vectors from the Struct, for Parallel Access
-        let (mut output_area_citizens, mut output_area_buildings, output_area_ids) = self
+        let (output_area_citizens, mut output_area_buildings, output_area_ids) = self
             .output_areas
             .iter_mut()
             .map(|area| {
@@ -864,7 +864,7 @@ impl SimulatorBuilder {
     /// `next_building_index` is the index to start assigning indexes to new buildings
     fn assign_buildings_per_output_area(
         workplace_area_code: OutputAreaID,
-        mut citizen_ids: &mut Vec<Citizen>,
+        citizen_ids: &mut Vec<Citizen>,
         possible_buildings: &mut Vec<RawBuilding>,
         mut next_building_index: u32,
     ) -> anyhow::Result<Vec<Box<dyn Building + Sync + Send>>> {
@@ -911,7 +911,7 @@ impl SimulatorBuilder {
             .sum::<i32>() as usize;
 
         // Calculate how much space we need
-        let mut required_space_per_occupation: EnumMap<OccupationType, usize> =
+        let required_space_per_occupation: EnumMap<OccupationType, usize> =
             citizen_ids_per_occupation
                 .iter()
                 .map(|(occupation, citizens)| {

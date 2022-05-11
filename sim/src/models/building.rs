@@ -199,7 +199,7 @@ impl Building for Household {
         self.location
     }
 
-    fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
+    fn find_exposures(&self, _infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
         (*self.occupants).to_owned()
     }
 }
@@ -275,7 +275,7 @@ impl Building for Workplace {
     fn get_location(&self) -> Point<i32> {
         self.location
     }
-    fn find_exposures(&self, infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
+    fn find_exposures(&self, _infected_citizens: &Vec<CitizenID>) -> Vec<CitizenID> {
         (*self.occupants).to_owned()
     }
 }

@@ -18,19 +18,11 @@
  *
  */
 
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::hash::Hash;
-use std::io::{BufWriter, Write};
 
-use log::error;
-use serde::{Deserialize, Serialize};
-use serde_json::to_writer;
-use uuid::Uuid;
+use serde::Serialize;
 
 use crate::interventions::MaskStatus;
-use crate::models::ID;
 
 #[derive(PartialEq, Debug, Serialize, Clone)]
 pub enum DiseaseStatus {
@@ -70,6 +62,7 @@ impl DiseaseStatus {
         }
     }
 }
+
 impl Display for DiseaseStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

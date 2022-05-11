@@ -22,8 +22,6 @@
 extern crate log;
 extern crate pretty_env_logger;
 
-use crate::DayOfWeek::Thursday;
-
 pub mod config;
 mod disease;
 mod error;
@@ -35,7 +33,7 @@ mod statistics;
 
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Copy,Clone,Debug, Deserialize, Serialize)]
 pub enum DayOfWeek {
     Monday,
     Tuesday,

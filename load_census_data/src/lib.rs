@@ -23,7 +23,6 @@
 extern crate enum_map;
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::path::Path;
 use std::string::String;
 
@@ -39,7 +38,7 @@ use crate::tables::occupation_count::{OccupationCountRecord, PreProcessingOccupa
 use crate::tables::population_and_density_per_output_area::{
     PopulationRecord, PreProcessingPopulationDensityRecord,
 };
-use crate::tables::resides_vs_workplace::{PreProcessingBulkWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialTrait, WorkplaceResidentialRecord};
+use crate::tables::resides_vs_workplace::{PreProcessingBulkWorkplaceResidentialRecord, PreProcessingWorkplaceResidentialRecord, WorkplaceResidentialRecord};
 
 mod nomis_download;
 pub mod parse_table;

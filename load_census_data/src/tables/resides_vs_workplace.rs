@@ -17,12 +17,10 @@
  * along with ESUCD.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use std::any::Any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
 use crate::{DataLoadingError, PreProcessingTable, TableEntry};

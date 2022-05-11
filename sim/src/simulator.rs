@@ -23,8 +23,8 @@ use std::ops::AddAssign;
 use std::sync::{Mutex, RwLock};
 use std::time::Instant;
 
-use anyhow::{Context, Error};
-use log::{debug, error, info, warn};
+use anyhow::{Context};
+use log::{debug, error, info};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
@@ -67,9 +67,7 @@ impl AddAssign for GeneratedExposures {
         }
         if self.building_exposure_list.len() < rhs.building_exposure_list.len() {
             self.building_exposure_list.extend(vec![
-                HashMap::new();
-                rhs.building_exposure_list.len() - self.building_exposure_list.len()
-            ]);
+                HashMap::new(); rhs.building_exposure_list.len() - self.building_exposure_list.len()]);
         }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
             let area_entry = self.building_exposure_list.get_mut(area_index).expect(
@@ -130,7 +128,7 @@ impl Simulator {
     /// Returns False if it has finished
     pub fn step(&mut self) -> anyhow::Result<bool> {
         //debug!("Executing time step at hour: {}",self.current_statistics.time_step());
-        self.statistics_recorder.next();
+        self.statistics_recorder.next()?;
         // Reset public transport containers
         self.public_transport = Default::default();
         let exposures = self.generate_exposures()?;
@@ -153,8 +151,9 @@ impl Simulator {
 
     /// Detects the Citizens that have been exposed in the current time step
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
-        let day=self.statistics_recorder.current_day();
+        let day = self.statistics_recorder.current_day();
         let hour = self.statistics_recorder.time_step();
+
         let disease = &self.disease_model;
         let lockdown = self.interventions.lockdown_enabled();
         let mut output_areas = self.output_areas.write().unwrap();
@@ -174,7 +173,7 @@ impl Simulator {
             let area_id = area.id();
             for mut citizen in area.citizens.drain(0..) {
                 let need_to_move = citizen.execute_time_step(
-                    hour,day, disease, lockdown,
+                    hour, day, disease, lockdown,
                 ).is_some();
                 statistics.add_citizen(&citizen.disease_status);
 
@@ -235,7 +234,7 @@ impl Simulator {
                     let mut area = area
                         .lock()
                         .expect("Failed to retrieve lock for Output Area");
-                    for mut citizen in citizens {
+                    for citizen in citizens {
                         let local_index = area.citizens.len();
                         let id = citizen.id().clone();
                         area.citizens.push(citizen);

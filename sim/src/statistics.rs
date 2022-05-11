@@ -19,16 +19,14 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::{Display, format, Formatter};
+use std::fmt::{Display, Formatter};
 use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::ops::AddAssign;
 use std::time::Instant;
 
-use anyhow::Context;
 use log::{error, info, warn};
-use num_format::Locale::{el, lo};
 use num_format::ToFormattedString;
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer;
@@ -37,11 +35,7 @@ use crate::config::{get_memory_usage, NUMBER_FORMATTING};
 use crate::DayOfWeek;
 use crate::disease::DiseaseStatus;
 use crate::error::SimError;
-use crate::models::building::BuildingID;
-use crate::models::citizen::Citizen;
 use crate::models::ID;
-use crate::models::output_area::OutputAreaID;
-use crate::models::public_transport_route::PublicTransportID;
 
 /// A simple struct for benchmarking how long a block of code takes
 #[derive(Debug)]
@@ -114,23 +108,25 @@ pub struct StatisticsRecorder {
 impl StatisticsRecorder {
     pub fn dump_to_file(&mut self, directory: String) {
         // Flush the recordings
-        self.next();
+        if let Err(e) = self.next() {
+            error!("Failed to create final statistics log: {:?}",e);
+        }
         fs::create_dir_all(directory.clone()).expect(&format!("Failed to create statistics directory: '{}'", directory));
         let file = File::create(directory.to_owned() + "exposures.json").expect("Failed to create results file!");
         let file_writer = BufWriter::new(file);
         let mut exposure_counts: HashMap<&str, HashMap<String, Vec<u32>>> = HashMap::new();
         for (place, records) in self.exposures_per_building_per_time_step.drain() {
-            let mut entry = exposure_counts.entry("All").or_default();
+            let entry = exposure_counts.entry("All").or_default();
             entry.insert("All".to_string(), records.clone());
             match place {
-                ID::Building(id) => {}
+                ID::Building(_id) => {}
                 ID::OutputArea(code) => {
-                    let mut entry = exposure_counts.entry("OutputArea").or_default();
+                    let entry = exposure_counts.entry("OutputArea").or_default();
                     entry.insert(code.code().to_string(), records);
                 }
                 ID::PublicTransport(id) => {
-                    let mut entry = exposure_counts.entry("PublicTransport").or_default();
-                    let code = String::new() + id.source.code() + "-" + id.destination.code();
+                    let _entry = exposure_counts.entry("PublicTransport").or_default();
+                    let _code = String::new() + id.source.code() + "-" + id.destination.code();
                     //entry.insert(code, records);
                 }
             }
@@ -154,7 +150,7 @@ impl StatisticsRecorder {
         self.current_time_step
     }
     pub fn current_day(&self) -> DayOfWeek {
-        *self.current_day
+        self.current_day
     }
 
     /// Prepares for recording the next step
@@ -164,7 +160,7 @@ impl StatisticsRecorder {
             self.timer_entries.push(self.timer.finished());
             self.memory_usage_entries.push(get_memory_usage()?);
             for (area, entry) in self.current_entry.drain() {
-                let mut recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();
+                let recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();
                 recording_entry.push(entry);
             }
         }
@@ -184,7 +180,7 @@ impl StatisticsRecorder {
 
     /// Increment the current global stats, with the other
     pub fn update_global_stats_entry(&mut self, entry: StatisticEntry) {
-        let mut current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
+        let current = self.global_stats.last_mut().expect("Need to call next() to start a recording!");
         *current += entry;
     }
     pub fn add_exposure(&mut self, location: ID) -> Result<(), SimError> {
@@ -193,11 +189,10 @@ impl StatisticsRecorder {
         let current_entry = &mut self.current_entry;
         if let ID::Building(building) = &location {
             let area_id = ID::OutputArea(building.output_area_code());
-            let mut stat_entry = current_entry.entry(area_id).or_default();
+            let stat_entry = current_entry.entry(area_id).or_default();
             *stat_entry += 1;
-            ;
         }
-        let mut stat_entry = current_entry.entry(location).or_default();
+        let stat_entry = current_entry.entry(location).or_default();
         *stat_entry += 1;
         Ok(())
     }

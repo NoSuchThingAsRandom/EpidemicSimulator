@@ -26,10 +26,9 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use clap::{App, Arg};
-use log::{debug, error, info, trace};
+use log::{error, info};
 use rayon;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use sanitize_filename::{Options, sanitize, sanitize_with_options};
 
 use load_census_data::CensusData;
 use load_census_data::tables::CensusTableNames;
