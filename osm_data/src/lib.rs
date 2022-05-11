@@ -30,7 +30,6 @@ use osmpbf::{DenseNode, DenseTagIter, TagIter};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::draw_voronoi::draw_voronoi_polygons;
 use crate::error::OSMError;
 use crate::quadtree::manhattan_distance;
 use crate::voronoi_generator::{Scaling, Voronoi};
@@ -483,7 +482,6 @@ impl OSMRawBuildings {
         filename: String,
         cache_filename: String,
         use_cache: bool,
-        visualise_building_boundaries: bool,
         grid_size: i32,
     ) -> Result<OSMRawBuildings, OSMError> {
         info!("Building OSM Data...");
@@ -506,14 +504,6 @@ impl OSMRawBuildings {
 
         debug!("Loaded OSM data");
         osm_data.construct_voronoi_diagrams(grid_size);
-        if visualise_building_boundaries {
-            debug!("Starting drawing");
-            for (k, p) in osm_data.voronoi().iter() {
-                let polygons: Vec<&geo_types::Polygon<i32>> =
-                    p.polygons.polygons.iter().map(|(_, p)| p).collect();
-                draw_voronoi_polygons(format!("images/{:?}Voronoi.png", k), &polygons, 20000);
-            }
-        }
         info!("Finished building OSM data");
         for (building_type, values) in &osm_data.building_locations {
             debug!("There are {} {:?} ", values.len(), building_type);

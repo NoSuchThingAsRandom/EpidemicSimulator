@@ -27,54 +27,52 @@ use osm_data::polygon_lookup::PolygonContainer;
 use osm_data::{OSMRawBuildings, OSM_CACHE_FILENAME, OSM_FILENAME};
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;
+use crate::Arguments;
 
-pub async fn load_data(
-    area: String,
-    census_directory: String,
-    grid_size: i32,
-    use_cache: bool,
-    allow_downloads: bool,
-    visualise_building_boundaries: bool,
+pub async fn load_data(arguments: Arguments
 ) -> anyhow::Result<(CensusData, OSMRawBuildings, PolygonContainer<String>)> {
-    let _census_data: Option<anyhow::Result<CensusData>> = None;
     let mut osm_buildings: Option<anyhow::Result<OSMRawBuildings>> = None;
     let mut output_area_polygons: Option<anyhow::Result<PolygonContainer<String>>> = None;
-    let census_data = Some(
-        CensusData::load_all_tables_async(
-            census_directory.to_string(),
-            area.to_string(),
-            allow_downloads,
-        )
-        .await
-        .context("Failed to load census tables"),
+    let _filename = arguments.data_directory.clone();
+    let area_code = arguments.area_code.clone();
+    let allow_downloads = arguments.allow_downloads;
+    let use_cache = arguments.use_cache;
+    let grid_size = arguments.grid_size;
+    let filename = _filename.clone();
+    let census_data = CensusData::load_all_tables_async(
+        filename,
+        area_code,
+        allow_downloads,
     );
+
     rayon::scope(|s| {
         // Load census data
-        let _filename = census_directory.clone();
-        /*        s.spawn(|_| async {
-            let census_closure = async move || -> anyhow::Result<CensusData> {
-                let census_data = CensusData::load_all_tables_async(
-                    filename.to_string(),
-                    area.to_string(),
-                    allow_downloads,
-                ).await;
+        s.spawn(|_| {
+
+/*            let filename = _filename.clone();
+            //-> anyhow::Result<CensusData>
+            let census_closure = move || async move {
+
                 census_data.context("Failed to load census data")
             };
-            census_data = Some(census_closure().await);
-        });*/
+            stuff = Some(census_closure());
+            if let Some(stuff)=stuff{
+                census_data=Some(rayon::spawn(stuff));
+            }*/
+        });
+
 
         // Load OSM Buildings
         s.spawn(|_| {
-            let filename = census_directory.clone();
+            let filename = _filename.clone();
             let buildings = move || -> anyhow::Result<OSMRawBuildings> {
                 OSMRawBuildings::build_osm_data(
                     filename.to_string() + OSM_FILENAME,
                     filename + OSM_CACHE_FILENAME,
                     use_cache,
-                    visualise_building_boundaries,
                     grid_size,
                 )
-                .context("Failed to load OSM map")
+                    .context("Failed to load OSM map")
             };
             osm_buildings = Some(buildings());
         });
@@ -86,13 +84,13 @@ pub async fn load_data(
                     CensusTableNames::OutputAreaMap.get_filename(),
                     grid_size,
                 )
-                .context("Loading polygons for output areas")
+                    .context("Loading polygons for output areas")
             };
             output_area_polygons = Some(polygon());
         });
     });
     let (census_data, osm_buildings, output_area_polygons) = (
-        census_data.expect("Census Data hasn't been executed!")?,
+        census_data.await?,
         osm_buildings.expect("OSM Buildings Data hasn't been executed!")?,
         output_area_polygons.expect("Output Area Polygons hasn't been executed!")?,
     );
@@ -100,26 +98,14 @@ pub async fn load_data(
 }
 
 pub async fn load_data_and_init_sim(
-    area: String,
-    census_directory: String,
-    use_cache: bool,
-    allow_downloads: bool,
-    visualise_building_boundaries: bool,
-    grid_size: i32,
-) -> anyhow::Result<Simulator> {
+    arguments: Arguments) -> anyhow::Result<Simulator> {
     info!("Loading data from disk...");
-    let (census_data, osm_buildings, output_area_polygons) = load_data(
-        area.to_string(),
-        census_directory,
-        grid_size,
-        use_cache,
-        allow_downloads,
-        visualise_building_boundaries,
-    )
-    .await?;
-    let mut sim = SimulatorBuilder::new(area, census_data, osm_buildings, output_area_polygons)
-        .context("Failed to initialise sim")
-        .unwrap();
-    sim.build().context("Failed to initialise sim").unwrap();
+    let area_code = arguments.area_code.to_string();
+    let (census_data, osm_buildings, output_area_polygons) = load_data(arguments)
+        .await?;
+    let mut sim = SimulatorBuilder::new(
+        area_code, census_data, osm_buildings, output_area_polygons)
+        .context("Failed to initialise sim")?;
+    sim.build().context("Failed to initialise sim")?;
     Ok(Simulator::from(sim))
 }

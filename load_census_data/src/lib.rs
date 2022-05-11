@@ -220,7 +220,7 @@ impl CensusData {
     /// If they are not on disk will attempt to download
     pub async fn load_all_tables_async(
         census_directory: String,
-        region_code: String,
+        area_code: String,
         should_download: bool,
     ) -> Result<CensusData, DataLoadingError> {
         let mut population_counts = None;
@@ -232,7 +232,7 @@ impl CensusData {
 
         // If we are using Bulk data, the file format is different, and we can't automate download - but we can thread
         // Otherwise, we can download - but limited to single thread, which is fine as smaller data
-        if region_code == "England" {
+        if area_code == "England" {
             info!("Using bulk tables");
             rayon::scope(|s| {
                 s.spawn(|_| {
@@ -243,7 +243,7 @@ impl CensusData {
                             PopulationRecord,
                         >(
                             &census_directory,
-                            &region_code,
+                            &area_code,
                             CensusTableNames::PopulationDensity,
                             true,
                         )
@@ -258,7 +258,7 @@ impl CensusData {
                             AgePopulationRecord,
                         >(
                             &census_directory,
-                            &region_code,
+                            &area_code,
                             CensusTableNames::AgeStructure,
                             true,
                         )
@@ -273,7 +273,7 @@ impl CensusData {
                             OccupationCountRecord,
                         >(
                             &census_directory,
-                            &region_code,
+                            &area_code,
                             CensusTableNames::OccupationCount,
                             true,
                         )
@@ -288,7 +288,7 @@ impl CensusData {
                             WorkplaceResidentialRecord,
                         >(
                             &census_directory,
-                            &region_code,
+                            &area_code,
                             CensusTableNames::ResidentialAreaVsWorkplaceArea,
                             true,
                         )
@@ -309,7 +309,7 @@ impl CensusData {
                     PopulationRecord,
                 >(
                     &census_directory,
-                    &region_code,
+                    &area_code,
                     CensusTableNames::PopulationDensity,
                     &data_fetcher,
                 )
@@ -323,7 +323,7 @@ impl CensusData {
                     AgePopulationRecord,
                 >(
                     &census_directory,
-                    &region_code,
+                    &area_code,
                     CensusTableNames::AgeStructure,
                     &data_fetcher,
                 )
@@ -337,7 +337,7 @@ impl CensusData {
                     OccupationCountRecord,
                 >(
                     &census_directory,
-                    &region_code,
+                    &area_code,
                     CensusTableNames::OccupationCount,
                     &data_fetcher,
                 )
@@ -351,7 +351,7 @@ impl CensusData {
                     WorkplaceResidentialRecord,
                 >(
                     &census_directory,
-                    &region_code,
+                    &area_code,
                     CensusTableNames::ResidentialAreaVsWorkplaceArea,
                     &data_fetcher,
                 )
