@@ -153,6 +153,7 @@ impl Simulator {
 
     /// Detects the Citizens that have been exposed in the current time step
     fn generate_exposures(&mut self) -> anyhow::Result<GeneratedExposures> {
+        let day=self.statistics_recorder.current_day();
         let hour = self.statistics_recorder.time_step();
         let disease = &self.disease_model;
         let lockdown = self.interventions.lockdown_enabled();
@@ -173,7 +174,7 @@ impl Simulator {
             let area_id = area.id();
             for mut citizen in area.citizens.drain(0..) {
                 let need_to_move = citizen.execute_time_step(
-                    hour, disease, lockdown,
+                    hour,day, disease, lockdown,
                 ).is_some();
                 statistics.add_citizen(&citizen.disease_status);
 

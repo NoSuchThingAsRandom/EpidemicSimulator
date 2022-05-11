@@ -24,6 +24,7 @@ use std::hash::{Hash, Hasher};
 
 use enum_map::Enum;
 use lazy_static::lazy_static;
+use log::warn;
 use rand::distributions::Distribution;
 use rand::distributions::Uniform;
 use rand::RngCore;
@@ -34,6 +35,7 @@ use uuid::Uuid;
 use load_census_data::tables::occupation_count::RawOccupationType;
 
 use crate::config::PUBLIC_TRANSPORT_PERCENTAGE;
+use crate::DayOfWeek;
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::interventions::MaskStatus;
 use crate::models::building::BuildingID;
@@ -168,39 +170,49 @@ impl Citizen {
     pub fn execute_time_step(
         &mut self,
         current_hour: u32,
+        current_day: DayOfWeek,
         disease: &DiseaseModel,
         lockdown_enabled: bool,
     ) -> Option<OutputAreaID> {
         let old_position = self.current_building_position.output_area_code();
         self.disease_status = DiseaseStatus::execute_time_step(&self.disease_status, disease);
         if !lockdown_enabled {
-            match current_hour % 24 {
-                // Travelling home to work
-                hour if hour == self.start_working_hour - 1 && self.uses_public_transport => {
-                    self.on_public_transport = Some((
-                        self.household_code.output_area_code(),
-                        self.workplace_code.output_area_code(),
-                    ))
-                }
-                // Starts work
-                hour if hour == self.start_working_hour => {
-                    self.current_building_position = self.workplace_code.clone();
-                    self.on_public_transport = None;
-                }
-                // Travelling work to home
-                hour if hour == self.end_working_hour - 1 && self.uses_public_transport => {
-                    self.on_public_transport = Some((
-                        self.workplace_code.output_area_code(),
-                        self.household_code.output_area_code(),
-                    ))
-                }
-                // Finish work, goes home
-                hour if hour == self.end_working_hour => {
+            if current_day.is_weekend() {
+                // TODO Figure out what to do on weekend?
+                if self.current_building_position != self.household_code {
+                    warn!("Citizen is not at home?");
                     self.current_building_position = self.household_code.clone();
                     self.on_public_transport = None;
                 }
-                _ => {
-                    self.on_public_transport = None;
+            } else {
+                match current_hour % 24 {
+                    // Travelling home to work
+                    hour if hour == self.start_working_hour - 1 && self.uses_public_transport => {
+                        self.on_public_transport = Some((
+                            self.household_code.output_area_code(),
+                            self.workplace_code.output_area_code(),
+                        ))
+                    }
+                    // Starts work
+                    hour if hour == self.start_working_hour => {
+                        self.current_building_position = self.workplace_code.clone();
+                        self.on_public_transport = None;
+                    }
+                    // Travelling work to home
+                    hour if hour == self.end_working_hour - 1 && self.uses_public_transport => {
+                        self.on_public_transport = Some((
+                            self.workplace_code.output_area_code(),
+                            self.household_code.output_area_code(),
+                        ))
+                    }
+                    // Finish work, goes home
+                    hour if hour == self.end_working_hour => {
+                        self.current_building_position = self.household_code.clone();
+                        self.on_public_transport = None;
+                    }
+                    _ => {
+                        self.on_public_transport = None;
+                    }
                 }
             }
         }

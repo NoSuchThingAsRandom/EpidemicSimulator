@@ -34,6 +34,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_writer;
 
 use crate::config::{get_memory_usage, NUMBER_FORMATTING};
+use crate::DayOfWeek;
 use crate::disease::DiseaseStatus;
 use crate::error::SimError;
 use crate::models::building::BuildingID;
@@ -101,6 +102,7 @@ pub struct StatisticsRecorder {
     timer_entries: Vec<HashMap<String, f64>>,
     memory_usage_entries: Vec<String>,
     current_time_step: u32,
+    current_day: DayOfWeek,
     pub global_stats: Vec<StatisticEntry>,
     /// The amount of exposures that occured in this building
     exposures_per_building_per_time_step: HashMap<ID, Vec<u32>>,
@@ -151,6 +153,9 @@ impl StatisticsRecorder {
     pub fn current_time_step(&self) -> u32 {
         self.current_time_step
     }
+    pub fn current_day(&self) -> DayOfWeek {
+        *self.current_day
+    }
 
     /// Prepares for recording the next step
     pub fn next(&mut self) -> anyhow::Result<()> {
@@ -159,12 +164,16 @@ impl StatisticsRecorder {
             self.timer_entries.push(self.timer.finished());
             self.memory_usage_entries.push(get_memory_usage()?);
             for (area, entry) in self.current_entry.drain() {
-                let mut recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();//tatisticEntry::with_time_step(self.current_time_step));
+                let mut recording_entry = self.exposures_per_building_per_time_step.entry(area).or_default();
                 recording_entry.push(entry);
             }
         }
         self.timer = Timer::default();
         self.current_time_step += 1;
+        // If midnight roll over to the next day
+        if self.current_time_step % 24 == 0 {
+            self.current_day = self.current_day.next_day();
+        }
         self.global_stats.push(StatisticEntry::with_time_step(self.current_time_step()));
         self.current_entry = HashMap::new();
         Ok(())
@@ -181,7 +190,6 @@ impl StatisticsRecorder {
     pub fn add_exposure(&mut self, location: ID) -> Result<(), SimError> {
         self.global_stats.last_mut().expect("No global data recorded").citizen_exposed()?;
         // If building, expose the Output Area as well
-        let time_step = self.current_time_step;
         let current_entry = &mut self.current_entry;
         if let ID::Building(building) = &location {
             let area_id = ID::OutputArea(building.output_area_code());
