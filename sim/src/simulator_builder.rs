@@ -47,6 +47,7 @@ use crate::config::STARTING_INFECTED_COUNT;
 use crate::config::{MAX_STUDENT_AGE, NUMBER_FORMATTING};
 use crate::disease::{DiseaseModel, DiseaseStatus};
 use crate::error::SimError;
+use crate::interventions::InterventionStatus;
 use crate::models::building::{
     Building, BuildingID, BuildingType, School, Workplace, AVERAGE_CLASS_SIZE,
 };
@@ -64,6 +65,7 @@ pub struct SimulatorBuilder {
     pub output_area_lookup: HashMap<String, u32>,
     output_areas_polygons: PolygonContainer<String>,
     pub disease_model: DiseaseModel,
+    pub interventions: InterventionStatus,
     /// The Output Area and Local Index a Citizen is located at
     pub citizen_output_area_lookup: Vec<(OutputAreaID, u32)>,
 }
@@ -97,7 +99,7 @@ impl SimulatorBuilder {
             let new_area = OutputArea::new(
                 output_id,
                 polygon.clone(),
-                self.disease_model.mask_percentage,
+                self.interventions.mask_compliance_percentage(),
             )
             .context("Failed to create Output Area")?;
             self.output_areas.push(new_area);
@@ -1149,6 +1151,8 @@ impl SimulatorBuilder {
         census_data: CensusData,
         osm_data: OSMRawBuildings,
         output_areas_polygons: PolygonContainer<String>,
+        disease_model: DiseaseModel,
+        interventions: InterventionStatus,
     ) -> anyhow::Result<SimulatorBuilder> {
         Ok(SimulatorBuilder {
             area_code: area,
@@ -1157,7 +1161,8 @@ impl SimulatorBuilder {
             output_areas: Default::default(),
             output_area_lookup: Default::default(),
             output_areas_polygons,
-            disease_model: DiseaseModel::covid(),
+            disease_model,
+            interventions,
             citizen_output_area_lookup: Default::default(),
         })
     }

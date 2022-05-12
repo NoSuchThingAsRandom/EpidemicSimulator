@@ -36,7 +36,7 @@ use load_census_data::tables::occupation_count::RawOccupationType;
 
 use crate::config::PUBLIC_TRANSPORT_PERCENTAGE;
 use crate::disease::{DiseaseModel, DiseaseStatus};
-use crate::interventions::MaskStatus;
+use crate::interventions::{InterventionStatus, MaskStatus};
 use crate::models::building::BuildingID;
 use crate::models::output_area::OutputAreaID;
 use crate::DayOfWeek;
@@ -229,27 +229,56 @@ impl Citizen {
     /// Registers a new exposure to this citizen
     ///
     /// # Paramaters
-    /// exposure_total: The amount of the exposures that occured in this time step
+    /// exposure_total: The amount of the exposures the Citizen is exposed to in this time step
     pub fn expose(
         &mut self,
         exposure_total: usize,
         disease_model: &DiseaseModel,
-        mask_status: &MaskStatus,
+        intervention_status: &InterventionStatus,
         rng: &mut dyn RngCore,
     ) -> bool {
-        let mask_status = if self.is_mask_compliant {
+
+        // The modifiers are calculated to be the chance of catching the disease
+
+
+        // Calculates the Citizen's current mask status
+        let citizen_mask_status = if self.is_mask_compliant {
             &MaskStatus::None(0)
         } else {
-            mask_status
+            &intervention_status.mask_status
         };
-        let exposure_chance = binomial(
-            disease_model.get_exposure_chance(
-                self.disease_status == DiseaseStatus::Vaccinated,
-                mask_status,
-                self.is_mask_compliant && self.on_public_transport.is_some(),
-            ),
-            exposure_total as u8,
-        );
+
+        // Calculates the modifier to the base infection probability based upon mask wearing and effectiveness
+        let mask_modifier = 1.0 - match citizen_mask_status {
+            MaskStatus::None(_) => 0.0,
+            MaskStatus::PublicTransport(_) => {
+                if self.is_mask_compliant && self.on_public_transport.is_some() {
+                    intervention_status.mask_effectiveness()
+                } else {
+                    0.0
+                }
+            }
+            MaskStatus::Everywhere(_) => {
+                intervention_status.mask_effectiveness()
+            }
+        };
+
+        // Calculates the infection chance, taking account of vaccination status
+        let vaccine_modifier = 1.0 - if self.disease_status == DiseaseStatus::Vaccinated {
+            intervention_status.vaccination_effectiveness()
+        } else {
+            0.0
+        };
+
+        let mut exposure_chance = disease_model.exposure_chance * mask_modifier * vaccine_modifier;
+        // Makes sure the infection chance is positive
+        if exposure_chance.is_sign_negative() {
+            exposure_chance = 0.0;
+        }
+
+        // Applies the individuals infection chance, across the number of infected Citizens they are in contact with, using the binomial distribution
+        let exposure_chance = binomial(exposure_chance, exposure_total as u8);
+        // Calculate if the Citizen should be exposed, given the exposure chance
         if self.disease_status == DiseaseStatus::Susceptible
             && RANDOM_DISTRUBUTION.sample(rng) < exposure_chance
         {

@@ -402,7 +402,7 @@ mod tests {
         let (easting, northing) = decimal_latitude_and_longitude_to_northing_and_eastings(lat, lon);
         println!("Northings/Eastings: {}, {}", northing, easting);
         let expected_northing = 412878;
-        let diff_northing = (northing - expected_northing);
+        let diff_northing = northing - expected_northing;
         assert_eq!(
             diff_northing, desired_accuracy,
             "Northing Coordinate is incorrect, actual: {}, expected: {}, difference: {}",
@@ -410,7 +410,7 @@ mod tests {
         );
 
         let expected_easting = 422297;
-        let diff_easting = (easting - expected_easting);
+        let diff_easting = easting - expected_easting;
         assert_eq!(
             diff_easting, desired_accuracy,
             "Easting Coordinate is incorrect, actual: {}, expected: {}, difference: {}",

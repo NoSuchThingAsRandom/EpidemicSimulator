@@ -12,7 +12,7 @@ fn get_cmd_arguments() -> clap::ArgMatches<'static> {
         .version("2.0")
         .author("Sam Ralph <sr1474@york.ac.uk")
         .about("Simulates an Epidemic Using UK Census Data")
-        .usage("run \"area_code\" --directory<data_directory> --mode=<mode>
+        .usage("run \"area_code\" --mode=<mode>
             \n    The area code which to use must be specified (area)\
             \n    The directory specifying where to store data must be specified (directory)\
             \n    There are several modes available to choose from:\

@@ -484,22 +484,3 @@ impl CensusData {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use rand::thread_rng;
-
-    use crate::CensusData;
-
-    #[test]
-    fn test_workplace_area_distrubution() {
-        let data = load_census_data();
-        let area_data = data
-            .for_output_area_code("E00067299".to_string())
-            .expect("Census area: 'E00067299' doesn't exist");
-        let mut rng = thread_rng();
-        for _ in 0..100 {
-            println!("{}", area_data.get_random_workplace_area(&mut rng).unwrap())
-        }
-    }
-}

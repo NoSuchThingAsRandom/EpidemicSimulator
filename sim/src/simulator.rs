@@ -33,10 +33,10 @@ use rayon::prelude::{
     IntoParallelRefMutIterator, ParallelIterator,
 };
 
-use crate::config::{get_memory_usage, DEBUG_ITERATION_PRINT};
+use crate::config::{get_memory_usage, DEBUG_ITERATION_PRINT, CITIZENS_PER_VACCINATION_RATE};
 use crate::disease::DiseaseStatus::Infected;
 use crate::disease::{DiseaseModel, DiseaseStatus};
-use crate::interventions::{InterventionStatus, InterventionsEnabled};
+use crate::interventions::{InterventionStatus, ActiveInterventions};
 use crate::models::building::BuildingID;
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::output_area::{OutputArea, OutputAreaID};
@@ -66,11 +66,7 @@ impl AddAssign for GeneratedExposures {
             entry.extend(citizens);
         }
         if self.building_exposure_list.len() < rhs.building_exposure_list.len() {
-            self.building_exposure_list.extend(vec![
-                HashMap::new();
-                rhs.building_exposure_list.len()
-                    - self.building_exposure_list.len()
-            ]);
+            self.building_exposure_list.extend(vec![HashMap::new(); rhs.building_exposure_list.len() - self.building_exposure_list.len()]);
         }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
             let area_entry = self.building_exposure_list.get_mut(area_index).expect(
@@ -90,7 +86,7 @@ pub struct Simulator {
     /// This maps the String code of an Output Area to it's index
     pub output_area_lookup: HashMap<String, u32>,
     /// The total size of the population
-    current_population: u32,
+    current_population: usize,
     /// A list of all the sub areas containing agents
     pub output_areas: RwLock<Vec<Mutex<OutputArea>>>,
     /// The Output Area ID, and Local Index for that Citizen
@@ -272,8 +268,8 @@ impl Simulator {
     }
     /// Applies the exposure cycle on any Citizens that have come in contact with an infected Citizen
     fn apply_exposures(&mut self, exposures: GeneratedExposures) -> anyhow::Result<()> {
-        let disease = &self.disease_model;
-        let mask_status = &self.interventions.mask_status;
+        let disease_model = &self.disease_model;
+        let intervention_status = &self.interventions;
         let output_areas = &self.output_areas;
         let citizen_lookup = &self.citizen_output_area_lookup;
         // Apply building exposures
@@ -348,11 +344,11 @@ impl Simulator {
                         };
                         if citizen.is_susceptible()
                             && citizen.expose(
-                                exposure_count,
-                                disease,
-                                mask_status,
-                                &mut thread_rng(),
-                            )
+                            exposure_count,
+                            disease_model,
+                            intervention_status,
+                            &mut thread_rng(),
+                        )
                         {
                             exposures.push(ID::Building(building_id.clone()));
                             if let Some(vaccine_list) = &mut area.citizens_eligible_for_vaccine {
@@ -447,11 +443,11 @@ impl Simulator {
             let citizen = citizen.unwrap();
             if citizen.is_susceptible()
                 & &citizen.expose(
-                    exposure_count,
-                    &self.disease_model,
-                    &self.interventions.mask_status,
-                    &mut self.rng,
-                )
+                exposure_count,
+                &self.disease_model,
+                &self.interventions,
+                &mut self.rng,
+            )
             {
                 self.statistics_recorder
                     .add_exposure(location.clone())
@@ -471,7 +467,7 @@ impl Simulator {
         let new_interventions = self.interventions.update_status(infected_percent);
         for intervention in new_interventions {
             match intervention {
-                InterventionsEnabled::Lockdown => {
+                ActiveInterventions::Lockdown => {
                     info!(
                         "Lockdown is enabled at hour {}",
                         self.statistics_recorder.current_time_step()
@@ -490,7 +486,7 @@ impl Simulator {
                             }
                         });
                 }
-                InterventionsEnabled::Vaccination => {
+                ActiveInterventions::Vaccination => {
                     // TODO Somehow more Citizens are vaccinated than the amount reduced from Susceptible? Suspicious....
                     info!(
                         "Starting vaccination program at hour: {}",
@@ -524,7 +520,7 @@ impl Simulator {
                         );
                     self.citizens_eligible_for_vaccine = Some(eligible);
                 }
-                InterventionsEnabled::MaskWearing(status) => {
+                ActiveInterventions::MaskWearing(status) => {
                     info!(
                         "Mask wearing status has changed: {} at hour {}",
                         status,
@@ -534,9 +530,10 @@ impl Simulator {
             }
         }
         if let Some(citizens) = &mut self.citizens_eligible_for_vaccine {
+            let vaccination_rate = (self.current_population / CITIZENS_PER_VACCINATION_RATE) * self.interventions.vaccination_rate();
             let chosen: Vec<CitizenID> = citizens
                 .iter()
-                .choose_multiple(&mut self.rng, self.disease_model.vaccination_rate as usize)
+                .choose_multiple(&mut self.rng, vaccination_rate as usize)
                 .iter()
                 .map(|id| **id)
                 .collect();
@@ -612,7 +609,7 @@ impl Simulator {
 
 impl From<SimulatorBuilder> for Simulator {
     fn from(builder: SimulatorBuilder) -> Self {
-        let current_population = builder.citizen_output_area_lookup.len() as u32;
+        let current_population = builder.citizen_output_area_lookup.len();
         let output_areas = RwLock::new(
             builder
                 .output_areas
@@ -636,7 +633,7 @@ impl From<SimulatorBuilder> for Simulator {
             citizen_output_area_lookup,
             citizens_eligible_for_vaccine: None,
             statistics_recorder: StatisticsRecorder::default(),
-            interventions: Default::default(),
+            interventions: builder.interventions,
             disease_model: builder.disease_model,
             public_transport: Default::default(),
             rng: thread_rng(),

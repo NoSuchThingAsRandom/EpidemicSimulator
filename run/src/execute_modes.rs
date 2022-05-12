@@ -63,7 +63,7 @@ pub async fn simulate(arguments: Arguments) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn resume(arguments: Arguments) -> anyhow::Result<()> {
+pub fn resume(_arguments: Arguments) -> anyhow::Result<()> {
     /*    let table =
             CensusTableNames::try_from(matches.value_of("table").expect("Missing table argument"))
                 .expect("Unknown table");
@@ -140,7 +140,7 @@ pub fn visualise_buildings(arguments: Arguments) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn visualise_stuff(arguments: Arguments) -> anyhow::Result<()> {
+pub fn _visualise_stuff(arguments: Arguments) -> anyhow::Result<()> {
     info!("Visualising buildings");
     let osm_buildings = OSMRawBuildings::build_osm_data(
         arguments.data_directory.to_string() + OSM_FILENAME,

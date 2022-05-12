@@ -22,7 +22,6 @@ use std::fmt::{Display, Formatter};
 
 use serde::Serialize;
 
-use crate::interventions::MaskStatus;
 
 #[derive(PartialEq, Debug, Serialize, Clone)]
 pub enum DiseaseStatus {
@@ -92,12 +91,6 @@ pub struct DiseaseModel {
     pub exposed_time: u16,
     pub infected_time: u16,
     pub max_time_step: u16,
-    /// The amount of people vaccinated per timestamp
-    pub vaccination_rate: u16,
-
-    // TODO Check if data on mask compliance ratio
-    pub mask_percentage: f64,
-    pub mask_effectiveness: f64,
 }
 
 impl DiseaseModel {
@@ -114,34 +107,6 @@ impl DiseaseModel {
             exposed_time: 4 * 24,
             infected_time: 14 * 24,
             max_time_step: 5000,
-            vaccination_rate: 85 * 18,
-            mask_percentage: 0.8,
-            mask_effectiveness: 0.70,
         }
-    }
-    // TODO Redo this function
-    pub fn get_exposure_chance(
-        &self,
-        is_vaccinated: bool,
-        global_mask_status: &MaskStatus,
-        is_on_public_transport_and_mask_compliant: bool,
-    ) -> f64 {
-        let mut chance = self.exposure_chance
-            - match global_mask_status {
-                MaskStatus::None(_) => 0.0,
-                MaskStatus::PublicTransport(_) => {
-                    if is_on_public_transport_and_mask_compliant {
-                        self.exposure_chance * self.mask_effectiveness
-                    } else {
-                        0.0
-                    }
-                }
-                MaskStatus::Everywhere(_) => self.exposure_chance * self.mask_effectiveness,
-            }
-            - if is_vaccinated { 1.0 } else { 0.0 };
-        if chance.is_sign_negative() {
-            chance = 0.0;
-        }
-        chance
     }
 }

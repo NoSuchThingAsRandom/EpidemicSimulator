@@ -22,6 +22,17 @@ use std::fmt::{Display, Formatter};
 
 use log::info;
 
+/// The set of possible interventions that can be applied
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+pub enum ActiveInterventions {
+    Lockdown,
+    Vaccination,
+    MaskWearing(MaskStatus),
+}
+
+/// The current Mask Status applied to the population
+///
+/// The `u32` represents the amount of steps the current status has been active for
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum MaskStatus {
     None(u32),
@@ -45,18 +56,6 @@ impl Display for MaskStatus {
     }
 }
 
-impl MaskStatus {
-    /// The percentage of infected cases, to trigger an increase
-    pub fn get_threshold(&self) -> f64 {
-        // TODO Make this loaded from a config file
-        match self {
-            MaskStatus::None(_) => 0.0,
-            MaskStatus::PublicTransport(_) => 0.001,
-            MaskStatus::Everywhere(_) => 0.0022,
-        }
-    }
-}
-
 /// This contains the thresholds of percentage cases to trigger a given intervention
 ///
 /// If none, then the Intervention is never applied
@@ -66,6 +65,30 @@ pub struct InterventionThresholds {
     lockdown: Option<f64>,
     /// The percent of cases to trigger vaccinations
     vaccination_threshold: Option<f64>,
+    /// The percent of cases to trigger masks on public transport
+    masks_public_transport: Option<f64>,
+    /// The percent of cases to trigger masks everywhere
+    masks_everywhere: Option<f64>,
+    /// How effective the vaccines are at preventing infection
+    vaccine_effectiveness: f64,
+    /// The amount of people vaccinated per timestamp (per 100,000 people)
+    pub vaccination_rate: usize,
+
+    // TODO Check if data on mask compliance ratio
+    /// The amount of people that wear masks
+    pub mask_compliance_percentage: f64,
+    /// How much the masks reduce chance of infection
+    pub mask_effectiveness: f64,
+}
+
+impl InterventionThresholds {
+    pub fn get_mask_threshold(&self, mask_status: MaskStatus) -> Option<f64> {
+        match mask_status {
+            MaskStatus::None(_) => { Some(0.0) }
+            MaskStatus::PublicTransport(_) => { self.masks_public_transport }
+            MaskStatus::Everywhere(_) => { self.masks_everywhere }
+        }
+    }
 }
 
 impl Default for InterventionThresholds {
@@ -73,6 +96,12 @@ impl Default for InterventionThresholds {
         Self {
             lockdown: Some(0.0034),
             vaccination_threshold: Some(0.005),
+            masks_public_transport: Some(0.001),
+            masks_everywhere: Some(0.0022),
+            vaccination_rate: 42,
+            vaccine_effectiveness: 1.0,
+            mask_compliance_percentage: 0.8,
+            mask_effectiveness: 0.7,
         }
     }
 }
@@ -99,15 +128,8 @@ impl Default for InterventionStatus {
     }
 }
 
-#[derive(Ord, PartialOrd, Eq, PartialEq)]
-pub enum InterventionsEnabled {
-    Lockdown,
-    Vaccination,
-    MaskWearing(MaskStatus),
-}
-
 impl InterventionStatus {
-    pub fn update_status(&mut self, percentage_infected: f64) -> BTreeSet<InterventionsEnabled> {
+    pub fn update_status(&mut self, percentage_infected: f64) -> BTreeSet<ActiveInterventions> {
         //debug!("Updating intervention status");
         let mut new_interventions = BTreeSet::new();
         // Lockdown
@@ -117,7 +139,7 @@ impl InterventionStatus {
                 self.lockdown = Some(if let Some(hour) = self.lockdown {
                     hour + 1
                 } else {
-                    new_interventions.insert(InterventionsEnabled::Lockdown);
+                    new_interventions.insert(ActiveInterventions::Lockdown);
                     0
                 });
             }
@@ -133,59 +155,88 @@ impl InterventionStatus {
                 self.vaccination = Some(if let Some(hour) = self.vaccination {
                     hour + 1
                 } else {
-                    new_interventions.insert(InterventionsEnabled::Vaccination);
+                    new_interventions.insert(ActiveInterventions::Vaccination);
                     0
                 });
             }
         }
-        //Mask Wearing
-        self.mask_status = match &self.mask_status {
-            MaskStatus::None(hour) => {
-                if MaskStatus::PublicTransport(0).get_threshold() < percentage_infected {
-                    info!("Mask wearing on public transport is enacted");
-                    new_interventions.insert(InterventionsEnabled::MaskWearing(
-                        MaskStatus::PublicTransport(0),
-                    ));
-                    MaskStatus::PublicTransport(0)
-                } else {
-                    MaskStatus::None(hour + 1)
-                }
-            }
-            MaskStatus::PublicTransport(hour) => {
-                if percentage_infected < MaskStatus::PublicTransport(0).get_threshold() {
-                    info!("Mask wearing on public transport is removed");
-                    new_interventions
-                        .insert(InterventionsEnabled::MaskWearing(MaskStatus::None(0)));
-                    MaskStatus::None(0)
-                } else if MaskStatus::Everywhere(0).get_threshold() < percentage_infected {
-                    info!("Mask wearing everywhere is enacted");
-                    new_interventions
-                        .insert(InterventionsEnabled::MaskWearing(MaskStatus::Everywhere(0)));
-                    MaskStatus::Everywhere(0)
-                } else {
-                    MaskStatus::PublicTransport(hour + 1)
-                }
-            }
-            MaskStatus::Everywhere(hour) => {
-                if percentage_infected < MaskStatus::Everywhere(0).get_threshold() {
-                    info!("Mask wearing everywhere is removed");
-                    new_interventions.insert(InterventionsEnabled::MaskWearing(
-                        MaskStatus::PublicTransport(0),
-                    ));
-                    MaskStatus::PublicTransport(0)
-                } else {
-                    MaskStatus::Everywhere(hour + 1)
-                }
-            }
-        };
+        self.update_mask_status(percentage_infected, &mut new_interventions);
+
 
         // Mask Wearing
         new_interventions
+    }
+    /// This updates the current mask status depending on the percentage of infected Citizens
+    ///
+    /// If the current infected percent drops below the threshold, the mask status drops
+    ///
+    /// Or if If the current infected percent increases above the next threshold, the mask status increases
+    ///
+    /// TODO Change to use if let chains: https://github.com/rust-lang/rust/pull/9492, when released
+    fn update_mask_status(&mut self, percentage_infected: f64, new_interventions: &mut BTreeSet<ActiveInterventions>) {
+        self.mask_status = match &self.mask_status {
+            MaskStatus::None(hour) => {
+                let mut new_status = MaskStatus::None(hour + 1);
+                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::PublicTransport(0)) {
+                    if threshold < percentage_infected {
+                        info!("Mask wearing on public transport is enacted");
+                        new_interventions.insert(ActiveInterventions::MaskWearing(
+                            MaskStatus::PublicTransport(0),
+                        ));
+                        new_status = MaskStatus::PublicTransport(0);
+                    }
+                }
+                new_status
+            }
+            MaskStatus::PublicTransport(hour) => {
+                let mut new_status = MaskStatus::PublicTransport(hour + 1);
+                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::PublicTransport(0)) {
+                    if percentage_infected < threshold {
+                        info!("Mask wearing on public transport is removed");
+                        new_interventions
+                            .insert(ActiveInterventions::MaskWearing(MaskStatus::None(0)));
+                        new_status = MaskStatus::None(0);
+                    }
+                }
+                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::Everywhere(0)) {
+                    if threshold < percentage_infected {
+                        info!("Mask wearing everywhere is enacted");
+                        new_interventions
+                            .insert(ActiveInterventions::MaskWearing(MaskStatus::Everywhere(0)));
+                        new_status = MaskStatus::Everywhere(0);
+                    }
+                }
+                new_status
+            }
+            MaskStatus::Everywhere(hour) => {
+                let mut new_status = MaskStatus::Everywhere(hour + 1);
+                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::Everywhere(0)) {
+                    if percentage_infected < threshold {
+                        info!("Mask wearing everywhere is removed");
+                        new_interventions.insert(ActiveInterventions::MaskWearing(
+                            MaskStatus::PublicTransport(0),
+                        ));
+                        new_status = MaskStatus::PublicTransport(0);
+                    }
+                }
+                new_status
+            }
+        };
     }
     pub fn lockdown_enabled(&self) -> bool {
         self.lockdown.is_some()
     }
     pub fn vaccination_program_started(&self) -> bool {
         self.vaccination.is_some()
+    }
+    pub fn vaccination_effectiveness(&self) -> f64 { self.thresholds.vaccine_effectiveness }
+    pub fn mask_compliance_percentage(&self) -> f64 {
+        self.thresholds.mask_compliance_percentage
+    }
+    pub fn mask_effectiveness(&self) -> f64 {
+        self.thresholds.mask_effectiveness
+    }
+    pub fn vaccination_rate(&self) -> usize {
+        self.thresholds.vaccination_rate
     }
 }
