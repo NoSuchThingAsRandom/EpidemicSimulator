@@ -668,7 +668,9 @@ impl SimulatorBuilder {
                     *building,
                     student_ids,
                     teacher_ids,
-                );
+                )
+                .context("Failed to build school")
+                .unwrap();
                 debug_stats.insert(
                     format!(
                         "({},{}",

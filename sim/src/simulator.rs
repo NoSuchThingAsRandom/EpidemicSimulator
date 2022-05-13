@@ -128,7 +128,6 @@ impl Simulator {
                 start_time = Instant::now();
             }
         }
-        // TODO Change this to a cmd argument
         self.statistics_recorder.dump_to_file(output_name);
         Ok(())
     }
@@ -479,14 +478,15 @@ impl Simulator {
                     // TODO THIS IS BROKEN, and Citizens are gonna get stuck...
                     self.output_areas
                         .write()
-                        .expect("Failed to retrive global Citizen lock")
+                        .expect("Failed to retrieve global Citizen lock")
                         .par_iter_mut()
                         .for_each(|area| {
                             let mut area = area.lock().unwrap();
                             // Send every Citizen home
                             for citizen in area.citizens.iter_mut() {
-                                let _home = citizen.household_code.clone();
-                                //citizen.current_building_position = home;
+                                let home = citizen.household_code.clone();
+                                citizen.current_building_position = home;
+                                citizen.on_public_transport = None;
                             }
                         });
                 }

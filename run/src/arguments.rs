@@ -24,7 +24,7 @@ use clap::{App, Arg};
 use log::warn;
 use serde::{Deserialize, Serialize};
 
-const VERSION_NUMBER: &str = "V2.1";
+const VERSION_NUMBER: &str = "V2";
 
 fn get_cmd_arguments() -> clap::ArgMatches<'static> {
     App::new("Epidemic Simulation Using Census Data and Open Street Maps")
@@ -208,7 +208,7 @@ impl Default for Arguments {
             disease_config_filename: "config/diseases/covid_19.json".to_string(),
             intervention_config_filename: "config/interventions/default.json".to_string(),
             data_directory: "data/".to_string(),
-            output_directory: "simulator_output/".to_string() + VERSION_NUMBER,
+            output_directory: "simulator_output/".to_string() + VERSION_NUMBER + "/",
             area_code: "1946157112TYPE299".to_string(),
             use_cache: false,
             allow_downloads: false,

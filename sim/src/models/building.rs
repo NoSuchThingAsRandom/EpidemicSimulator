@@ -342,16 +342,17 @@ pub struct School {
 }
 
 impl School {
-    // TODO Return errors instead of panicking!
     pub fn with_students_and_teachers(
         building_id: BuildingID,
         building: RawBuilding,
         students: Vec<Vec<CitizenID>>,
         teachers: Vec<CitizenID>,
-    ) -> (School, SchoolStatistic) {
+    ) -> Result<(School, SchoolStatistic), SimError> {
         let mut statistic = SchoolStatistic::default();
         if teachers.len() < 1 {
-            panic!("Cannot have a school without any teachers!")
+            return Err(SimError::InitializationError {
+                message: "Cannot have a school without any teachers!".to_string(),
+            });
         }
         // Remove any empty age groups
         let students: Vec<(usize, Vec<CitizenID>)> = students
@@ -380,11 +381,13 @@ impl School {
         let required_teachers: usize = statistic.classes_per_age_group.iter().sum();
 
         if teachers.len() < (required_teachers as usize) {
-            panic!(
-                "School does not have enough teachers ({}), requires: ({})",
-                teachers.len(),
-                required_teachers
-            );
+            return Err(SimError::InitializationError {
+                message: format!(
+                    "School does not have enough teachers ({}), requires: ({})",
+                    teachers.len(),
+                    required_teachers
+                ),
+            });
         }
 
         // Allocate students/teachers into classes
@@ -402,7 +405,11 @@ impl School {
             statistic.class_sizes.push(class_size);
             let age_group = age_group.into_iter();
             for class in age_group.as_slice().chunks(class_size) {
-                let teacher = teachers.next().expect("Ran out of teachers!");
+                let teacher = teachers
+                    .next()
+                    .ok_or_else(|| SimError::InitializationError {
+                        message: "No teachers left to assign to class!".to_string(),
+                    })?;
                 for student in class {
                     participant_to_class.insert(*student, RoomID::ClassId { id: class_index });
                 }
@@ -430,7 +437,7 @@ impl School {
             office_index += 1;
             statistic.number_of_offices += 1;
         }
-        (
+        Ok((
             School {
                 building_code: building_id,
                 location: building.center(),
@@ -439,7 +446,7 @@ impl School {
                 occupant_to_class: participant_to_class,
             },
             statistic,
-        )
+        ))
     }
     pub fn classes(&self) -> &Vec<Class> {
         &self.classes

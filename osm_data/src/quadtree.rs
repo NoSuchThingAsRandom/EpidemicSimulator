@@ -84,12 +84,15 @@ pub fn manhattan_distance<T: geo_types::CoordNum>(
     a: geo_types::Coordinate<T>,
     b: geo_types::Coordinate<T>,
 ) -> T {
-    // TODO This is fucking cursed
-    let x = a.x - b.x;
-    let x: isize = format!("{:?}", x).parse().unwrap(); // as isize;
-    let y = a.y - b.y;
-    let y: isize = format!("{:?}", y).parse().unwrap(); // as isize;
-    T::from(x.abs() + y.abs()).unwrap()
+    let x = if a.x > b.x { a.x - b.x } else { b.x - a.x };
+    assert!(x >= Coordinate::zero().x);
+    //let x: isize = format!("{:?}", x).parse().unwrap(); // as isize;
+
+    let y = if a.y > b.y { a.y - b.y } else { b.y - a.y };
+    assert!(x >= Coordinate::zero().y);
+    //let y = a.y - b.y;
+    //let y: isize = format!("{:?}", y).parse().unwrap(); // as isize;
+    T::from(x + y).unwrap()
 }
 
 #[derive(Serialize)]
