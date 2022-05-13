@@ -3,7 +3,7 @@ use log::warn;
 
 extern crate serde;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 const VERSION_NUMBER: &str = "V2.1";
 
@@ -30,18 +30,32 @@ fn get_cmd_arguments() -> clap::ArgMatches<'static> {
                 .required(true))
         .arg(
             Arg::with_name("mode")
+                .long("mode")
                 .help("Specifies the mode of the simulator")
                 .takes_value(true)
+                .require_equals(true)
                 .required(true))
         .arg(
-            Arg::with_name("data_directory")
+            Arg::with_name("disease-config")
+                .long("disease-config")
+                .help("Select the disease config file to use")
+                .require_equals(true)
+                .takes_value(true))
+        .arg(
+            Arg::with_name("intervention-config")
+                .long("intervention-config")
+                .help("Select the intervention config file to use")
+                .require_equals(true)
+                .takes_value(true))
+        .arg(
+            Arg::with_name("data-directory")
                 .short("d")
                 .long("directory")
                 .help("The directory that the data files are located (osm and census tables)")
                 .require_equals(true)
                 .takes_value(true))
         .arg(
-            Arg::with_name("output_directory")
+            Arg::with_name("output-directory")
                 .long("output_name")
                 .help("Specifies the name of the output directory to store statistics")
                 .takes_value(true)
@@ -77,6 +91,8 @@ fn get_cmd_arguments() -> clap::ArgMatches<'static> {
 
 pub struct Arguments {
     pub mode: SimMode,
+    pub disease_config_filename: String,
+    pub intervention_config_filename: String,
     pub data_directory: String,
     pub output_directory: String,
     pub area_code: String,
@@ -105,10 +121,25 @@ impl Arguments {
     pub fn load_from_arguments() -> Arguments {
         let mut arguments = Arguments::default();
         let matches = get_cmd_arguments();
-        arguments.mode = serde_plain::from_str(matches.value_of("mode").expect("Mode for the simulator must be provided!")).expect("Unknown mode received! Use --help for a list of valid modes");
+        arguments.mode = serde_plain::from_str(
+            matches
+                .value_of("mode")
+                .expect("Mode for the simulator must be provided!"),
+        )
+        .expect("Unknown mode received! Use --help for a list of valid modes");
 
-        if let Some(directory) = matches
-            .value_of("data_directory") {
+        if let Some(filename) = matches.value_of("disease-config") {
+            // TODO Remove illegal characters to prevent directory traversal
+            //output_directory = sanitize(name)+"/";
+            arguments.disease_config_filename = filename.to_string();
+        }
+        if let Some(filename) = matches.value_of("intervention-config") {
+            // TODO Remove illegal characters to prevent directory traversal
+            //output_directory = sanitize(name)+"/";
+            arguments.intervention_config_filename = filename.to_string();
+        }
+
+        if let Some(directory) = matches.value_of("data-directory") {
             //let census_directory = directory.to_owned() + "/";
             arguments.data_directory = directory.to_string();
         }
@@ -128,24 +159,20 @@ impl Arguments {
         if matches.is_present("allow-downloads") {
             arguments.allow_downloads = true;
         }
-        if let Some(grid_size) = matches
-            .value_of("grid-size") {
+        if let Some(grid_size) = matches.value_of("grid-size") {
             let grid_size_parsed = grid_size.parse();
             match grid_size_parsed {
-                Ok(grid_size) =>
-                    arguments.grid_size = grid_size,
+                Ok(grid_size) => arguments.grid_size = grid_size,
                 Err(e) => {
                     warn!("Failed to parse grid size with value: '{}' and error {}. Using default value of: {}",grid_size,e,arguments.grid_size)
                 }
             }
         }
 
-        if let Some(number_of_threads) = matches
-            .value_of("number_of_threads") {
+        if let Some(number_of_threads) = matches.value_of("number_of_threads") {
             let number_of_threads_parsed = number_of_threads.parse();
             match number_of_threads_parsed {
-                Ok(number_of_threads) =>
-                    arguments.number_of_threads = Some(number_of_threads),
+                Ok(number_of_threads) => arguments.number_of_threads = Some(number_of_threads),
                 Err(e) => {
                     warn!("Failed to parse number of threads with value: '{}' and error {}. Using default value.",number_of_threads,e)
                 }
@@ -159,12 +186,14 @@ impl Default for Arguments {
     fn default() -> Self {
         Arguments {
             mode: SimMode::Simulate,
+            disease_config_filename: "config/diseases/covid_19.json".to_string(),
+            intervention_config_filename: "config/interventions/default.json".to_string(),
             data_directory: "data/".to_string(),
             output_directory: "simulator_output/".to_string() + VERSION_NUMBER,
             area_code: "1946157112TYPE299".to_string(),
             use_cache: false,
             allow_downloads: false,
-            grid_size: 0,
+            grid_size: 250000,
             number_of_threads: None,
         }
     }

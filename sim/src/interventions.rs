@@ -21,6 +21,7 @@ use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 
 use log::info;
+use serde::{Deserialize, Serialize};
 
 /// The set of possible interventions that can be applied
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
@@ -59,7 +60,7 @@ impl Display for MaskStatus {
 /// This contains the thresholds of percentage cases to trigger a given intervention
 ///
 /// If none, then the Intervention is never applied
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct InterventionThresholds {
     /// The percent of cases to trigger a total lockdown
     lockdown: Option<f64>,
@@ -84,9 +85,9 @@ pub struct InterventionThresholds {
 impl InterventionThresholds {
     pub fn get_mask_threshold(&self, mask_status: MaskStatus) -> Option<f64> {
         match mask_status {
-            MaskStatus::None(_) => { Some(0.0) }
-            MaskStatus::PublicTransport(_) => { self.masks_public_transport }
-            MaskStatus::Everywhere(_) => { self.masks_everywhere }
+            MaskStatus::None(_) => Some(0.0),
+            MaskStatus::PublicTransport(_) => self.masks_public_transport,
+            MaskStatus::Everywhere(_) => self.masks_everywhere,
         }
     }
 }
@@ -128,6 +129,14 @@ impl Default for InterventionStatus {
     }
 }
 
+impl From<InterventionThresholds> for InterventionStatus {
+    fn from(thresholds: InterventionThresholds) -> Self {
+        let mut status = InterventionStatus::default();
+        status.thresholds = thresholds;
+        status
+    }
+}
+
 impl InterventionStatus {
     pub fn update_status(&mut self, percentage_infected: f64) -> BTreeSet<ActiveInterventions> {
         //debug!("Updating intervention status");
@@ -162,7 +171,6 @@ impl InterventionStatus {
         }
         self.update_mask_status(percentage_infected, &mut new_interventions);
 
-
         // Mask Wearing
         new_interventions
     }
@@ -173,11 +181,18 @@ impl InterventionStatus {
     /// Or if If the current infected percent increases above the next threshold, the mask status increases
     ///
     /// TODO Change to use if let chains: https://github.com/rust-lang/rust/pull/9492, when released
-    fn update_mask_status(&mut self, percentage_infected: f64, new_interventions: &mut BTreeSet<ActiveInterventions>) {
+    fn update_mask_status(
+        &mut self,
+        percentage_infected: f64,
+        new_interventions: &mut BTreeSet<ActiveInterventions>,
+    ) {
         self.mask_status = match &self.mask_status {
             MaskStatus::None(hour) => {
                 let mut new_status = MaskStatus::None(hour + 1);
-                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::PublicTransport(0)) {
+                if let Some(threshold) = self
+                    .thresholds
+                    .get_mask_threshold(MaskStatus::PublicTransport(0))
+                {
                     if threshold < percentage_infected {
                         info!("Mask wearing on public transport is enacted");
                         new_interventions.insert(ActiveInterventions::MaskWearing(
@@ -190,7 +205,10 @@ impl InterventionStatus {
             }
             MaskStatus::PublicTransport(hour) => {
                 let mut new_status = MaskStatus::PublicTransport(hour + 1);
-                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::PublicTransport(0)) {
+                if let Some(threshold) = self
+                    .thresholds
+                    .get_mask_threshold(MaskStatus::PublicTransport(0))
+                {
                     if percentage_infected < threshold {
                         info!("Mask wearing on public transport is removed");
                         new_interventions
@@ -198,7 +216,10 @@ impl InterventionStatus {
                         new_status = MaskStatus::None(0);
                     }
                 }
-                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::Everywhere(0)) {
+                if let Some(threshold) = self
+                    .thresholds
+                    .get_mask_threshold(MaskStatus::Everywhere(0))
+                {
                     if threshold < percentage_infected {
                         info!("Mask wearing everywhere is enacted");
                         new_interventions
@@ -210,7 +231,10 @@ impl InterventionStatus {
             }
             MaskStatus::Everywhere(hour) => {
                 let mut new_status = MaskStatus::Everywhere(hour + 1);
-                if let Some(threshold) = self.thresholds.get_mask_threshold(MaskStatus::Everywhere(0)) {
+                if let Some(threshold) = self
+                    .thresholds
+                    .get_mask_threshold(MaskStatus::Everywhere(0))
+                {
                     if percentage_infected < threshold {
                         info!("Mask wearing everywhere is removed");
                         new_interventions.insert(ActiveInterventions::MaskWearing(
@@ -229,7 +253,9 @@ impl InterventionStatus {
     pub fn vaccination_program_started(&self) -> bool {
         self.vaccination.is_some()
     }
-    pub fn vaccination_effectiveness(&self) -> f64 { self.thresholds.vaccine_effectiveness }
+    pub fn vaccination_effectiveness(&self) -> f64 {
+        self.thresholds.vaccine_effectiveness
+    }
     pub fn mask_compliance_percentage(&self) -> f64 {
         self.thresholds.mask_compliance_percentage
     }

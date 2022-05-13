@@ -1,0 +1,10 @@
+{
+  "lockdown": 0.0034,
+  "vaccination_threshold": 0.005,
+  "masks_public_transport": 0.001,
+  "masks_everywhere": 0.0022,
+  "vaccination_rate": 42,
+  "vaccine_effectiveness": 1.0,
+  "mask_compliance_percentage": 0.8,
+  "mask_effectiveness": 0.7
+}

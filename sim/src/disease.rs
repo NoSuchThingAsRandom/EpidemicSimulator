@@ -20,8 +20,7 @@
 
 use std::fmt::{Display, Formatter};
 
-use serde::Serialize;
-
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Serialize, Clone)]
 pub enum DiseaseStatus {
@@ -84,7 +83,7 @@ impl Display for DiseaseStatus {
     }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct DiseaseModel {
     pub exposure_chance: f64,
     pub death_rate: f64,

@@ -1,0 +1,7 @@
+{
+  "exposure_chance": 0.00055,
+  "death_rate": 0.2,
+  "exposed_time": 96,
+  "infected_time": 336,
+  "max_time_step": 5000
+}

@@ -20,16 +20,27 @@
 
 use anyhow::Context;
 use log::info;
+use serde::de::DeserializeOwned;
+use std::fs::File;
+use std::io::BufReader;
 
 use crate::Arguments;
 use load_census_data::tables::CensusTableNames;
 use load_census_data::CensusData;
 use osm_data::polygon_lookup::PolygonContainer;
 use osm_data::{OSMRawBuildings, OSM_CACHE_FILENAME, OSM_FILENAME};
-use sim::disease::DiseaseModel;
-use sim::interventions::InterventionStatus;
+use sim::interventions::{InterventionStatus, InterventionThresholds};
 use sim::simulator::Simulator;
 use sim::simulator_builder::SimulatorBuilder;
+
+pub fn load_struct_from_file<T: DeserializeOwned>(filename: String) -> anyhow::Result<T> {
+    let file = File::open(filename.to_string()).context(format!(
+        "Failed to load config file: '{}'",
+        filename.to_string()
+    ))?;
+    let reader = BufReader::new(file);
+    serde_json::from_reader(reader).context(format!("Failed to parse config file: '{}'", filename))
+}
 
 pub async fn load_data(
     arguments: Arguments,
@@ -45,20 +56,6 @@ pub async fn load_data(
     let census_data = CensusData::load_all_tables_async(filename, area_code, allow_downloads);
 
     rayon::scope(|s| {
-        // Load census data
-        s.spawn(|_| {
-            /*            let filename = _filename.clone();
-            //-> anyhow::Result<CensusData>
-            let census_closure = move || async move {
-
-                census_data.context("Failed to load census data")
-            };
-            stuff = Some(census_closure());
-            if let Some(stuff)=stuff{
-                census_data=Some(rayon::spawn(stuff));
-            }*/
-        });
-
         // Load OSM Buildings
         s.spawn(|_| {
             let filename = _filename.clone();
@@ -95,17 +92,26 @@ pub async fn load_data(
 }
 
 pub async fn load_data_and_init_sim(arguments: Arguments) -> anyhow::Result<Simulator> {
-    info!("Loading data from disk...");
+    info!(
+        "Using config files: {} and {}",
+        arguments.disease_config_filename, arguments.intervention_config_filename
+    );
     let area_code = arguments.area_code.to_string();
+    let disease_model = load_struct_from_file(arguments.disease_config_filename.to_string())
+        .context("Failed to load Disease Model Config")?;
+    let intervention_thresholds: InterventionThresholds =
+        load_struct_from_file(arguments.intervention_config_filename.to_string())
+            .context("Failed to load Intervention Config")?;
+    let intervention_status = InterventionStatus::from(intervention_thresholds);
+    info!("Starting to loading data from disk");
     let (census_data, osm_buildings, output_area_polygons) = load_data(arguments).await?;
-    // TODO Load DiseaseModel and InterventionStatus from Config files
     let mut sim = SimulatorBuilder::new(
         area_code,
         census_data,
         osm_buildings,
         output_area_polygons,
-        DiseaseModel::covid(),
-        InterventionStatus::default(),
+        disease_model,
+        intervention_status,
     )
     .context("Failed to initialise sim")?;
     sim.build().context("Failed to initialise sim")?;
