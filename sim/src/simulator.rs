@@ -33,10 +33,10 @@ use rayon::prelude::{
     IntoParallelRefMutIterator, ParallelIterator,
 };
 
-use crate::config::{get_memory_usage, DEBUG_ITERATION_PRINT, CITIZENS_PER_VACCINATION_RATE};
+use crate::config::{get_memory_usage, CITIZENS_PER_VACCINATION_RATE, DEBUG_ITERATION_PRINT};
 use crate::disease::DiseaseStatus::Infected;
 use crate::disease::{DiseaseModel, DiseaseStatus};
-use crate::interventions::{InterventionStatus, ActiveInterventions};
+use crate::interventions::{ActiveInterventions, InterventionStatus};
 use crate::models::building::BuildingID;
 use crate::models::citizen::{Citizen, CitizenID};
 use crate::models::output_area::{OutputArea, OutputAreaID};
@@ -66,7 +66,11 @@ impl AddAssign for GeneratedExposures {
             entry.extend(citizens);
         }
         if self.building_exposure_list.len() < rhs.building_exposure_list.len() {
-            self.building_exposure_list.extend(vec![HashMap::new(); rhs.building_exposure_list.len() - self.building_exposure_list.len()]);
+            self.building_exposure_list.extend(vec![
+                HashMap::new();
+                rhs.building_exposure_list.len()
+                    - self.building_exposure_list.len()
+            ]);
         }
         for (area_index, exposures) in rhs.building_exposure_list.into_iter().enumerate() {
             let area_entry = self.building_exposure_list.get_mut(area_index).expect(
@@ -344,11 +348,11 @@ impl Simulator {
                         };
                         if citizen.is_susceptible()
                             && citizen.expose(
-                            exposure_count,
-                            disease_model,
-                            intervention_status,
-                            &mut thread_rng(),
-                        )
+                                exposure_count,
+                                disease_model,
+                                intervention_status,
+                                &mut thread_rng(),
+                            )
                         {
                             exposures.push(ID::Building(building_id.clone()));
                             if let Some(vaccine_list) = &mut area.citizens_eligible_for_vaccine {
@@ -443,11 +447,11 @@ impl Simulator {
             let citizen = citizen.unwrap();
             if citizen.is_susceptible()
                 & &citizen.expose(
-                exposure_count,
-                &self.disease_model,
-                &self.interventions,
-                &mut self.rng,
-            )
+                    exposure_count,
+                    &self.disease_model,
+                    &self.interventions,
+                    &mut self.rng,
+                )
             {
                 self.statistics_recorder
                     .add_exposure(location.clone())
@@ -530,7 +534,8 @@ impl Simulator {
             }
         }
         if let Some(citizens) = &mut self.citizens_eligible_for_vaccine {
-            let vaccination_rate = (self.current_population / CITIZENS_PER_VACCINATION_RATE) * self.interventions.vaccination_rate();
+            let vaccination_rate = (self.current_population / CITIZENS_PER_VACCINATION_RATE)
+                * self.interventions.vaccination_rate();
             let chosen: Vec<CitizenID> = citizens
                 .iter()
                 .choose_multiple(&mut self.rng, vaccination_rate as usize)

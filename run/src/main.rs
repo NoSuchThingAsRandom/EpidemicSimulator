@@ -18,21 +18,19 @@
  *
  */
 
-
 use anyhow::Context;
-use log::{info};
+use log::info;
 use rayon;
 
 use crate::arguments::Arguments;
 use crate::execute_modes::execute_arguments;
-
 use crate::load_data::load_data;
 use crate::load_data::load_data_and_init_sim;
 
-mod load_data;
-mod visualise;
 mod arguments;
 mod execute_modes;
+mod load_data;
+mod visualise;
 
 //use visualisation::citizen_connections::{connected_groups, draw_graph};
 //use visualisation::image_export::DrawingRecord;
@@ -54,7 +52,6 @@ async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().expect("Failed to load dot env");
     pretty_env_logger::init_timed();
 
-
     let arguments = Arguments::load_from_arguments();
     if let Some(threads) = arguments.number_of_threads {
         rayon::ThreadPoolBuilder::new()
@@ -66,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
             .build_global()
             .expect("Failed to build Rayon thread pool!");
     }
-
 
     info!(
         "Using area: {}, Utilizing Cache: {}, Allowing downloads: {}",

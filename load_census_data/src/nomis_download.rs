@@ -157,7 +157,7 @@ impl DataFetcher {
                     file.write_all(data.as_bytes())
                         .map_err(|e| DataLoadingError::IOError {
                             source: Box::new(e),
-                            context: format!("Failed to write downloaded data to file"),
+                            context: "Failed to write downloaded data to file".to_string(),
                         })?;
                 } else {
                     break;
@@ -193,7 +193,7 @@ impl DataFetcher {
                     file.write_all(data.as_bytes())
                         .map_err(|e| DataLoadingError::IOError {
                             source: Box::new(e),
-                            context: format!("Failed to write downloaded data to file"),
+                            context: "Failed to write downloaded data to file".to_string(),
                         })?;
                 }
                 data = self.execute_request(index, request.clone(), 0).await?;
@@ -210,7 +210,7 @@ impl DataFetcher {
         }
         file.flush().map_err(|e| DataLoadingError::IOError {
             source: Box::new(e),
-            context: format!("Failed to flush downloaded data to file"),
+            context: "Failed to flush downloaded data to file".to_string(),
         })?;
         info!(
             "Finished downloading table with {} rows in {:?}",

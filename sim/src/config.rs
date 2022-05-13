@@ -44,7 +44,6 @@ pub const NUMBER_FORMATTING: Locale = Locale::en_GB; // SystemLocale::default().
 /// i.e. 40 Jabs per timestep per 100000 Citizens
 pub const CITIZENS_PER_VACCINATION_RATE: usize = 100000;
 
-
 pub fn get_memory_usage() -> anyhow::Result<String> {
     Ok(format!(
         "{:.2} GB",

@@ -237,9 +237,7 @@ impl Citizen {
         intervention_status: &InterventionStatus,
         rng: &mut dyn RngCore,
     ) -> bool {
-
         // The modifiers are calculated to be the chance of catching the disease
-
 
         // Calculates the Citizen's current mask status
         let citizen_mask_status = if self.is_mask_compliant {
@@ -249,26 +247,26 @@ impl Citizen {
         };
 
         // Calculates the modifier to the base infection probability based upon mask wearing and effectiveness
-        let mask_modifier = 1.0 - match citizen_mask_status {
-            MaskStatus::None(_) => 0.0,
-            MaskStatus::PublicTransport(_) => {
-                if self.is_mask_compliant && self.on_public_transport.is_some() {
-                    intervention_status.mask_effectiveness()
-                } else {
-                    0.0
+        let mask_modifier = 1.0
+            - match citizen_mask_status {
+                MaskStatus::None(_) => 0.0,
+                MaskStatus::PublicTransport(_) => {
+                    if self.is_mask_compliant && self.on_public_transport.is_some() {
+                        intervention_status.mask_effectiveness()
+                    } else {
+                        0.0
+                    }
                 }
-            }
-            MaskStatus::Everywhere(_) => {
-                intervention_status.mask_effectiveness()
-            }
-        };
+                MaskStatus::Everywhere(_) => intervention_status.mask_effectiveness(),
+            };
 
         // Calculates the infection chance, taking account of vaccination status
-        let vaccine_modifier = 1.0 - if self.disease_status == DiseaseStatus::Vaccinated {
-            intervention_status.vaccination_effectiveness()
-        } else {
-            0.0
-        };
+        let vaccine_modifier = 1.0
+            - if self.disease_status == DiseaseStatus::Vaccinated {
+                intervention_status.vaccination_effectiveness()
+            } else {
+                0.0
+            };
 
         let mut exposure_chance = disease_model.exposure_chance * mask_modifier * vaccine_modifier;
         // Makes sure the infection chance is positive

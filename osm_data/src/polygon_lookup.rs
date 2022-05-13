@@ -325,7 +325,7 @@ impl PolygonContainer<String> {
                 geo_types::Polygon::new(LineString::from(rings), interior_ring)
             } else {
                 return Err(OSMError::ValueParsingError {
-                    source: format!("Unexpected shape type: {}", shape.shapetype().to_string())
+                    source: format!("Unexpected shape type: {}", shape.shapetype())
                 });
             };
 

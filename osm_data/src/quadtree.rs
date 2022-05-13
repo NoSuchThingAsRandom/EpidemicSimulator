@@ -25,7 +25,6 @@ use std::hash::Hash;
 use geo::prelude::Intersects;
 use geo_types::{CoordNum, Coordinate};
 use log::{trace, warn};
-use serde;
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
@@ -103,9 +102,9 @@ impl<T: Clone + Debug, U: CoordNum> Display for Child<T, U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Child::Quad { children } => {
-                write!(f, "\n")?;
+                writeln!(f)?;
                 for child in children.iter() {
-                    write!(f, "\t -> {}\n", child)?;
+                    writeln!(f, "\t -> {}", child)?;
                 }
             }
             Child::Items { items } => {
@@ -522,7 +521,7 @@ impl<'a, T: Clone + Eq + Hash, U: CoordNum + Display> QuadTree<T, U> {
             Child::Quad { children } => children
                 .iter_mut()
                 .filter_map(|child| {
-                    if child.contains(&bounding_box) {
+                    if child.contains(bounding_box) {
                         Some(child.get_items_mut(bounding_box))
                     } else {
                         None
