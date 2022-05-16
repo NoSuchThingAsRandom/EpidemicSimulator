@@ -30,7 +30,7 @@ disease
 
 ## V2
 
-This is an extension of the Dissertation, to make the simulator more user-friendly and implement additional features.
+This is an extension of the project built during my Dissertation, aiming to make the simulator more user-friendly and implement additional features.
 Hopefully implementing some of the aforementioned goals
 
 External Contributors are welcome, and new ideas/thoughts are much appreciated.
